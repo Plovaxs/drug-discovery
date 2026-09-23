@@ -132,12 +132,11 @@ design's real evaluation metrics, and the likely reason (gradient
 direction misallocated relative to binding-relevant geometry) is itself a
 testable, actionable hypothesis for whoever continues this line of work.
 
-**Next steps for the thesis, not yet started:** the "synthesizability"
-half of the original "Coupled Affinity-Synthesizability Guidance" title
-has its own prior thread (SynthGuidance, RA-score, `guidance/
-SYNTH_GUIDANCE_FINDING.md`) not revisited in this phase; deciding how the
-thesis frames its central contribution given this negative result (e.g.
-as a rigorous ablation study of what does and doesn't work for
-diffusion-guidance in SBDD, with the DIAG1 mechanism as the connecting
-insight) is a scoping decision for the next phase of work, not something
-resolved by this document.
+**Update (post-phase):** the "synthesizability" half of the original
+"Coupled Affinity-Synthesizability Guidance" title has since been
+re-investigated to the same standard (Track D, `guidance/
+TRACK_D_SYNTH_GUIDANCE_REPORT.md`) and a third, non-gradient mechanism
+was also tested (Track C, `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md`).
+Both reached the same overall conclusion documented here. The complete,
+four-track closing synthesis — including how these results fit together
+and the recommended thesis framing — is `guidance/THESIS_FINDINGS_SYNTHESIS.md`.
