@@ -2,6 +2,47 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/guanjq/targetdiff/blob/main/LICIENCE)
 
+## This fork: thesis extension (Coupled Affinity-Synthesizability Guidance)
+
+This repository is a fork of the [official TargetDiff implementation](https://github.com/guanjq/targetdiff)
+(all credit for the base model, training pipeline, and original codebase
+below belongs to the original authors — see [Citation](#citation)). It
+adds a Master's thesis research project built on top of TargetDiff's
+frozen, pretrained diffusion model:
+
+> **Coupled Affinity-Synthesizability Guidance for Target-Conditional
+> Molecular Diffusion in Structure-Based Drug Design**
+
+The thesis investigates whether generation can be steered toward
+molecules with better predicted binding affinity and synthesizability,
+using four independent, statistically rigorous tracks — each governed by
+pre-registered dual-criterion checkpoints (KS tests with
+Benjamini-Hochberg correction across all comparisons, bootstrap 95% CIs,
+and mandatory negative controls, never a bare mean-difference claim):
+
+| Track | Mechanism tested | Result |
+|---|---|---|
+| **A** | Physics-anchored gradient guidance (GIGN + PIGNet2 energy decomposition) | Falsified — full-tier training, dual-checkpoint verified null |
+| **B** | 3 gradient-guidance variants (norm normalization, classifier-head reformulation, timestep-windowing) | Falsified — 3/3 null |
+| **C** | Non-gradient rejection sampling (post-hoc top-k filtering by a frozen affinity ranker) | Falsified — apparent raw-score gain is a molecule-size artifact; ligand efficiency gets significantly *worse* in 14/15 pockets |
+| **D** | Synthesizability guidance re-investigation (leakage-safe retrain, λ re-sweep, direction diagnostics) | Mechanism unresolved after ruling out the obvious confounds |
+
+All four tracks converge on the same root cause (diagnosed in
+`guidance/DIAG1_SIZE_CONFOUND_FINDING.md`): the trained affinity model's
+signal is dominated by molecular size, not target-specific binding
+chemistry — a negative result treated as a legitimate, reportable
+scientific finding rather than a dead end.
+
+**Start here:**
+- `guidance/STAGE2_PLUS_EXPERIMENT_LOG.md` — single source of truth, every experiment logged
+- `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md`, `guidance/DUAL_FALSIFICATION_CONCLUSION.md` — full write-ups
+- `guidance/generate_molecules_for_target.py` — generate & score candidate molecules for any of the 100 test-set pockets
+- `guidance/render_examples.py`, `guidance/build_pptx_glb.py` — publication-quality and PowerPoint-ready 3D visualizations of generated binding poses
+
+This section documents the thesis contribution; everything below is the
+original TargetDiff paper/codebase documentation.
+
+-----
 
 This repository is the official implementation of 3D Equivariant Diffusion for Target-Aware Molecule Generation and Affinity Prediction (ICLR 2023). [[PDF]](https://openreview.net/pdf?id=kJqXEPXMsE0) 
 
