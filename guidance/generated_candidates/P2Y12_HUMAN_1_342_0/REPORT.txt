@@ -1,0 +1,40 @@
+Candidate molecules generated for target: P2Y12_HUMAN_1_342_0
+(test-set data_id=60, 9 valid molecules out of 10 attempted)
+
+============================================================================
+IMPORTANT -- how to read this report
+============================================================================
+This project's own rigorous testing (Tracks A-D, see
+guidance/DUAL_FALSIFICATION_CONCLUSION.md and
+guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md) found that this affinity
+model's score -- and even the raw Vina Dock score -- is substantially
+confounded by molecule size and does NOT reliably distinguish genuinely
+better binders. Treat `predicted_affinity_score` and `vina_dock` below as
+weak, unreliable priors, NOT a validated ranking of binding quality.
+
+The more trustworthy signals here are:
+  - `pb_valid`: did the pose pass basic structural sanity checks
+    (bond lengths/angles, no steric clashes, connected atoms)? Molecules
+    with pb_valid=False may be geometrically implausible.
+  - `qed` / `sa`: standard drug-likeness and synthetic-accessibility
+    heuristics (0-1, higher = more drug-like / easier to synthesize).
+  - `ra_score`: a learned synthesizability estimate (higher = more likely
+    synthesizable by a real retrosynthesis-aware model).
+
+Use this list as a rough SET OF STARTING IDEAS to inspect manually
+(structure, functional groups, drug-likeness) -- not as a pre-ranked
+"top candidate" list. Real triage should involve visual inspection,
+expert chemistry judgment, and independent re-docking/re-scoring before
+any synthesis decision.
+============================================================================
+
+   file                                                                                                           smiles  heavy_atoms      qed   sa  ra_score  pb_valid  predicted_affinity_score  vina_dock  ligand_efficiency
+000.sdf                                                    N#C[C@@H](CC[C@]1(O)CC2=C(CC=C(CCC(=O)O)C2)O1)C1=C(O)C=CC=CC1           28 0.568784 0.56  0.029027      True                  6.273141     -9.724          -0.347286
+001.sdf                                                      CC[C@H]1CCC2=C1C[C@@H](C(=O)O)N(C[C@H](C)CO[PH](O)(O)O)C2=O           24 0.493326 0.55  0.009906      True                  6.054365     -8.902          -0.370917
+007.sdf                                         CC[C@@H](C1CCCCC1)C(C)(C)CNC(=O)OCC(=O)[C@]1(O)CCC2=C(NS(O)(O)C2)[C@H]1O           33 0.304739 0.57  0.354190      True                  6.419305     -9.075          -0.275000
+004.sdf                       CCn1c(=O)c([C@@]23ON(C(=O)[C@H](O)C[C@H](C)[PH](O)(O)O)[C@@H]2[C@@H](O)[C@@H]3O)cc2ccccc21           32 0.280802 0.52  0.022854      True                  6.361959    -11.212          -0.350375
+003.sdf C[C@@H]1CC(=O)N2C[C@H](O)[C@@H]3[C@@H](OC(=O)[C@@H](CO)[C@H](O)C(=O)O)[C@H](C)[C@](C)(O)C(=O)O[C@@]3(C)C2[C@H]1C           35 0.276025 0.50  0.009947     False                  6.449996     -8.803          -0.251514
+005.sdf                            C[C@@H]([C@H](O)[C@@H](O)C(=O)O)N1N[C@@H](S(O)(O)NC(=O)[C@H]2CCC3=C2CCC3)[C@H](O)C1=O           30 0.220298 0.52  0.017759     False                  6.434439    -10.109          -0.336967
+006.sdf                    CC(C)C=C1C=C(C=C(O)[C@@H](O)[C@H](O)OC(=CO)[C@@H]2CC[C@@H](O)[C@H](C(=O)O)C2)C(=O)N=C1CC(N)=O           36 0.161998 0.51  0.053084     False                  6.597494    -10.998          -0.305500
+002.sdf                 CC1=CC=CC(=C2NON[C@@H]2C)C1[C@H]1C(=O)N(C(O)O)[C@H]1[C@H](C)[C@@H](O)c1cc(O)cc(S(O)(O)CC(=O)O)c1           39 0.159960 0.48  0.029618     False                  6.753343     -9.414          -0.241385
+008.sdf                             N=c1nc2c(cc3c1OC(=S)N1C(=C=C[C@@H](C=O)C(O)=CCO)[C@H](O)[C@H](O)[C@H](O)[C@H]31)CCC2           33 0.144537 0.48  0.001915      True                  6.430551    -10.597          -0.321121
