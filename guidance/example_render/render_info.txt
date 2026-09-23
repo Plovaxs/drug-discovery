@@ -1,0 +1,3 @@
+protein_path=./data/test_set/SQHC_ALIAD_1_631_0/1h36_A_rec.pdb
+pose_pdb_path=./guidance/example_render/best_pose.pdb
+score=-15.775

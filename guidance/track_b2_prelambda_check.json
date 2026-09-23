@@ -1,0 +1,38 @@
+[
+  {
+    "lambda": 1.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 3.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 10.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 30.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 100.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 300.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 0.0
+  }
+]

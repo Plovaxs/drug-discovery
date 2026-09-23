@@ -1,0 +1,3 @@
+file,report_path,image_path,formula,smiles,mol_weight,qed,sa,ra_score,vina_dock,ligand_efficiency,n_contacts,contact_method,lipinski_violations,pains_alert
+001.sdf,guidance/task_f_blueprints/baseline_pocket80_seed1/001_blueprint.md,guidance/task_f_blueprints/baseline_pocket80_seed1/001_structure.png,C24H30N2O4,COCOc1ccc([C@@H](COC(=O)[C@H]2CCNc3ncccc32)C2CCCC2)cc1,410.22,0.5111017615910232,0.71,0.8531784415245056,-9.376,-0.3125333333333333,6,plip,0,False
+008.sdf,guidance/task_f_blueprints/baseline_pocket80_seed1/008_blueprint.md,guidance/task_f_blueprints/baseline_pocket80_seed1/008_structure.png,C21H32O6,CC(C)c1cccc2c1O[C@](C)(CC[C@H]1[C@H](O)[C@@H](O)C(O)(O)C[C@@H]1O)CC2,380.22,0.5059789808699294,0.61,0.007417625747621,-10.573,-0.3915925925925926,12,plip,0,False

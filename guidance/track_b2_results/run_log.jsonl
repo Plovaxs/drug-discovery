@@ -1,0 +1,3 @@
+{"condition": "classifier", "lambda": 100.0, "pocket": "BSD_ASPTE_1_130_0", "status": "completed"}
+{"condition": "classifier", "lambda": 100.0, "pocket": "HDAC8_HUMAN_1_377_0", "status": "completed"}
+{"condition": "classifier", "lambda": 100.0, "pocket": "CD38_HUMAN_44_300_0", "status": "completed"}

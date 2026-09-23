@@ -1,0 +1,24 @@
+model:
+  checkpoint: ./pretrained_models/pretrained_diffusion.pt
+
+# NOTE: despite the filename, this is currently an affinity-only variant,
+# not a true dual-guidance run. lambda_synth=0.0 because synth guidance was
+# found to be a null/negative result (guidance model's own score and the
+# real RA-score diverge at every tested nonzero lambda) -- full detail in
+# guidance/SYNTH_GUIDANCE_FINDING.md. Report this variant's results under
+# an accurate label (e.g. "affinity-guidance") rather than "dual-guidance",
+# since only one signal is meaningfully active. lambda_affinity is still
+# pending final selection from the architectural-upgrade addendum's
+# Phase 1/2 checkpoints (bond-aware features / guidance scheduling); update
+# this value once that concludes rather than assuming the placeholder.
+sample:
+  seed: 2021
+  num_samples: 20
+  num_steps: 1000
+  pos_only: False
+  center_pos_mode: protein
+  sample_num_atoms: prior
+  lambda_affinity: 1.0  # pending final selection -- see note above
+  lambda_synth: 0.0  # synth guidance is a documented null result; see guidance/SYNTH_GUIDANCE_FINDING.md
+  affinity_checkpoint: ./guidance_models/affinity_egnn.pt  # produced by Task C
+  synth_checkpoint: ./guidance_models/synth_ra_score.pt  # produced by Task D

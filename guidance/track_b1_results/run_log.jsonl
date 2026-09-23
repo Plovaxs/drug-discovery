@@ -1,0 +1,9 @@
+{"condition": "unguided", "lambda": 0.0, "pocket": "BSD_ASPTE_1_130_0", "status": "completed"}
+{"condition": "raw", "lambda": 10.0, "pocket": "BSD_ASPTE_1_130_0", "status": "completed"}
+{"condition": "normalized", "lambda": 0.1, "pocket": "BSD_ASPTE_1_130_0", "status": "completed"}
+{"condition": "unguided", "lambda": 0.0, "pocket": "HDAC8_HUMAN_1_377_0", "status": "completed"}
+{"condition": "raw", "lambda": 10.0, "pocket": "HDAC8_HUMAN_1_377_0", "status": "completed"}
+{"condition": "normalized", "lambda": 0.1, "pocket": "HDAC8_HUMAN_1_377_0", "status": "completed"}
+{"condition": "unguided", "lambda": 0.0, "pocket": "CD38_HUMAN_44_300_0", "status": "completed"}
+{"condition": "raw", "lambda": 10.0, "pocket": "CD38_HUMAN_44_300_0", "status": "completed"}
+{"condition": "normalized", "lambda": 0.1, "pocket": "CD38_HUMAN_44_300_0", "status": "completed"}

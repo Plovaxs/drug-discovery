@@ -1,0 +1,181 @@
+{
+  "diagnostic_2": [
+    {
+      "target": "F16P1_HUMAN_1_338_0",
+      "n": 1,
+      "mean_abs_error": 3.439639091491699
+    },
+    {
+      "target": "BGL07_ORYSJ_25_504_0",
+      "n": 1,
+      "mean_abs_error": 3.371720552444458
+    },
+    {
+      "target": "CD38_HUMAN_44_300_0",
+      "n": 1,
+      "mean_abs_error": 3.2940361499786377
+    },
+    {
+      "target": "PA2B8_DABRR_1_121_0",
+      "n": 1,
+      "mean_abs_error": 2.8853907585144043
+    },
+    {
+      "target": "GLMU_STRPN_2_459_0",
+      "n": 1,
+      "mean_abs_error": 2.698798418045044
+    },
+    {
+      "target": "BSD_ASPTE_1_130_0",
+      "n": 1,
+      "mean_abs_error": 2.605104446411133
+    },
+    {
+      "target": "SQHC_ALIAD_1_631_0",
+      "n": 1,
+      "mean_abs_error": 2.276063919067383
+    },
+    {
+      "target": "NAGZ_VIBCH_1_330_0",
+      "n": 1,
+      "mean_abs_error": 1.8829617500305176
+    },
+    {
+      "target": "NEP_HUMAN_54_750_0",
+      "n": 1,
+      "mean_abs_error": 1.7240071296691895
+    },
+    {
+      "target": "AKT1_HUMAN_1_137_0",
+      "n": 1,
+      "mean_abs_error": 1.7091622352600098
+    },
+    {
+      "target": "CHIB_SERMA_1_499_0",
+      "n": 1,
+      "mean_abs_error": 1.6099772453308105
+    },
+    {
+      "target": "SIR3_HUMAN_117_398_0",
+      "n": 1,
+      "mean_abs_error": 1.563565731048584
+    },
+    {
+      "target": "TNKS2_HUMAN_948_1162_0",
+      "n": 1,
+      "mean_abs_error": 1.297966480255127
+    },
+    {
+      "target": "Y635_MYCTU_1_158_0",
+      "n": 1,
+      "mean_abs_error": 1.1851258277893066
+    },
+    {
+      "target": "M3K14_HUMAN_321_678_0",
+      "n": 1,
+      "mean_abs_error": 1.1555752754211426
+    },
+    {
+      "target": "QPCT_HUMAN_33_361_0",
+      "n": 1,
+      "mean_abs_error": 1.1497950553894043
+    },
+    {
+      "target": "UPPS_ECOLI_1_253_0",
+      "n": 1,
+      "mean_abs_error": 0.917975902557373
+    },
+    {
+      "target": "GUX1_HYPJE_18_451_0",
+      "n": 1,
+      "mean_abs_error": 0.8559231758117676
+    },
+    {
+      "target": "DFPA_LOLVU_2_314_0",
+      "n": 1,
+      "mean_abs_error": 0.7749834060668945
+    },
+    {
+      "target": "BACE2_HUMAN_76_460_0",
+      "n": 1,
+      "mean_abs_error": 0.629704475402832
+    },
+    {
+      "target": "VAOX_PENSI_1_560_0",
+      "n": 1,
+      "mean_abs_error": 0.4961714744567871
+    },
+    {
+      "target": "CDK6_HUMAN_1_312_0",
+      "n": 2,
+      "mean_abs_error": 0.19153952598571777
+    },
+    {
+      "target": "ATS5_HUMAN_262_480_0",
+      "n": 1,
+      "mean_abs_error": 0.16897153854370117
+    },
+    {
+      "target": "IMA1_HUMAN_68_497_0",
+      "n": 1,
+      "mean_abs_error": 0.11545848846435547
+    },
+    {
+      "target": "PAC_ECOLX_27_846_0",
+      "n": 1,
+      "mean_abs_error": 0.09923100471496582
+    },
+    {
+      "target": "CHIB1_ASPFM_39_433_0",
+      "n": 1,
+      "mean_abs_error": 0.07552456855773926
+    }
+  ],
+  "diagnostic_3": {
+    "ridge": {
+      "train_pearson": 0.8663967472797136,
+      "train_r2": 0.7505723933402724,
+      "test_pearson": 0.4273370803638036,
+      "test_r2": -0.7687241070441289
+    },
+    "random_forest": {
+      "train_pearson": 0.9847479711710017,
+      "train_r2": 0.9672522488940756,
+      "test_pearson": 0.4925815410490559,
+      "test_r2": 0.04659401568165522
+    }
+  },
+  "diagnostic_4": {
+    "best_lr3e-5": {
+      "pearson_point": 0.5380831098421521,
+      "pearson_ci95": [
+        0.22996841943563642,
+        0.7754852166346201
+      ],
+      "r2_point": 0.046356356985637115,
+      "r2_ci95": [
+        -0.6006728293898362,
+        0.445354313077255
+      ]
+    },
+    "baseline_lr1e-4": {
+      "pearson_point": 0.23253940407926402,
+      "pearson_ci95": [
+        -0.14492311412516598,
+        0.594858738473252
+      ],
+      "r2_point": -0.5368044602035495,
+      "r2_ci95": [
+        -1.7689084017666301,
+        0.18277798253534405
+      ]
+    }
+  },
+  "diagnostic_5": {
+    "affinity_vs_heavy_atoms_pearson": 0.7990471917516632,
+    "affinity_vs_heavy_atoms_p": 5.808436462544512e-07,
+    "pocket_scramble_mean_abs_delta": 1.49122154712677,
+    "pred_std_reference": 1.774236117067987,
+    "n_scramble_pairs": 20
+  }
+}

@@ -134,4 +134,18 @@ dmypy.json
 # OS FILE
 .DS_Store
 
-tmp
+tmp/
+
+# Third-party data/code not ours to redistribute, and large scratch/log
+# directories generated during this project's experiments (thesis repo:
+# https://github.com/Plovaxs/drug-discovery)
+data/
+guidance/reference_code/
+pretrained_models/
+logs_*/
+outputs_smoketest/
+outputs_validate/
+guidance/track_c_pools/*/*/sdf/
+guidance/generated_candidates/*/sdf/
+sampling_results/
+__pycache__/

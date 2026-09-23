@@ -1,0 +1,21 @@
+model:
+  checkpoint: ./pretrained_models/pretrained_diffusion.pt
+
+sample:
+  seed: 2021
+  num_samples: 20
+  num_steps: 1000
+  pos_only: False
+  center_pos_mode: protein
+  sample_num_atoms: prior
+  lambda_affinity: 0.0
+  # NOT a tuned operating value. guidance/lambda_sweep.py found that at
+  # every nonzero lambda_synth tested (0.01-30.0), synth guidance's own
+  # predicted score diverges from the real, independently-computed
+  # RA-score -- see guidance/SYNTH_GUIDANCE_FINDING.md for the full sweep
+  # table and root-cause analysis. This config is retained so the
+  # documented null result stays reproducible, not because 1.0 (or any
+  # other value here) is expected to improve outcomes -- it is not run as
+  # part of the main Task F ablation for that reason.
+  lambda_synth: 1.0
+  synth_checkpoint: ./guidance_models/synth_ra_score.pt  # produced by Task D

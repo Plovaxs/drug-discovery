@@ -1,0 +1,8 @@
+{"variant": "affinity_only", "pocket_data_id": 0, "pocket_target": "BSD_ASPTE_1_130_0", "seed": 1, "status": "completed", "elapsed_sec": 1061.4, "timestamp": "2026-09-09 22:05:15"}
+{"variant": "affinity_only", "pocket_data_id": 5, "pocket_target": "HDAC8_HUMAN_1_377_0", "seed": 1, "status": "completed", "elapsed_sec": 623.8, "timestamp": "2026-09-09 22:15:38"}
+{"variant": "affinity_only", "pocket_data_id": 10, "pocket_target": "CD38_HUMAN_44_300_0", "seed": 1, "status": "completed", "elapsed_sec": 1140.9, "timestamp": "2026-09-09 22:34:39"}
+{"variant": "affinity_only", "pocket_data_id": 17, "pocket_target": "MENE_BACSU_2_486_0", "seed": 1, "status": "completed", "elapsed_sec": 984.2, "timestamp": "2026-09-09 22:51:03"}
+{"variant": "affinity_only", "pocket_data_id": 20, "pocket_target": "NQO1_HUMAN_2_274_0", "seed": 1, "status": "completed", "elapsed_sec": 572.0, "timestamp": "2026-09-09 23:00:35"}
+{"variant": "affinity_only", "pocket_data_id": 25, "pocket_target": "PAK4_HUMAN_291_591_ATP_0", "seed": 1, "status": "completed", "elapsed_sec": 754.2, "timestamp": "2026-09-09 23:13:10"}
+{"variant": "affinity_only", "pocket_data_id": 30, "pocket_target": "PNTM_STRAE_2_398_0", "seed": 1, "status": "completed", "elapsed_sec": 859.6, "timestamp": "2026-09-09 23:27:29"}
+{"variant": "affinity_only", "pocket_data_id": 35, "pocket_target": "RIBB_VIBCH_2_218_0", "seed": 1, "status": "completed", "elapsed_sec": 939.9, "timestamp": "2026-09-09 23:43:09"}

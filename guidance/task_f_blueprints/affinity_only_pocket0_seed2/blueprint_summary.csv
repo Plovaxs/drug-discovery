@@ -1,0 +1,3 @@
+file,report_path,image_path,formula,smiles,mol_weight,qed,sa,ra_score,vina_dock,ligand_efficiency,n_contacts,contact_method,lipinski_violations,pains_alert
+001.sdf,guidance/task_f_blueprints/affinity_only_pocket0_seed2/001_blueprint.md,guidance/task_f_blueprints/affinity_only_pocket0_seed2/001_structure.png,C16H22N2O8,N[C@@H](C(=O)O)c1cc(O[C@@H](O)CO)cc(N2CC[C@@H](O)C[C@H](O)C2=O)c1,370.14,0.319211895747001,0.66,0.0643150508403778,-9.587,-0.3687307692307692,14,plip,1,False
+006.sdf,guidance/task_f_blueprints/affinity_only_pocket0_seed2/006_blueprint.md,guidance/task_f_blueprints/affinity_only_pocket0_seed2/006_structure.png,C12H14FN5O3S,CC(=O)N(O)CC(=C1CNC(F)S1)c1cnnc(C(N)=O)c1,327.08,0.4075857393147051,0.61,0.5124519467353821,-9.068,-0.4121818181818181,12,plip,0,False

@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import _pyg_knn_compat; _pyg_knn_compat.apply()
 from torch_geometric.nn import knn_graph
 
 

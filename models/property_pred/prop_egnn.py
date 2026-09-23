@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch_scatter import scatter_sum
+import _pyg_knn_compat; _pyg_knn_compat.apply()
 from torch_geometric.nn import radius_graph, knn_graph
 from models.common import GaussianSmearing, MLP
 

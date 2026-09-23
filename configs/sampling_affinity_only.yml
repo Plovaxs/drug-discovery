@@ -1,0 +1,13 @@
+model:
+  checkpoint: ./pretrained_models/pretrained_diffusion.pt
+
+sample:
+  seed: 2021
+  num_samples: 20
+  num_steps: 1000
+  pos_only: False
+  center_pos_mode: protein
+  sample_num_atoms: prior
+  lambda_affinity: 1.0  # placeholder magnitude; re-tune once Task C's model is trained
+  lambda_synth: 0.0
+  affinity_checkpoint: ./guidance_models/affinity_egnn.pt  # produced by Task C

@@ -1,0 +1,32 @@
+[
+  {
+    "lambda": 0.1,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 1.0
+  },
+  {
+    "lambda": 0.3,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 0.75
+  },
+  {
+    "lambda": 1.0,
+    "n_reconstructed": 3,
+    "n_samples": 4,
+    "single_fragment_rate": 0.75
+  },
+  {
+    "lambda": 3.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 0.0
+  },
+  {
+    "lambda": 10.0,
+    "n_reconstructed": 4,
+    "n_samples": 4,
+    "single_fragment_rate": 0.0
+  }
+]

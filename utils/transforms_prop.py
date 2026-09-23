@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import _pyg_knn_compat; _pyg_knn_compat.apply()
 from torch_geometric.nn import knn_graph
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add

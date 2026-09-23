@@ -1,0 +1,2 @@
+file,report_path,image_path,formula,smiles,mol_weight,qed,sa,ra_score,vina_dock,ligand_efficiency,n_contacts,contact_method,lipinski_violations,pains_alert
+001.sdf,guidance/task_f_blueprints/baseline_pocket70_seed1/001_blueprint.md,guidance/task_f_blueprints/baseline_pocket70_seed1/001_structure.png,C26H29ClO2S,CCOC(=O)[C@H]1C2=CC(Cl)=CC([C@H]3Cc4ccc5sc(C)cc5c4C3)[C@@H]2CC[C@H]1C,440.16,0.4886823905289658,0.6,0.0299272295087575,-12.596,-0.4198666666666666,10,plip,1,False

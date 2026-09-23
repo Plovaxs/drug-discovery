@@ -1,0 +1,37 @@
+model:
+  hidden_channels: 128
+  encoder:
+    name: egnn
+    num_layers: 4
+    hidden_dim: 128
+    edge_dim: 0
+    num_r_gaussian: 32
+    act_fn: relu
+    norm: False
+    cutoff: 10.0
+    knn: 24
+
+train:
+  seed: 2021
+  batch_size: 8
+  num_workers: 4
+  max_epochs: 150
+  early_stop_patience: 15
+  report_iter: 200
+  val_freq: 1
+  max_grad_norm: 10.
+  optimizer:
+    type: adam
+    lr: 2.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3
+    min_lr: 1.e-5
+
+dataset:
+  root: ./data/crossdocked_v1.1_rmsd1.0_pocket10
+  labels: ./data/synth_ra_labels.pkl

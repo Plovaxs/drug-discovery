@@ -1,0 +1,66 @@
+[
+  {
+    "data_id": 0,
+    "lmdb_idx": 3011,
+    "target": "BSD_ASPTE_1_130_0",
+    "protein_filename": "BSD_ASPTE_1_130_0/2z3h_A_rec_1wn6_bst_lig_tt_docked_3_pocket10.pdb",
+    "ligand_filename": "BSD_ASPTE_1_130_0/2z3h_A_rec_1wn6_bst_lig_tt_docked_3.sdf",
+    "expected_protein_pdb": "BSD_ASPTE_1_130_0/2z3h_A_rec.pdb"
+  },
+  {
+    "data_id": 5,
+    "lmdb_idx": 7659,
+    "target": "HDAC8_HUMAN_1_377_0",
+    "protein_filename": "HDAC8_HUMAN_1_377_0/4rn0_B_rec_4rn1_l8g_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "HDAC8_HUMAN_1_377_0/4rn0_B_rec_4rn1_l8g_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "HDAC8_HUMAN_1_377_0/4rn0_B_rec.pdb"
+  },
+  {
+    "data_id": 10,
+    "lmdb_idx": 20612,
+    "target": "CD38_HUMAN_44_300_0",
+    "protein_filename": "CD38_HUMAN_44_300_0/3dzh_A_rec_3u4i_cvr_lig_tt_docked_0_pocket10.pdb",
+    "ligand_filename": "CD38_HUMAN_44_300_0/3dzh_A_rec_3u4i_cvr_lig_tt_docked_0.sdf",
+    "expected_protein_pdb": "CD38_HUMAN_44_300_0/3dzh_A_rec.pdb"
+  },
+  {
+    "data_id": 17,
+    "lmdb_idx": 29922,
+    "target": "MENE_BACSU_2_486_0",
+    "protein_filename": "MENE_BACSU_2_486_0/5bur_A_rec_5x8f_amp_lig_tt_docked_7_pocket10.pdb",
+    "ligand_filename": "MENE_BACSU_2_486_0/5bur_A_rec_5x8f_amp_lig_tt_docked_7.sdf",
+    "expected_protein_pdb": "MENE_BACSU_2_486_0/5bur_A_rec.pdb"
+  },
+  {
+    "data_id": 20,
+    "lmdb_idx": 38461,
+    "target": "NQO1_HUMAN_2_274_0",
+    "protein_filename": "NQO1_HUMAN_2_274_0/1dxo_C_rec_1gg5_e09_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "NQO1_HUMAN_2_274_0/1dxo_C_rec_1gg5_e09_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "NQO1_HUMAN_2_274_0/1dxo_C_rec.pdb"
+  },
+  {
+    "data_id": 25,
+    "lmdb_idx": 42180,
+    "target": "PAK4_HUMAN_291_591_ATP_0",
+    "protein_filename": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec_5vef_m77_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec_5vef_m77_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec.pdb"
+  },
+  {
+    "data_id": 30,
+    "lmdb_idx": 54709,
+    "target": "PNTM_STRAE_2_398_0",
+    "protein_filename": "PNTM_STRAE_2_398_0/5l1v_A_rec_5l1v_7pf_lig_tt_docked_0_pocket10.pdb",
+    "ligand_filename": "PNTM_STRAE_2_398_0/5l1v_A_rec_5l1v_7pf_lig_tt_docked_0.sdf",
+    "expected_protein_pdb": "PNTM_STRAE_2_398_0/5l1v_A_rec.pdb"
+  },
+  {
+    "data_id": 35,
+    "lmdb_idx": 66411,
+    "target": "RIBB_VIBCH_2_218_0",
+    "protein_filename": "RIBB_VIBCH_2_218_0/4p6p_A_rec_4p77_5rp_lig_tt_docked_0_pocket10.pdb",
+    "ligand_filename": "RIBB_VIBCH_2_218_0/4p6p_A_rec_4p77_5rp_lig_tt_docked_0.sdf",
+    "expected_protein_pdb": "RIBB_VIBCH_2_218_0/4p6p_A_rec.pdb"
+  }
+]

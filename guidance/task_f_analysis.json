@@ -1,0 +1,108 @@
+{
+  "variant_stats": {
+    "affinity_only": {
+      "variant": "affinity_only",
+      "n_attempted": 600,
+      "n_scored": 596,
+      "validity_rate": 0.9933333333333333,
+      "uniqueness_rate": 1.0,
+      "diversity_mean_1_minus_tanimoto": 0.9099482597742982,
+      "qed_mean_std": [
+        0.45163175794323995,
+        0.18450050700635784
+      ],
+      "sa_mean_std": [
+        0.6003020134228187,
+        0.12104965046745181
+      ],
+      "ra_score_mean_std": [
+        0.42867970202569755,
+        0.38729578477789367
+      ],
+      "vina_dock_mean_std": [
+        -7.251058724832213,
+        2.4085907072113613
+      ],
+      "ligand_efficiency_mean_std": [
+        -0.37174387652911106,
+        0.10895057286212344
+      ],
+      "pb_valid_rate": 0.5453020134228188,
+      "standard_success_rate": 0.07046979865771812,
+      "honest_success_rate": 0.026845637583892617
+    },
+    "baseline": {
+      "variant": "baseline",
+      "n_attempted": 600,
+      "n_scored": 597,
+      "validity_rate": 0.995,
+      "uniqueness_rate": 1.0,
+      "diversity_mean_1_minus_tanimoto": 0.9097501405693349,
+      "qed_mean_std": [
+        0.44946735405086785,
+        0.18457556453915003
+      ],
+      "sa_mean_std": [
+        0.601390284757119,
+        0.12216960693427734
+      ],
+      "ra_score_mean_std": [
+        0.43518339552982105,
+        0.38550288038544955
+      ],
+      "vina_dock_mean_std": [
+        -6.813306532663316,
+        10.079260378288168
+      ],
+      "ligand_efficiency_mean_std": [
+        -0.33990219328546517,
+        0.748669909463445
+      ],
+      "pb_valid_rate": 0.5510887772194305,
+      "standard_success_rate": 0.07035175879396985,
+      "honest_success_rate": 0.03015075376884422
+    }
+  },
+  "significance": {
+    "qed": {
+      "mannwhitney_p": 0.8891923436321267,
+      "wilcoxon_paired_p": 0.6476554870605469,
+      "n_pockets_paired": 20,
+      "n_a": 597,
+      "n_b": 596
+    },
+    "sa": {
+      "mannwhitney_p": 0.7978999042753928,
+      "wilcoxon_paired_p": 0.2771920054090605,
+      "n_pockets_paired": 20,
+      "n_a": 597,
+      "n_b": 596
+    },
+    "ra_score": {
+      "mannwhitney_p": 0.8156132456772407,
+      "wilcoxon_paired_p": 0.3117942810058594,
+      "n_pockets_paired": 20,
+      "n_a": 597,
+      "n_b": 596
+    },
+    "vina_dock": {
+      "mannwhitney_p": 0.9605246208233663,
+      "wilcoxon_paired_p": 0.5458755493164062,
+      "n_pockets_paired": 20,
+      "n_a": 597,
+      "n_b": 596
+    },
+    "ligand_efficiency": {
+      "mannwhitney_p": 0.9560385336196194,
+      "wilcoxon_paired_p": 0.3299827575683594,
+      "n_pockets_paired": 20,
+      "n_a": 597,
+      "n_b": 596
+    }
+  },
+  "vina_hacking": [
+    "affinity_only Vina Dock improved vs baseline (-7.251 < -6.813).",
+    "  ...and ligand efficiency did not worsen (-0.3717 vs -0.3399) -- not consistent with simple size-inflation hacking.",
+    "  ...and PoseBusters pass rate dropped (0.545 < 0.551) -- poses may be less physically plausible."
+  ]
+}

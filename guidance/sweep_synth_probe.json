@@ -1,0 +1,293 @@
+[
+  {
+    "lambda_affinity": 0.0,
+    "lambda_synth": 0.0,
+    "n_samples": 8,
+    "n_valid": 8,
+    "n_single_fragment": 8,
+    "single_fragment_rate": 1.0,
+    "validity_rate": 1.0,
+    "per_molecule": [
+      {
+        "sample_idx": 0,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.51860237121582,
+        "synth_own_score": 0.5036113262176514,
+        "qed": 0.6484027218787162,
+        "sa": 0.6,
+        "real_ra_score": 0.16649268567562103
+      },
+      {
+        "sample_idx": 1,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 8.552165031433105,
+        "synth_own_score": 0.9420632719993591,
+        "qed": 0.7004849471468728,
+        "sa": 0.62,
+        "real_ra_score": 0.886707067489624
+      },
+      {
+        "sample_idx": 2,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.794562339782715,
+        "synth_own_score": 0.07202236354351044,
+        "qed": 0.6651362617313366,
+        "sa": 0.5,
+        "real_ra_score": 0.04524059221148491
+      },
+      {
+        "sample_idx": 3,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.57232666015625,
+        "synth_own_score": 0.28895750641822815,
+        "qed": 0.68276766642531,
+        "sa": 0.56,
+        "real_ra_score": 0.8659664392471313
+      },
+      {
+        "sample_idx": 4,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.284181594848633,
+        "synth_own_score": 0.9691099524497986,
+        "qed": 0.5812880158997126,
+        "sa": 0.66,
+        "real_ra_score": 0.3267436623573303
+      },
+      {
+        "sample_idx": 5,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.384371757507324,
+        "synth_own_score": 0.8114310503005981,
+        "qed": 0.6766747832539148,
+        "sa": 0.4,
+        "real_ra_score": 0.06588301062583923
+      },
+      {
+        "sample_idx": 6,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 11.27892017364502,
+        "synth_own_score": 0.04872283712029457,
+        "qed": 0.21589671496852622,
+        "sa": 0.49,
+        "real_ra_score": 0.5233616232872009
+      },
+      {
+        "sample_idx": 7,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 10.637052536010742,
+        "synth_own_score": 0.027446771040558815,
+        "qed": 0.5362634558406035,
+        "sa": 0.31,
+        "real_ra_score": 0.006333262659609318
+      }
+    ],
+    "mean_affinity_model_own_score": 9.752772808074951,
+    "mean_synth_model_own_score": 0.4579206348862499,
+    "mean_qed": 0.5883643208931241,
+    "mean_sa": 0.5175,
+    "mean_ra_score": 0.36084104294423014,
+    "n_complete_for_chem": 8
+  },
+  {
+    "lambda_affinity": 0.0,
+    "lambda_synth": 0.01,
+    "n_samples": 8,
+    "n_valid": 8,
+    "n_single_fragment": 8,
+    "single_fragment_rate": 1.0,
+    "validity_rate": 1.0,
+    "per_molecule": [
+      {
+        "sample_idx": 0,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.498102188110352,
+        "synth_own_score": 0.5188822150230408,
+        "qed": 0.6484027218787162,
+        "sa": 0.6,
+        "real_ra_score": 0.16649268567562103
+      },
+      {
+        "sample_idx": 1,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 8.553247451782227,
+        "synth_own_score": 0.9441013932228088,
+        "qed": 0.7004849471468728,
+        "sa": 0.62,
+        "real_ra_score": 0.886707067489624
+      },
+      {
+        "sample_idx": 2,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.796302795410156,
+        "synth_own_score": 0.14932911098003387,
+        "qed": 0.6887872814555233,
+        "sa": 0.46,
+        "real_ra_score": 0.3007035553455353
+      },
+      {
+        "sample_idx": 3,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.57907485961914,
+        "synth_own_score": 0.33797308802604675,
+        "qed": 0.68276766642531,
+        "sa": 0.56,
+        "real_ra_score": 0.8659664392471313
+      },
+      {
+        "sample_idx": 4,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.28378677368164,
+        "synth_own_score": 0.9687572717666626,
+        "qed": 0.5812880158997126,
+        "sa": 0.66,
+        "real_ra_score": 0.3267436623573303
+      },
+      {
+        "sample_idx": 5,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.387044906616211,
+        "synth_own_score": 0.8209221959114075,
+        "qed": 0.6766747832539148,
+        "sa": 0.4,
+        "real_ra_score": 0.06588301062583923
+      },
+      {
+        "sample_idx": 6,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 11.321019172668457,
+        "synth_own_score": 0.05110585317015648,
+        "qed": 0.21082842572212354,
+        "sa": 0.46,
+        "real_ra_score": 0.29863446950912476
+      },
+      {
+        "sample_idx": 7,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 10.541044235229492,
+        "synth_own_score": 0.10860557854175568,
+        "qed": 0.3503733968667914,
+        "sa": 0.44,
+        "real_ra_score": 0.01275903731584549
+      }
+    ],
+    "mean_affinity_model_own_score": 9.74495279788971,
+    "mean_synth_model_own_score": 0.48745958833023906,
+    "mean_qed": 0.5674509048311205,
+    "mean_sa": 0.525,
+    "mean_ra_score": 0.36548624094575644,
+    "n_complete_for_chem": 8
+  },
+  {
+    "lambda_affinity": 0.0,
+    "lambda_synth": 0.03,
+    "n_samples": 8,
+    "n_valid": 8,
+    "n_single_fragment": 8,
+    "single_fragment_rate": 1.0,
+    "validity_rate": 1.0,
+    "per_molecule": [
+      {
+        "sample_idx": 0,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.4832181930542,
+        "synth_own_score": 0.5619782209396362,
+        "qed": 0.6387156551822424,
+        "sa": 0.55,
+        "real_ra_score": 0.010682640597224236
+      },
+      {
+        "sample_idx": 1,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 8.550850868225098,
+        "synth_own_score": 0.9475151896476746,
+        "qed": 0.635219033438417,
+        "sa": 0.64,
+        "real_ra_score": 0.9090811610221863
+      },
+      {
+        "sample_idx": 2,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.804598808288574,
+        "synth_own_score": 0.2538992166519165,
+        "qed": 0.44246998164005913,
+        "sa": 0.44,
+        "real_ra_score": 0.01891462877392769
+      },
+      {
+        "sample_idx": 3,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.614530563354492,
+        "synth_own_score": 0.8584652543067932,
+        "qed": 0.707818438727508,
+        "sa": 0.54,
+        "real_ra_score": 0.1875942498445511
+      },
+      {
+        "sample_idx": 4,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.252129554748535,
+        "synth_own_score": 0.9346567392349243,
+        "qed": 0.5944633572469841,
+        "sa": 0.62,
+        "real_ra_score": 0.13424161076545715
+      },
+      {
+        "sample_idx": 5,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 9.317204475402832,
+        "synth_own_score": 0.8504830002784729,
+        "qed": 0.5002323029426002,
+        "sa": 0.56,
+        "real_ra_score": 0.039651818573474884
+      },
+      {
+        "sample_idx": 6,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 11.318620681762695,
+        "synth_own_score": 0.09563767164945602,
+        "qed": 0.1686008051346272,
+        "sa": 0.45,
+        "real_ra_score": 0.03923676908016205
+      },
+      {
+        "sample_idx": 7,
+        "reconstructed": true,
+        "n_fragments": 1,
+        "affinity_own_score": 10.662715911865234,
+        "synth_own_score": 0.22678792476654053,
+        "qed": 0.43203144985177705,
+        "sa": 0.42,
+        "real_ra_score": 0.003793257288634777
+      }
+    ],
+    "mean_affinity_model_own_score": 9.750483632087708,
+    "mean_synth_model_own_score": 0.5911779021844268,
+    "mean_qed": 0.5149438780205269,
+    "mean_sa": 0.5275000000000001,
+    "mean_ra_score": 0.16789951699320227,
+    "n_complete_for_chem": 8
+  }
+]

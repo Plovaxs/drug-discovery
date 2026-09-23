@@ -1,0 +1,94 @@
+[
+  {
+    "name": "baseline_lr1e-4_layers6",
+    "config": "configs/prop/crossdocked_affinity_egnn.yml",
+    "log_path": "logs_affinity/crossdocked_affinity_egnn_2026_09_04__01_23_11/log.txt",
+    "best_epoch": 20,
+    "best_val_loss": 1.375,
+    "val": {
+      "n": 4061,
+      "rmse": 1.173,
+      "mae": 0.844,
+      "r2": 0.616,
+      "pearson": 0.788,
+      "spearman": 0.786
+    },
+    "test": {
+      "n": 27,
+      "rmse": 2.25,
+      "mae": 1.767,
+      "r2": -0.537,
+      "pearson": 0.233,
+      "spearman": 0.141
+    }
+  },
+  {
+    "name": "lr_3e-5_layers6",
+    "config": "configs/prop/affinity_sweep/lr_3e-5.yml",
+    "log_path": "./logs_affinity_sweep/lr_3e-5_layers6/lr_3e-5_2026_09_06__23_57_10/log.txt",
+    "best_epoch": 20,
+    "best_val_loss": 1.334,
+    "val": {
+      "n": 4061,
+      "rmse": 1.155,
+      "mae": 0.837,
+      "r2": 0.628,
+      "pearson": 0.803,
+      "spearman": 0.803
+    },
+    "test": {
+      "n": 27,
+      "rmse": 1.772,
+      "mae": 1.421,
+      "r2": 0.046,
+      "pearson": 0.538,
+      "spearman": 0.421
+    }
+  },
+  {
+    "name": "lr_3e-4_layers6",
+    "config": "configs/prop/affinity_sweep/lr_3e-4.yml",
+    "log_path": "./logs_affinity_sweep/lr_3e-4_layers6/lr_3e-4_2026_09_07__03_32_51/log.txt",
+    "best_epoch": 19,
+    "best_val_loss": 1.71,
+    "val": {
+      "n": 4061,
+      "rmse": 1.308,
+      "mae": 0.981,
+      "r2": 0.523,
+      "pearson": 0.727,
+      "spearman": 0.733
+    },
+    "test": {
+      "n": 27,
+      "rmse": 2.179,
+      "mae": 1.772,
+      "r2": -0.442,
+      "pearson": 0.272,
+      "spearman": 0.216
+    }
+  },
+  {
+    "name": "arch_lr1e-4_layers4",
+    "config": "configs/prop/affinity_sweep/arch_4layers.yml",
+    "log_path": "./logs_affinity_sweep/arch_lr1e-4_layers4/arch_4layers_2026_09_07__07_03_56/log.txt",
+    "best_epoch": 19,
+    "best_val_loss": 1.287,
+    "val": {
+      "n": 4061,
+      "rmse": 1.134,
+      "mae": 0.821,
+      "r2": 0.641,
+      "pearson": 0.806,
+      "spearman": 0.803
+    },
+    "test": {
+      "n": 27,
+      "rmse": 2.346,
+      "mae": 1.917,
+      "r2": -0.671,
+      "pearson": 0.119,
+      "spearman": 0.084
+    }
+  }
+]

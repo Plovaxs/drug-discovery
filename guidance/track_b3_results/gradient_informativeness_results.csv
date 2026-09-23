@@ -1,0 +1,9 @@
+label,n_unguided,n_guided,ks_stat,ks_p,mean_shift,median_shift,direction,ligand_efficiency_shift,ligand_efficiency_degraded,pb_valid_rate_unguided,pb_valid_rate_guided,pb_degraded,ks_p_bh_corrected,significant_after_correction,verdict
+BSD_ASPTE_1_130_0:uniform,20,20,0.1,0.9999923931635496,-0.15624999999999822,0.1355000000000004,correct (more negative/better),-0.006125157230934153,False,0.2,0.25,False,0.9999923931635496,False,no_signal
+BSD_ASPTE_1_130_0:late_third,20,20,0.2,0.8319696107963263,0.11505000000000187,0.46300000000000097,wrong (more positive/worse),0.0037144679451256435,True,0.2,0.25,False,0.9999923931635496,False,no_signal
+BSD_ASPTE_1_130_0:middle_third,20,20,0.15,0.9831368772656193,-0.011049999999999116,0.0519999999999996,correct (more negative/better),0.00015718627449989864,True,0.2,0.2,False,0.9999923931635496,False,no_signal
+BSD_ASPTE_1_130_0:early_third,20,20,0.15,0.9831368772656193,-0.002349999999998076,0.06750000000000078,correct (more negative/better),-0.0008359554964101346,False,0.2,0.3,False,0.9999923931635496,False,no_signal
+HDAC8_HUMAN_1_377_0:uniform,20,20,0.25,0.571336004933722,-0.08780000000000143,-0.44849999999999923,correct (more negative/better),-0.00502029319651226,False,0.6,0.6,False,0.9999923931635496,False,no_signal
+HDAC8_HUMAN_1_377_0:late_third,20,20,0.15,0.9831368772656193,0.09599999999999831,0.08250000000000046,wrong (more positive/worse),0.001593775892150484,True,0.6,0.6,False,0.9999923931635496,False,no_signal
+HDAC8_HUMAN_1_377_0:middle_third,20,20,0.2,0.8319696107963263,-0.03640000000000043,-0.13199999999999967,correct (more negative/better),-0.0031520833574607,False,0.6,0.55,False,0.9999923931635496,False,no_signal
+HDAC8_HUMAN_1_377_0:early_third,20,20,0.2,0.8319696107963263,-0.051000000000001044,-0.12899999999999956,correct (more negative/better),-0.0030848927755681155,False,0.6,0.6,False,0.9999923931635496,False,no_signal
