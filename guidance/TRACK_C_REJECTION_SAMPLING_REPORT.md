@@ -151,9 +151,36 @@ larger molecule without necessarily becoming physically implausible, so
 the same size-shortcut does less structural damage there — even though
 (per §4) it is *still* not a genuine affinity signal in either case.
 
-**Caveats (explicitly not overclaimed):** this is a single exploratory
-correlation at n=15, not a pre-registered test, and is not BH-corrected
-against the rest of this report's hypothesis tests (it was run
+**A second predictor was tested and adds independent explanatory power.**
+Per-pocket pool diversity (mean 1−Tanimoto across the full combined-seed
+pool, the same metric Task F already used) shows no significant
+relationship with the PoseBusters drop on its own (r=+0.24, 95% CI
+[−0.26,+0.59]). But the pool's heavy-atom-count *spread* (standard
+deviation across the ~600-molecule pool) does predict the PB drop
+**independently of pocket size**: partial Spearman correlation, pocket
+size held fixed via linear residualization, r=+0.70, 95% bootstrap CI
+[+0.17, +0.91] (n=15, case-resampling bootstrap, 5000 draws). Pockets
+whose unguided pool already spans a wider range of molecule sizes see a
+larger PoseBusters collapse after top-k selection — plausibly because a
+high-variance pool hands the ranker easier access to unusually large,
+tail-end molecules to select into the top 10%, compounding the plain
+pocket-size effect above. Pocket size itself correlates with pool
+diversity (r=−0.59, a side finding) but diversity does not independently
+predict the PB-drop outcome the way size-spread does.
+
+*(An earlier draft of this analysis mistakenly truncated the combined
+pool to its first 300 molecules when computing these two pool-level
+statistics — effectively using only one of the two seeds — which
+produced a non-significant partial correlation. Re-running the saved,
+reusable script below on the correct, full ~600-molecule pool per pocket
+reversed that conclusion to the significant result reported here; this
+correction was caught by re-deriving the numbers from a clean script run
+rather than trusting the first exploratory pass, consistent with this
+project's verification standard throughout.)*
+
+**Caveats (explicitly not overclaimed):** this is a small set of
+exploratory correlations at n=15, not pre-registered, and not
+BH-corrected against the rest of this report's hypothesis tests (run
 post-hoc, after seeing the PB-drop variation, specifically to explain
 it). It should be read as a plausible, testable mechanistic hypothesis
 for future work — e.g. an explicit pocket-volume vs. steric-clash-rate

@@ -155,19 +155,26 @@ only the figure number to match your thesis's actual numbering).
 **Source:** `guidance/analyze_pocket_size_confound.py`; see
 `TRACK_C_REJECTION_SAMPLING_REPORT.md` §6b.
 
-> **Figure 12.** Exploratory post-hoc correlation between pocket size
-> (protein atom count, CrossDocked2020 pocket10 crop) and the PoseBusters
-> valid-rate drop from Fig. 7C, per pocket (n=15). Spearman r = −0.59
-> (95% bootstrap CI [−0.83, −0.13], excludes zero; robust under
-> leave-one-out and confirmed by Pearson). Counter-intuitively, *smaller*
-> pockets are more susceptible to the size-shortcut artifact, not larger
-> ones — plausibly because a tightly-fitted small pocket has less room to
-> accommodate the ranker's preferred larger molecules without steric
-> clash, while a roomier pocket can absorb the same size push without
-> becoming as structurally implausible. Exploratory (not pre-registered,
-> not BH-corrected against the rest of Track C's tests) — a testable
-> hypothesis for follow-up work, best positioned in the Discussion
-> chapter as a mechanistic lead, not a confirmed causal claim.
+> **Figure 12.** Exploratory post-hoc analysis of what predicts the
+> per-pocket PoseBusters damage from Fig. 7C (n=15 pockets). **(A)**
+> Pocket size (protein atom count, CrossDocked2020 pocket10 crop) vs. the
+> PB valid-rate drop: Spearman r = −0.59 (95% bootstrap CI [−0.83, −0.13],
+> excludes zero; robust under leave-one-out and confirmed by Pearson).
+> Counter-intuitively, *smaller* pockets are more susceptible, not
+> larger ones — plausibly because a tightly-fitted small pocket has less
+> room to accommodate the ranker's preferred larger molecules without
+> steric clash, while a roomier pocket absorbs the same size push with
+> less structural damage. **(B)** The unguided pool's own heavy-atom-count
+> spread predicts additional damage *independent of pocket size* (partial
+> Spearman r = +0.70, 95% bootstrap CI [+0.17, +0.91]) — a pool that
+> already spans a wider size range hands the ranker easier access to
+> unusually large tail-end molecules. Both exploratory (not
+> pre-registered, not BH-corrected against the rest of Track C's tests)
+> — testable mechanistic leads for follow-up work, not confirmed causal
+> claims. See `TRACK_C_REJECTION_SAMPLING_REPORT.md` §6b for the full
+> analysis, including a documented correction (an earlier draft
+> under-sampled the pool to 300/600 molecules, which understated panel
+> B's effect).
 
 ---
 
