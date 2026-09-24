@@ -121,6 +121,45 @@ the more robust and decisive signal throughout. Full per-k results in
 `guidance/track_c_analysis/track_c_analysis_results.json`
 (`sensitivity_by_k_fraction`).
 
+## 6b. Exploratory follow-up: does pocket size predict susceptibility?
+
+The per-pocket PoseBusters drop in §4 ranges widely (5.7–52.7 pp) — a
+natural follow-up question is whether this variation is itself
+explainable, rather than unstructured noise. One cheap, testable
+hypothesis: pockets with more physical room might tolerate the ranker's
+size-shortcut better (or worse). Pocket size was operationalized as the
+protein atom count in each target's CrossDocked2020 `pocket10` crop (the
+same 10 Å pocket definition used throughout this project), correlated
+against the PoseBusters valid-rate drop via Spearman's rank correlation
+with a case-resampling bootstrap 95% CI (n=15 pockets).
+
+**Result: r = −0.59, 95% CI [−0.83, −0.13], excludes zero** — robust
+under leave-one-out (r stays in [−0.53, −0.71], raw p < 0.055 with any
+single pocket removed) and confirmed by Pearson (r = −0.54, p = 0.039).
+As a sanity check, pocket size also correlates with the *baseline*
+molecule size the model generates there (r = +0.72, 95% CI [+0.20,
++0.96]) — larger pockets do get larger unguided molecules, as expected.
+
+**The direction is the opposite of the naive hypothesis.** Larger
+pockets are *more* tolerant of the ranker's size-push (smaller PB drop),
+not more susceptible. A plausible interpretation: a small, tight pocket's
+baseline-generated molecules are already closely fitted to the available
+space; pushing toward the ranker's preferred larger size has nowhere to
+go without producing steric clashes or fragmentation, so validity
+collapses sharply. A large, roomy pocket can accommodate a somewhat
+larger molecule without necessarily becoming physically implausible, so
+the same size-shortcut does less structural damage there — even though
+(per §4) it is *still* not a genuine affinity signal in either case.
+
+**Caveats (explicitly not overclaimed):** this is a single exploratory
+correlation at n=15, not a pre-registered test, and is not BH-corrected
+against the rest of this report's hypothesis tests (it was run
+post-hoc, after seeing the PB-drop variation, specifically to explain
+it). It should be read as a plausible, testable mechanistic hypothesis
+for future work — e.g. an explicit pocket-volume vs. steric-clash-rate
+model — not as a confirmed causal finding. Figure and full correlation
+table in `guidance/all_tracks_figures/trackC_pocket_size_vs_pb_drop.{pdf,png}`.
+
 ## 7. Conclusion
 
 Track C's rejection-sampling mechanism — using the same frozen EGNN
@@ -153,3 +192,7 @@ non-gradient rejection sampling) all fail for a traceable, common reason.
   bootstrap CIs.
 - `guidance/example_render/*.png` — qualitative pose renders (separate,
   illustrative only; not part of this statistical analysis).
+- `guidance/analyze_pocket_size_confound.py`,
+  `guidance/all_tracks_figures/trackC_pocket_size_vs_pb_drop.{pdf,png}`
+  — §6b's exploratory pocket-size-vs-susceptibility follow-up analysis
+  and figure.
