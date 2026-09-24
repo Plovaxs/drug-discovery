@@ -180,5 +180,12 @@ stand.
 - `guidance/TRACK_D_SYNTH_GUIDANCE_REPORT.md` — Track D detailed report.
 - `guidance/DIAG1_SIZE_CONFOUND_FINDING.md`, `guidance/DIAG_SYNTH_DIRECTION_FINDING.md`
   — the two mechanistic diagnostics.
-- `guidance/track_c_figures/`, `guidance/example_render/` — publication
-  figures (statistical + structural) for the Results chapter.
+- `guidance/track_c_figures/`, `guidance/example_render/` — Track C
+  publication figures (statistical + structural pose renders).
+- `guidance/all_tracks_figures/` — publication figures for Tracks A, B,
+  D, and both diagnostics (DIAG1, D.5): effect-size forest plots,
+  direction-consistency and PoseBusters dose-response charts, the
+  predictive-quality comparison across every trained model, Track D's
+  own-score-vs-real-score divergence plot, the DIAG1-vs-D.5 diagnostic
+  comparison, and the grand summary verdict chart across every
+  track/sub-track tested in this project (`guidance/plot_all_tracks_figures.py`).
