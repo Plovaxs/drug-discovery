@@ -143,12 +143,20 @@ gradient's misdirection.** It is not systematically pushing toward
 heavier atoms, and not systematically pushing toward or away from
 aromaticity. This rules out the two cheapest, most obvious candidate
 explanations, but the actual mechanism behind the divergence remains an
-open question. Plausible untested candidates: a higher-order/
-adversarial-like direction in the model's input space (a known failure
-mode in the classifier-guidance literature), or the fingerprint-based
-RA-score target may have a training-distribution structure that a smooth,
-continuous 3D gradient cannot usefully approximate regardless of which
-feature it chases.
+open question.
+
+**D.5b follow-up** (requested during thesis-writing review, same scale):
+a third proxy, heteroatom fraction (P(N/O/S/P/halogen), distinct from the
+atomic-number-weighted heaviness above — motivated by RA-score-style
+classifiers' known sensitivity to heteroatom-dense functional groups),
+was also tested and also ruled out: correlation = 0.042, 95% CI
+[-0.008, 0.091] (n=144). Three candidate proxies now tested, all null.
+Plausible remaining, untested candidates: a higher-order/adversarial-like
+direction in the model's input space (a known failure mode in the
+classifier-guidance literature), or the fingerprint-based RA-score target
+may have a training-distribution structure that a smooth, continuous 3D
+gradient cannot usefully approximate regardless of which feature it
+chases.
 
 ## 6. Summary table (D.2 → D.5)
 
@@ -158,7 +166,8 @@ feature it chases.
 | D.2a | Leakage-safe retrain: real test R²=0.414 (not the previously-reported 0.769) |
 | D.3 | Divergence **persists** at proper power (n=30) even with both fixes applied — own score up, real RA-score down |
 | D.4 | Skipped per the explicit gating rule (D.3 did not show resolution) |
-| D.5 | Neither size nor aromaticity explains the gradient's misdirection — mechanism remains unidentified |
+| D.5 | Size and aromaticity don't explain the gradient's misdirection |
+| D.5b | Heteroatom fraction (third proxy) also doesn't — mechanism remains unidentified after three attempts |
 
 ## 7. Conclusion and how this compares to the affinity side
 
@@ -175,11 +184,12 @@ check).
 **One honest, disclosed difference from the affinity side**: DIAG1 found
 a concrete, statistically clear mechanistic explanation for the
 affinity-guidance failure (gradient direction anti-correlated with
-pocket-contact proximity). D.5 did not find an equivalent explanation for
-the synthesizability side — the two cheapest candidate proxies were both
-ruled out, but the actual mechanism remains open. This is reported as a
-genuine gap in this phase's explanatory power, not minimized or implied
-to be equivalent to DIAG1's result.
+pocket-contact proximity). D.5/D.5b did not find an equivalent
+explanation for the synthesizability side — three candidate proxies
+(size, aromaticity, heteroatom fraction) were all ruled out, but the
+actual mechanism remains open. This is reported as a genuine gap in this
+phase's explanatory power, not minimized or implied to be equivalent to
+DIAG1's result.
 
 Combined with the affinity side's `guidance/DUAL_FALSIFICATION_CONCLUSION.md`,
 both halves of the thesis's originally-proposed "Coupled
@@ -201,3 +211,5 @@ to their respective real targets — see
   — the leakage-safe re-split and retrain scripts.
 - `guidance/diag_synth_direction.py`, `guidance/diag_synth_direction_results.json`
   — D.5's diagnostic script and raw results.
+- `guidance/diag_synth_direction_followup.py`, `guidance/diag_synth_direction_followup_results.json`
+  — D.5b's third-proxy (heteroatom fraction) follow-up script and results.

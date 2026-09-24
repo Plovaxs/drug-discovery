@@ -35,6 +35,27 @@ per-atom gradient magnitude against two proxies:
 | Gradient magnitude vs. size/heaviness | 0.032 | [-0.019, 0.083] | **Not significant** (CI includes 0) |
 | Gradient magnitude vs. aromaticity | -0.014 | [-0.061, 0.036] | **Not significant** (CI includes 0) |
 
+## Follow-up: a third proxy, requested during thesis-writing review
+
+A third candidate proxy was tested at the same scale (3 pockets, n=16,
+same 3 captured timesteps, n=144 total gradient-vs-proxy correlations):
+**heteroatom fraction** — P(atom is N/O/S/P/halogen) under the current
+soft type distribution, distinct from the "heaviness" proxy above (which
+weights by raw atomic number) because RA-score-style classifiers are
+known to be sensitive to heteroatom-dense functional groups (esters,
+amides, sulfonamides) in a way a smooth atomic-number-weighted average
+does not specifically capture.
+
+| Correlation | Mean | 95% CI | Interpretation |
+|---|---|---|---|
+| Gradient magnitude vs. heteroatom fraction | 0.042 | [-0.008, 0.091] | **Not significant** (CI includes 0) |
+
+**Also ruled out.** This is the third candidate explanation tested for
+the synth-guidance gradient's misdirection (after size/heaviness and
+aromaticity), and the third to come back null. Script:
+`guidance/diag_synth_direction_followup.py`; raw results:
+`guidance/diag_synth_direction_followup_results.json`.
+
 ## Interpretation: unlike DIAG1, this diagnostic did NOT find an explanation
 
 **This is a genuinely different result from the affinity side's DIAG1**,
@@ -49,9 +70,11 @@ This does not mean the gradient direction is fine — D.3 already
 established it moves real RA-score in the wrong direction. It means the
 two cheapest, most obvious candidate explanations (size-shortcut,
 aromaticity-shortcut) are both ruled out, and the actual mechanism behind
-the divergence remains an open question. Plausible remaining candidates,
-none tested here (matching `SYNTH_GUIDANCE_FINDING.md`'s own "open
-question" list, still unresolved): the gradient may be exploiting a
+the divergence remains an open question. A third proxy (heteroatom
+fraction, see the follow-up above) was also tested and also ruled out.
+Plausible remaining candidates, none tested here (matching
+`SYNTH_GUIDANCE_FINDING.md`'s own "open question" list, still
+unresolved): the gradient may be exploiting a
 higher-order/adversarial-like direction in the model's input space (the
 classifier-guidance literature's known failure mode) that isn't captured
 by either simple scalar proxy tried here, or the fingerprint-based
