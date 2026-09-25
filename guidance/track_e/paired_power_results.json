@@ -1,0 +1,179 @@
+{
+ "n_test_targets": 127,
+ "pearson_pk_vs_heavy_atoms_test": 0.5551430731557143,
+ "pearson_egnn_pred_vs_heavy_atoms_test": 0.7194931237981728,
+ "egnn_vs_ha_only": {
+  "delta_r2_point": 0.03464966360822552,
+  "ci95": [
+   -0.0749335130146991,
+   0.13533898741696082
+  ],
+  "sd": 0.053356584968924516
+ },
+ "egnn_vs_vina_calibrated": {
+  "delta_r2_point": 0.081394015579772,
+  "ci95": [
+   -0.007074141337957354,
+   0.16426214128606542
+  ],
+  "sd": 0.04446024261790655
+ },
+ "egnn_vs_vina_plus_ha_linear": {
+  "delta_r2_point": -0.016076175884184307,
+  "ci95": [
+   -0.10374855720972441,
+   0.07020944046274873
+  ],
+  "sd": 0.04383230554379454
+ },
+ "vina_plus_ha_vs_ha_only": {
+  "delta_r2_point": 0.05072583949240983,
+  "ci95": [
+   0.015907688101556038,
+   0.08593875572472585
+  ],
+  "sd": 0.018203224177442995
+ },
+ "test_complexes_per_target": {
+  "min": 1,
+  "median": 14.0,
+  "max": 1392
+ },
+ "within_target_ranking_min10": {
+  "egnn": {
+   "n_targets": 73,
+   "mean_spearman": 0.19494370482086207,
+   "median_spearman": 0.2676916743139069,
+   "ci95_mean": [
+    0.08106670975422806,
+    0.3059043757269063
+   ]
+  },
+  "vina_raw": {
+   "n_targets": 73,
+   "mean_spearman": 0.24804593298546437,
+   "median_spearman": 0.3376705922904005,
+   "ci95_mean": [
+    0.15311705251319488,
+    0.33584236856380695
+   ]
+  },
+  "heavy_atoms": {
+   "n_targets": 71,
+   "mean_spearman": 0.1905916977040139,
+   "median_spearman": 0.30781305274383536,
+   "ci95_mean": [
+    0.05259742821545762,
+    0.3209037590777587
+   ]
+  },
+  "vina_plus_ha_linear": {
+   "n_targets": 73,
+   "mean_spearman": 0.2646354713795957,
+   "median_spearman": 0.3922939694643142,
+   "ci95_mean": [
+    0.1597788960455078,
+    0.3705313680061192
+   ]
+  }
+ },
+ "reference_table_clipped_anchor": {
+  "vina_clipped_raw": {
+   "r2": 0.07646899932911788,
+   "r2_ci_target_cluster": [
+    -0.20771664413489,
+    0.2629132776320521
+   ],
+   "pearson": 0.5297169852183372,
+   "pearson_vs_heavy_atoms": 0.621982838378198,
+   "within_target": {
+    "n_targets": 73,
+    "mean_spearman": 0.24804594635438992,
+    "median_spearman": 0.3376705922904005,
+    "ci95_mean": [
+     0.15745765277531037,
+     0.3330515804322686
+    ]
+   }
+  },
+  "vina_clipped_calibrated": {
+   "r2": 0.2731428319369882,
+   "r2_ci_target_cluster": [
+    0.16278466525656152,
+    0.3379465845139607
+   ],
+   "pearson": 0.5297169852183372,
+   "pearson_vs_heavy_atoms": 0.6219828383781981,
+   "within_target": {
+    "n_targets": 73,
+    "mean_spearman": 0.24804594635438992,
+    "median_spearman": 0.3376705922904005,
+    "ci95_mean": [
+     0.15377511998698487,
+     0.33342138649865977
+    ]
+   }
+  },
+  "heavy_atoms_only": {
+   "r2": 0.30689006434188904,
+   "r2_ci_target_cluster": [
+    0.13583673041470581,
+    0.4290266463532856
+   ],
+   "pearson": 0.5551430731557143,
+   "pearson_vs_heavy_atoms": 0.9999999999999999,
+   "within_target": {
+    "n_targets": 71,
+    "mean_spearman": 0.1905916977040139,
+    "median_spearman": 0.30781305274383536,
+    "ci95_mean": [
+     0.0449685346844196,
+     0.3286481702497968
+    ]
+   }
+  },
+  "vina_clipped_plus_ha_linear": {
+   "r2": 0.36151825128611814,
+   "r2_ci_target_cluster": [
+    0.1937544085634585,
+    0.47225951911015707
+   ],
+   "pearson": 0.6021858833975756,
+   "pearson_vs_heavy_atoms": 0.9400589034025209,
+   "within_target": {
+    "n_targets": 73,
+    "mean_spearman": 0.2657125795589361,
+    "median_spearman": 0.3963666943457547,
+    "ci95_mean": [
+     0.15492755044844084,
+     0.3692437959332965
+    ]
+   }
+  },
+  "stage0_egnn": {
+   "r2": 0.34153972795011456,
+   "r2_ci_target_cluster": [
+    0.16416164185542506,
+    0.4636719739612088
+   ],
+   "pearson": 0.6090235754342784,
+   "pearson_vs_heavy_atoms": 0.7194931237981728,
+   "within_target": {
+    "n_targets": 73,
+    "mean_spearman": 0.19494370482086207,
+    "median_spearman": 0.2676916743139069,
+    "ci95_mean": [
+     0.07235891663784733,
+     0.3117078238235321
+    ]
+   }
+  },
+  "delta_target_clipped_train": {
+   "mean": 0.5176772525978013,
+   "std": 1.7530424944894032,
+   "pk_std": 1.8011892602558346,
+   "pearson_delta_vs_ha": 0.052208585012184935,
+   "n_positive_vina_train": 53
+  }
+ }
+}

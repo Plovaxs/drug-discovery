@@ -1,0 +1,120 @@
+{
+ "n": {
+  "train": 46964,
+  "val": 6069,
+  "test": 11855
+ },
+ "missing_vina": {
+  "train": 0,
+  "val": 0,
+  "test": 0
+ },
+ "n_targets": {
+  "train": 779,
+  "val": 65,
+  "test": 127
+ },
+ "delta_target": {
+  "train_mean": 0.520873487824834,
+  "train_std": 1.771760745414353,
+  "train_pk_std": 1.8011892602558346,
+  "pearson_delta_vs_heavy_atoms_train": 0.051203146006757724,
+  "pearson_pk_vs_heavy_atoms_train": 0.49688457628201244,
+  "pearson_pkvina_vs_heavy_atoms_train": 0.5339956567854508,
+  "pearson_pk_vs_pkvina_train": 0.4374710454275628
+ },
+ "test_baselines": [
+  {
+   "name": "Vina-only raw (yhat=-vina/1.364)",
+   "r2": 0.032239035584821996,
+   "r2_ci_target_cluster": [
+    -0.2830820992760794,
+    0.23847414275258796
+   ],
+   "pearson": 0.5149222958650437,
+   "pearson_ci_target_cluster": [
+    0.4042655555607042,
+    0.6056448324117913
+   ]
+  },
+  {
+   "name": "Vina-only linearly calibrated on train",
+   "r2": 0.26014571237034256,
+   "r2_ci_target_cluster": [
+    0.14550494926815863,
+    0.32587231695894725
+   ],
+   "pearson": 0.5149222958650437,
+   "pearson_ci_target_cluster": [
+    0.40426555556070415,
+    0.6056448324117913
+   ]
+  },
+  {
+   "name": "Heavy-atom-count only (linear, train fit)",
+   "r2": 0.30689006434188904,
+   "r2_ci_target_cluster": [
+    0.13607484729272057,
+    0.42115932992250243
+   ],
+   "pearson": 0.5551430731557143,
+   "pearson_ci_target_cluster": [
+    0.4001294986347761,
+    0.6716464769587461
+   ]
+  },
+  {
+   "name": "Vina + heavy-atom linear (train fit)",
+   "r2": 0.35761590383429886,
+   "r2_ci_target_cluster": [
+    0.19435728194827454,
+    0.46611047448156573
+   ],
+   "pearson": 0.5987446958311881,
+   "pearson_ci_target_cluster": [
+    0.4669418986847767,
+    0.7017986028481495
+   ]
+  },
+  {
+   "name": "Train-mean constant",
+   "r2": -4.261289991336348e-05,
+   "r2_ci_target_cluster": [
+    -0.07312297099487294,
+    -1.5490401352036304e-05
+   ],
+   "pearson": NaN,
+   "pearson_ci_target_cluster": [
+    NaN,
+    NaN
+   ]
+  },
+  {
+   "name": "Stage 0 EGNN (existing checkpoint) [all test]",
+   "r2": 0.34153972795011456,
+   "r2_ci_target_cluster": [
+    0.16399904526951153,
+    0.4626810039030281
+   ],
+   "pearson": 0.6090235754342784,
+   "pearson_ci_target_cluster": [
+    0.5183456324339781,
+    0.6925362297611033
+   ]
+  },
+  {
+   "name": "Stage 0 EGNN (existing checkpoint) [test with Vina score]",
+   "r2": 0.34153972795011456,
+   "r2_ci_target_cluster": [
+    0.16399904526951153,
+    0.4626810039030281
+   ],
+   "pearson": 0.6090235754342784,
+   "pearson_ci_target_cluster": [
+    0.5183456324339781,
+    0.6925362297611033
+   ]
+  }
+ ],
+ "egnn_pearson_pred_vs_heavy_atoms_test": 0.7194931237981728
+}

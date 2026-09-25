@@ -1,0 +1,48 @@
+{
+ "summary": {
+  "n_requested": 200,
+  "n_ok": 200,
+  "n_errors": 0,
+  "errors": [],
+  "wall_s": 15.064417362213135,
+  "workers": 2,
+  "complexes_per_s": 13.276318306320325,
+  "mean_plip_s_per_complex": 0.07191820621490479,
+  "zero_interaction_complex_frac": 0.010000000000000009,
+  "ligand_atom_positive_rate": {
+   "hbond": 0.11129672165378994,
+   "hydrophobic": 0.16976404259761954,
+   "pi_stack": 0.1317602839841303,
+   "salt_bridge": 0.03153059093756525
+  },
+  "complex_has_class_rate": {
+   "hbond": 0.93,
+   "hydrophobic": 0.91,
+   "pi_stack": 0.44,
+   "salt_bridge": 0.285
+  },
+  "index_element_mismatches_total": 0,
+  "jitter": {
+   "sigma_A": 0.2,
+   "n": 100,
+   "atom_level_jaccard_mean_over_complexes_with_label": {
+    "hbond": 0.8084997439836149,
+    "hydrophobic": 0.6897281290138433,
+    "pi_stack": 0.15528455284552847,
+    "salt_bridge": 0.8088235294117647
+   },
+   "n_complexes_with_label": {
+    "hbond": 93,
+    "hydrophobic": 91,
+    "pi_stack": 41,
+    "salt_bridge": 34
+   },
+   "complex_level_presence_agreement": {
+    "hbond": 0.95,
+    "hydrophobic": 0.98,
+    "pi_stack": 0.69,
+    "salt_bridge": 0.95
+   }
+  }
+ }
+}

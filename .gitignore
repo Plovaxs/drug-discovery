@@ -149,3 +149,7 @@ guidance/track_c_pools/*/*/sdf/
 guidance/generated_candidates/*/sdf/
 sampling_results/
 __pycache__/
+
+# Track E regenerable caches
+guidance/track_e/_*.npz
+guidance/track_e/__pycache__/
