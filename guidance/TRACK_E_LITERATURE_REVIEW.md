@@ -256,3 +256,10 @@ Numbering matches the entries above. Entries marked † are the 12 that are stil
 - Zhung, W.; Kim, H.; Kim, W. Y. 3D Molecular Generative Framework for Interaction-Guided Drug Design. *Nat. Commun.* **2024**, *15*, 2688. https://doi.org/10.1038/s41467-024-47011-2 [29]
 
 *Bibliographic details for the PubMed-verified entries were retrieved from PubMed records in this session.*
+
+## Addendum (2026-09-25): independent cross-check of Sec. 1.5, supplied by the user
+
+Additional near-neighbour sources (not in the numbered list of 45; tags show how far I verified them): **InterDiff** — Wu, P.; Du, H.; Yan, Y.; Lee, T.-Y.; Bai, C.; Wu, S. *Guided diffusion for molecular generation with interaction prompt.* *Brief. Bioinform.* **2024**, *25* (3), bbae174 [page fetched: training-time interaction-type cross-entropy loss inside the denoiser + cross-attention prompts; not PubMed-checked]. **BInD** — Lee, J.; Zhung, W.; Seo, J.; Kim, W. Y. *Adv. Sci.* **2025**, *12* (35), e02702; PMC12463045 [page fetched: PLIP interactions co-generated as a diffusion channel]. **Delta Score** — Ren, M.; Gao, B.; Qiang, B.; Lan, Y. arXiv:2311.12035 (2023) and **SBE-Diff** — Gao, B. et al. arXiv:2403.12987 (2024) [**preprints**; "delta" = a specificity/evaluation metric — name collision only]. Reported by the user's check but **not re-verified by me**: DiffPharma (*npj Drug Discov.* 2026, 10.1038/s44386-026-00040-x), DiffInt (*JCIM* 2024, 4c01385; **training-loss details unconfirmed**), BADGER (*JCIM* 2025, 5c01166), arXiv:2505.05874, DeepRLI (arXiv:2401.10806).
+
+**Correction to the user-supplied summary:** InterDiff *does* use an auxiliary interaction-type classification loss at training time (in the generator's denoiser), so the statement that no paper uses typed interactions as an auxiliary training loss is not supported; the defensible gap is the placement of that supervision on the **guidance model** together with a delta target. See `TRACK_E_DESIGN.md` amendment A8.
+
