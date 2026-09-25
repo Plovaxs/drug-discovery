@@ -325,4 +325,59 @@ Regeneration: `PYTHONPATH=. python guidance/track_e/reference_baselines_check.py
 
 ## Amendments
 
-*(none — pre-registration frozen at the commit that introduces this file)*
+*Pre-registration frozen at commit `8d913c6`. All amendments below were made on 2026-09-25 after the go-ahead for Option F and
+**before any Track E model was trained**; none changes a pass/fail threshold.*
+
+**A1 — decisions D1–D6 resolved by the user.** D1: Option F (~58 GPU-h budget), scope below. D2: π-stack/π-cation dropped from the
+primary auxiliary head. D3: E1 counts as a positive result only if it beats **both** the Stage 0 EGNN (R² 0.342) **and** the
+Vina + heavy-atom linear baseline (R² 0.362); this is exactly C1a AND C1b in Sec. 2.4 (both must pass; C1a alone is explicitly *not* a pass — a
+"PARTIAL" outcome). D4: the 2 extra EGNN seeds are part of Option F (not additional). D5: guided-generation re-test deferred. D6: see A3.
+
+**A2 — limitation stated explicitly (D2).** π-stacking (merged with π-cation) PLIP labels are **not** used as training targets: atom-level
+Jaccard between labels of the original and 0.2 Å-jittered pose is 0.16 (complex-level presence agreement 0.69), against 0.69–0.81 for H-bond,
+hydrophobic and salt bridge. The labels are computed and cached (column `pi_stack`) but excluded from the loss; E2 therefore tests
+H-bond, hydrophobic and salt-bridge supervision only, and cannot speak to π-stacking.
+
+**A3 — D6 result (Vina column semantics), `guidance/track_e/d6_vina_semantics_check.py`, n = 100 CrossDocked test-set reference poses with real receptor
++ SDF on disk, Vina 1.2.6 through this project's own preparation.** The stored `vina` value is a Vina-type score of (approximately) the stored pose but is
+**not reproducible exactly** with our pipeline: mean(stored − recomputed) = −0.79 kcal/mol (score-only) / −0.44 (minimised), MAE 0.82 / 0.79 kcal/mol,
+Pearson 0.86 / 0.89. **Score-only and minimised cannot be told apart by this check**: for 90 of 100 poses they differ by < 0.2 kcal/mol under our preparation
+(poses already sit at a local minimum), and for the 5 poses where they differ neither matches the stored value (MAE ≈ 4–5 kcal/mol; stored value
+tracks minimised in 3/5); a Wilcoxon test of |stored − minimised| < |stored − score-only| is not significant (p = 0.97). The SDF files carry no `minimizedAffinity`
+field. Conclusion: the stored anchor is treated as an **opaque, fixed, pose-attached Vina-type score with ≈ 0.8 kcal/mol (≈ 0.6 pK) preparation noise
+relative to our recomputation**. This does **not** affect any scoring result on CrossDocked poses (train and test both use the stored anchor), but it means an anchor
+recomputed for *generated* molecules (D5, deferred) would carry a systematic offset of about +0.3–0.6 pK that would have to be calibrated. The stretch item "rerun
+the headline result under the other Vina interpretation" is **not feasible at scale** (raw receptors exist only for the 100 test targets, not the 64,888 LP-split complexes); its planned
+substitute is a **robustness test** that perturbs the anchor at test time (offset −0.5 kcal/mol and Gaussian noise SD 0.8 kcal/mol) and reports the change in ΔR².
+
+**A4 — corrections and execution details (no threshold changes).**
+(i) Track A's full-tier model used **hidden 256 / 0.494 M parameters** (not 64 as written in Sec. 2.1); Track E arms use hidden 256, matching the reference model.
+(ii) Epoch cap **30** (Track A used 100): worst case 30 × 10.9 min ≈ 5.5 h per run; early stopping keyed on validation loss of the *main* (Δ or absolute) loss, patience 12, for every arm.
+(iii) Test predictions are produced **once**, from `best.pt`, at the end of each run (Track A evaluated the test set at every improvement; selection is unchanged because it uses validation loss only).
+(iv) Train/val exclude Vina > 0 poses for all GIGN arms (A0′ included); the test set is unfiltered. The 2 extra EGNN seeds (2022, 2023) replicate `train_egnn_stage0.py`
+exactly (same 6,000-entry training subsample, seed-2021 subsample kept fixed; only the training seed varies) and are combined with the existing Stage 0 checkpoint into a 3-seed EGNN baseline used as a **sensitivity** reference;
+the decision reference stays the pre-registered Stage 0 checkpoint.
+(v) The "best E1 head" for E2 is chosen on **validation loss only** (seed-mean best val loss, `phys` vs `mlp`), never on test.
+(vi) The λ_aux sensitivity sweep and the conditional PCGrad arm belong to the E2 stage (λ_aux exists only there); they are not run in the E1 stage. The PCGrad arm is launched only if the
+logged cosine between the Δ and auxiliary gradients on the shared layers has median < −0.2 over the second half of training, as declared in Sec. 2.2.
+(vii) Uncertainty is reported at 90/95/99% (percentile bootstrap); decisions use 95% and one-sided p-values with Benjamini–Hochberg across each stage's tests. Effect sizes: ΔR²/bootstrap-SD and paired Cohen's d_z on per-target MSE differences.
+(viii) Aux loss is masked for complexes with no detected interaction in the three primary classes: 2.6% of train, 1.9% of val, **7.3% of test** (full-cache MEASURED; the 200-complex sample gave 1%).
+
+**A5 — confirmed compute (100-step benchmark, RTX 3050, idle CPU; `train_e.py --benchmark_steps 100`).**
+
+| Arm | Train it/s | Eval it/s | Epoch (46,911 train + 6,069 val) | Run (13 epochs = patience-12 minimum) |
+|---|---|---|---|---|
+| A0′ / E1 (physics head) | 76.7 | 140 | 10.9 min | **≈ 2.4 h** (matches estimate) |
+| E1-MLP | 123 | 166 | 7.1 min | ≈ 1.5 h |
+| E1+E2 (aux head) | 74.8 | 132 | 11.2 min | **≈ 2.4 h** (estimate was 2.6 h) |
+| E1+E2 + PCGrad | 59.9 | 129 | 13.5 min | ≈ 2.9 h |
+| Stage 0 EGNN (extra seeds) | 11.9 | 32 | 11.6 min (6,000-entry epoch) | 2.3–3.9 h (patience 5 / cap 20 epochs) |
+
+(An earlier benchmark taken while PLIP labelling ran on 4 CPU cores gave ≈ 60 it/s; the difference was CPU contention, so **labelling and training must not overlap** — labelling is finished.)
+Revised Option F budget: E1 stage 3 × (2.4 + 2.4 + 1.5) + 2 EGNN ≈ **24–27 GPU-h**; E2 stage 6 × 2.4 + λ-sweep 2 × 2.4 + PCGrad 3 × 2.9 ≈ **28 GPU-h**; total ≈ **52–55 GPU-h**, inside the ~58 GPU-h budget.
+
+**A6 — infrastructure verification (before any real run).** Unit tests for the delta target/reconstruction and the scramble control (`guidance/track_e/tests/test_core.py`, 10 tests).
+Interrupt/resume: SIGTERM mid-epoch → atomic checkpoint, exit 75, exact resume; SIGKILL → resume from the last periodic checkpoint. **A trainer bug was found and fixed during this test**: the model was built before
+`seed_all`, so initial weights were not a function of the seed. After the fix, an interrupted-and-resumed run is **bitwise identical** to an uninterrupted run on CPU (single thread: prediction and parameter
+differences exactly 0.0, interrupted mid-epoch 2), and on GPU epoch 1 is bit-identical while later epochs differ at the level of CUDA atomic non-determinism (max |Δŷ| 0.048 for resumed vs 0.059 between two uninterrupted runs), i.e. **resuming is indistinguishable from re-running on this hardware**.
+Analysis pipeline check: the Track A model reproduces its recorded R² = −0.189 / Pearson 0.581 through the new inference path, and the fast target-clustered bootstrap reproduces the frozen reference CIs.

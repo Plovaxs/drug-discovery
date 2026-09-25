@@ -1,0 +1,621 @@
+{
+ "n": 100,
+ "vs_score_only": {
+  "mean_diff_stored_minus_calc": -0.7860089000000001,
+  "MAE": 0.8150979,
+  "median_abs": 0.5791049999999998,
+  "frac_within_0.05": 0.08,
+  "frac_within_0.5": 0.48,
+  "pearson": 0.8588831961413124
+ },
+ "vs_minimize": {
+  "mean_diff_stored_minus_calc": -0.4411289,
+  "MAE": 0.7919904999999998,
+  "median_abs": 0.5395849999999995,
+  "frac_within_0.05": 0.03,
+  "frac_within_0.5": 0.47,
+  "pearson": 0.8920777451536873
+ },
+ "rows": [
+  {
+   "key": "ABL2_HUMAN_274_551_0/4xli_B_rec_4xli_1n1_lig_tt_min_0",
+   "stored": -9.08044,
+   "score_only": -8.889,
+   "minimize": -8.856
+  },
+  {
+   "key": "ACE_HUMAN_650_1230_0/3l3n_A_rec_2iux_nxa_lig_tt_docked_2",
+   "stored": -4.06829,
+   "score_only": -3.74,
+   "minimize": -3.74
+  },
+  {
+   "key": "AK1BA_HUMAN_1_316_0/5liu_X_rec_4gq0_qap_lig_tt_min_0",
+   "stored": -8.10097,
+   "score_only": -7.759,
+   "minimize": -7.698
+  },
+  {
+   "key": "AKT1_HUMAN_1_137_0/3o96_A_rec_3o96_iqo_lig_tt_docked_2",
+   "stored": -14.00626,
+   "score_only": -13.992,
+   "minimize": -14.21
+  },
+  {
+   "key": "AROE_THET8_1_263_0/2cy0_A_rec_2d5c_skm_lig_tt_min_0",
+   "stored": -6.89257,
+   "score_only": -6.207,
+   "minimize": -6.152
+  },
+  {
+   "key": "ATS5_HUMAN_262_480_0/3hy9_B_rec_3hyg_099_lig_tt_min_0",
+   "stored": -9.73357,
+   "score_only": -9.153,
+   "minimize": -9.291
+  },
+  {
+   "key": "BACE2_HUMAN_76_460_0/4bel_A_rec_2ewy_dbo_lig_tt_min_0",
+   "stored": -9.46299,
+   "score_only": -8.784,
+   "minimize": -8.893
+  },
+  {
+   "key": "BAPA_SPHXN_30_402_0/3nfb_A_rec_3nfb_oae_lig_tt_docked_2",
+   "stored": -8.43483,
+   "score_only": -7.615,
+   "minimize": -7.544
+  },
+  {
+   "key": "BAZ2A_HUMAN_1795_1898_0/5mgl_A_rec_5mgl_7mu_lig_tt_min_0",
+   "stored": -4.43905,
+   "score_only": -4.114,
+   "minimize": -4.144
+  },
+  {
+   "key": "BGAT_HUMAN_63_353_0/5tjn_A_rec_1zj1_nlc_lig_tt_docked_4",
+   "stored": -5.3143,
+   "score_only": -4.585,
+   "minimize": -4.514
+  },
+  {
+   "key": "BGL07_ORYSJ_25_504_0/4qlk_A_rec_4qlk_ctt_lig_tt_docked_0",
+   "stored": -12.20443,
+   "score_only": -9.381,
+   "minimize": -9.377
+  },
+  {
+   "key": "BSD_ASPTE_1_130_0/2z3h_A_rec_1wn6_bst_lig_tt_docked_3",
+   "stored": -10.02375,
+   "score_only": -8.822,
+   "minimize": -8.818
+  },
+  {
+   "key": "BTRN_BACCI_2_250_0/4m7t_A_rec_4m7t_sam_lig_tt_min_0",
+   "stored": -9.58385,
+   "score_only": -8.34,
+   "minimize": -8.366
+  },
+  {
+   "key": "CAT_ECOLX_1_219_0/3u9f_C_rec_3u9f_clm_lig_tt_min_0",
+   "stored": -6.61714,
+   "score_only": -6.342,
+   "minimize": -6.305
+  },
+  {
+   "key": "CCPR_YEAST_69_361_0/1a2g_A_rec_4jmv_1ly_lig_tt_min_0",
+   "stored": -4.53078,
+   "score_only": -4.401,
+   "minimize": -4.388
+  },
+  {
+   "key": "CD38_HUMAN_44_300_0/3dzh_A_rec_3u4i_cvr_lig_tt_docked_0",
+   "stored": -10.99611,
+   "score_only": -9.122,
+   "minimize": -9.057
+  },
+  {
+   "key": "CDK6_HUMAN_1_312_0/2f2c_B_rec_1xo2_fse_lig_tt_min_0",
+   "stored": -8.70241,
+   "score_only": -7.952,
+   "minimize": -7.819
+  },
+  {
+   "key": "CDK6_HUMAN_1_312_0/4aua_A_rec_4aua_4au_lig_it2_tt_docked_7",
+   "stored": 0.72634,
+   "score_only": 0.736,
+   "minimize": -5.939
+  },
+  {
+   "key": "CHIA_SERMA_19_563_0/1k9t_A_rec_2wlz_dio_lig_tt_min_0",
+   "stored": -2.49237,
+   "score_only": -2.492,
+   "minimize": -2.482
+  },
+  {
+   "key": "CHIB1_ASPFM_39_433_0/3chc_B_rec_3ch9_xrg_lig_tt_min_0",
+   "stored": -4.54716,
+   "score_only": -4.115,
+   "minimize": -4.274
+  },
+  {
+   "key": "CHIB_SERMA_1_499_0/1h0i_A_rec_1e6z_ngo_lig_it2_tt_docked_15",
+   "stored": 3.39332,
+   "score_only": 3.129,
+   "minimize": -5.636
+  },
+  {
+   "key": "CHIB_SERMA_1_499_0/4z2g_A_rec_4z2g_m6v_lig_tt_docked_16",
+   "stored": -8.78448,
+   "score_only": -7.754,
+   "minimize": -8.013
+  },
+  {
+   "key": "CHOD_BREST_46_552_0/1coy_A_rec_1coy_and_lig_tt_docked_0",
+   "stored": -9.59933,
+   "score_only": -9.438,
+   "minimize": -9.478
+  },
+  {
+   "key": "COAA_MYCTU_1_312_0/3af2_A_rec_3af4_gcp_lig_tt_min_0",
+   "stored": -7.75705,
+   "score_only": -6.812,
+   "minimize": -6.782
+  },
+  {
+   "key": "CONA_CANCT_1_237_0/1jn2_P_rec_1val_png_lig_tt_docked_11",
+   "stored": -5.94374,
+   "score_only": -5.326,
+   "minimize": -5.29
+  },
+  {
+   "key": "COTA_BACSU_1_513_0/4q8b_B_rec_4q8b_sxx_lig_tt_min_0",
+   "stored": -4.56341,
+   "score_only": -4.312,
+   "minimize": -4.284
+  },
+  {
+   "key": "CPXB_BACMB_2_464_0/4zfa_A_rec_1smj_pam_lig_tt_min_0",
+   "stored": -6.20199,
+   "score_only": -6.104,
+   "minimize": -6.071
+  },
+  {
+   "key": "DFPA_LOLVU_2_314_0/3li4_A_rec_2gvv_di9_lig_tt_min_0",
+   "stored": -6.28434,
+   "score_only": -6.463,
+   "minimize": -6.487
+  },
+  {
+   "key": "DHAK_ECOLI_1_356_0/3pnm_A_rec_3pnq_2ha_lig_tt_docked_10",
+   "stored": -3.2168,
+   "score_only": -2.73,
+   "minimize": -2.644
+  },
+  {
+   "key": "DIDH_RAT_1_319_0/1afs_A_rec_1afs_tes_lig_tt_min_0",
+   "stored": -8.77342,
+   "score_only": -8.524,
+   "minimize": -8.514
+  },
+  {
+   "key": "DPO4_SULSO_1_347_0/4tqr_A_rec_2xca_doc_lig_tt_min_0",
+   "stored": -2.83184,
+   "score_only": -3.551,
+   "minimize": -3.452
+  },
+  {
+   "key": "DPP2_HUMAN_27_492_0/3jyh_A_rec_3n0t_opy_lig_tt_min_0",
+   "stored": -5.05635,
+   "score_only": -4.81,
+   "minimize": -4.754
+  },
+  {
+   "key": "DYRK2_HUMAN_145_550_0/4azf_A_rec_5lxc_7aa_lig_tt_min_0",
+   "stored": -9.50812,
+   "score_only": -9.157,
+   "minimize": -9.122
+  },
+  {
+   "key": "EFTU1_ECOLI_2_178_0/2hcj_B_rec_2hcj_gdp_lig_tt_docked_0",
+   "stored": -10.39394,
+   "score_only": -8.578,
+   "minimize": -8.431
+  },
+  {
+   "key": "EXG1_CANAL_41_438_0/2pc8_A_rec_1eqc_cts_lig_tt_docked_6",
+   "stored": -6.11334,
+   "score_only": -5.452,
+   "minimize": -5.382
+  },
+  {
+   "key": "F16P1_HUMAN_1_338_0/3kc1_A_rec_3kc1_2t6_lig_tt_min_0",
+   "stored": -7.79695,
+   "score_only": -7.441,
+   "minimize": -7.371
+  },
+  {
+   "key": "FKB1A_HUMAN_2_108_0/1d7j_A_rec_1tco_fk5_lig_tt_docked_0",
+   "stored": -8.47813,
+   "score_only": -7.294,
+   "minimize": -7.17
+  },
+  {
+   "key": "GLMU_STRPN_2_459_0/4aaw_A_rec_4ac3_r83_lig_tt_min_0",
+   "stored": -7.99704,
+   "score_only": -8.001,
+   "minimize": -7.931
+  },
+  {
+   "key": "GRK4_HUMAN_1_578_0/4yhj_A_rec_4yhj_an2_lig_tt_min_0",
+   "stored": -7.38126,
+   "score_only": -6.532,
+   "minimize": -6.421
+  },
+  {
+   "key": "GSTP1_HUMAN_2_210_0/14gs_A_rec_20gs_cbd_lig_tt_min_0",
+   "stored": -7.10272,
+   "score_only": -5.947,
+   "minimize": -5.965
+  },
+  {
+   "key": "GUX1_HYPJE_18_451_0/2v3r_A_rec_1dy4_snp_lig_tt_docked_1",
+   "stored": -8.84196,
+   "score_only": -8.647,
+   "minimize": -8.65
+  },
+  {
+   "key": "HDAC8_HUMAN_1_377_0/4rn0_B_rec_4rn1_l8g_lig_tt_min_0",
+   "stored": -5.04834,
+   "score_only": -4.863,
+   "minimize": -4.914
+  },
+  {
+   "key": "HDHA_ECOLI_1_255_0/1fmc_B_rec_1fmc_cho_lig_tt_docked_1",
+   "stored": -9.98638,
+   "score_only": -9.747,
+   "minimize": -9.734
+  },
+  {
+   "key": "HMD_METJA_1_358_0/3daf_A_rec_3daf_feg_lig_tt_docked_0",
+   "stored": -10.09606,
+   "score_only": -9.228,
+   "minimize": -9.12
+  },
+  {
+   "key": "IDHP_HUMAN_40_452_0/4ja8_B_rec_4ja8_1k9_lig_tt_docked_0",
+   "stored": -13.17952,
+   "score_only": -12.163,
+   "minimize": -12.191
+  },
+  {
+   "key": "IMA1_HUMAN_68_497_0/4u5s_A_rec_4u54_3c5_lig_tt_min_0",
+   "stored": -4.53427,
+   "score_only": -4.074,
+   "minimize": -4.101
+  },
+  {
+   "key": "IPMK_HUMAN_49_416_0/5w2g_A_rec_5w2i_adp_lig_tt_min_0",
+   "stored": -5.68741,
+   "score_only": -5.032,
+   "minimize": -4.95
+  },
+  {
+   "key": "KS6A3_HUMAN_41_357_0/3g51_A_rec_3g51_anp_lig_tt_min_0",
+   "stored": -10.05896,
+   "score_only": -8.828,
+   "minimize": -8.791
+  },
+  {
+   "key": "LAT_MYCTU_1_449_0/2jjg_A_rec_2jjg_plp_lig_tt_min_0",
+   "stored": -6.7375,
+   "score_only": -5.841,
+   "minimize": -5.793
+  },
+  {
+   "key": "LMBL1_HUMAN_198_526_0/2pqw_A_rec_2rhy_mlz_lig_tt_min_0",
+   "stored": -4.19823,
+   "score_only": -4.033,
+   "minimize": -4.023
+  },
+  {
+   "key": "LMBL1_HUMAN_198_526_0/2rhy_A_rec_2rhy_mlz_lig_tt_min_0",
+   "stored": -2.95163,
+   "score_only": -2.828,
+   "minimize": -2.816
+  },
+  {
+   "key": "M3K14_HUMAN_321_678_0/4g3d_B_rec_4idv_13v_lig_tt_min_0",
+   "stored": -5.39374,
+   "score_only": -5.08,
+   "minimize": -5.062
+  },
+  {
+   "key": "MCCF_ECOLX_1_344_0/4iiy_A_rec_3tle_gsu_lig_tt_docked_12",
+   "stored": -8.97017,
+   "score_only": -7.477,
+   "minimize": -7.516
+  },
+  {
+   "key": "MENE_BACSU_2_486_0/5bur_A_rec_5x8f_amp_lig_tt_docked_7",
+   "stored": -7.91003,
+   "score_only": -7.029,
+   "minimize": -7.03
+  },
+  {
+   "key": "MURA_ECOLI_1_419_catalytic_0/3v4t_A_rec_4e7f_udp_lig_tt_min_0",
+   "stored": -7.66564,
+   "score_only": -7.088,
+   "minimize": -7.15
+  },
+  {
+   "key": "NAGZ_VIBCH_1_330_0/3gs6_A_rec_2oxn_oan_lig_tt_docked_4",
+   "stored": -6.43458,
+   "score_only": -5.741,
+   "minimize": -5.782
+  },
+  {
+   "key": "NEP_HUMAN_54_750_0/1r1h_A_rec_1r1h_bir_lig_tt_docked_1",
+   "stored": -10.03331,
+   "score_only": -9.399,
+   "minimize": -9.505
+  },
+  {
+   "key": "NOS1_HUMAN_302_723_0/3tym_A_rec_3n5v_xfh_lig_tt_min_0",
+   "stored": -7.1927,
+   "score_only": -6.492,
+   "minimize": -6.486
+  },
+  {
+   "key": "NOS1_HUMAN_302_723_0/4d7o_A_rec_3n5z_xfm_lig_tt_min_0",
+   "stored": -6.6211,
+   "score_only": -6.344,
+   "minimize": -6.312
+  },
+  {
+   "key": "NOS2_HUMAN_78_505_0/3ej8_A_rec_2nsi_itu_lig_tt_min_0",
+   "stored": -2.78039,
+   "score_only": -2.712,
+   "minimize": -2.667
+  },
+  {
+   "key": "NOS3_HUMAN_65_480_0/1rs9_A_rec_1dmk_itu_lig_tt_min_0",
+   "stored": -3.30503,
+   "score_only": -3.213,
+   "minimize": -3.216
+  },
+  {
+   "key": "NOS3_HUMAN_65_480_0/4kcq_A_rec_4cwv_hw8_lig_tt_min_0",
+   "stored": -5.48774,
+   "score_only": -5.065,
+   "minimize": -5.101
+  },
+  {
+   "key": "NPD_THEMA_1_246_0/3pdh_A_rec_4buz_ocz_lig_tt_min_0",
+   "stored": -7.90953,
+   "score_only": 7.25,
+   "minimize": -4.535
+  },
+  {
+   "key": "NQO1_HUMAN_2_274_0/1dxo_C_rec_1gg5_e09_lig_tt_min_0",
+   "stored": -3.34303,
+   "score_only": -3.19,
+   "minimize": -3.141
+  },
+  {
+   "key": "NQO1_HUMAN_2_274_0/1gg5_A_rec_1kbo_340_lig_tt_min_0",
+   "stored": -5.57363,
+   "score_only": -5.574,
+   "minimize": -5.527
+  },
+  {
+   "key": "NR1H4_HUMAN_258_486_0/5q0k_A_rec_5q0q_9ld_lig_tt_docked_0",
+   "stored": -9.831,
+   "score_only": -9.76,
+   "minimize": -9.716
+  },
+  {
+   "key": "ODBB_THET8_1_324_0/1umd_B_rec_1umb_tdp_lig_tt_docked_1",
+   "stored": -10.19607,
+   "score_only": -8.882,
+   "minimize": -8.842
+  },
+  {
+   "key": "OLIAC_CANSA_1_101_0/5b08_A_rec_5b09_4mx_lig_tt_min_0",
+   "stored": -6.47163,
+   "score_only": -5.891,
+   "minimize": -5.851
+  },
+  {
+   "key": "P2Y12_HUMAN_1_342_0/4pxz_A_rec_4pxz_6ad_lig_tt_min_0",
+   "stored": -11.04001,
+   "score_only": -9.81,
+   "minimize": -9.787
+  },
+  {
+   "key": "PA21B_PIG_23_146_0/2azy_A_rec_2azy_chd_lig_tt_docked_0",
+   "stored": -10.92404,
+   "score_only": -9.929,
+   "minimize": -9.879
+  },
+  {
+   "key": "PA2B8_DABRR_1_121_0/2gns_A_rec_4qer_stl_lig_tt_min_0",
+   "stored": -3.8997,
+   "score_only": -3.616,
+   "minimize": -3.61
+  },
+  {
+   "key": "PAC_ECOLX_27_846_0/1ai4_A_rec_1ai5_mnp_lig_tt_docked_0",
+   "stored": -7.092,
+   "score_only": -6.462,
+   "minimize": -6.634
+  },
+  {
+   "key": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec_5vef_m77_lig_tt_min_0",
+   "stored": -7.77373,
+   "score_only": -7.77,
+   "minimize": -7.694
+  },
+  {
+   "key": "PHKG1_RABIT_6_296_ATPsite_0/1phk_A_rec_1phk_atp_lig_tt_min_0",
+   "stored": -9.40684,
+   "score_only": -8.401,
+   "minimize": -8.36
+  },
+  {
+   "key": "PHP_SULSO_1_314_0/4keu_A_rec_4ket_pg4_lig_tt_min_0",
+   "stored": -4.03032,
+   "score_only": -3.861,
+   "minimize": -3.864
+  },
+  {
+   "key": "PLCD1_RAT_134_756_0/1djy_A_rec_1djz_ip2_lig_tt_min_0",
+   "stored": -6.78244,
+   "score_only": -5.492,
+   "minimize": -5.377
+  },
+  {
+   "key": "PNTM_STRAE_2_398_0/5l1v_A_rec_5l1v_7pf_lig_tt_docked_0",
+   "stored": -7.63495,
+   "score_only": -6.737,
+   "minimize": -6.77
+  },
+  {
+   "key": "POL_FOAMV_861_1060_0/5mma_A_rec_4ztf_x2p_lig_tt_min_0",
+   "stored": -5.65301,
+   "score_only": -3.083,
+   "minimize": -4.749
+  },
+  {
+   "key": "PPIA_HUMAN_1_165_0/2rma_A_rec_3rdd_ea4_lig_tt_docked_0",
+   "stored": -6.7219,
+   "score_only": -5.778,
+   "minimize": -5.743
+  },
+  {
+   "key": "PTGIS_HUMAN_20_500_0/3b6h_A_rec_3b6h_mxd_lig_tt_min_0",
+   "stored": -4.1255,
+   "score_only": -3.906,
+   "minimize": -3.897
+  },
+  {
+   "key": "PYRD_TRYCC_2_314_catalytic_0/2e6d_A_rec_2e6d_fum_lig_tt_min_0",
+   "stored": -4.92398,
+   "score_only": -3.237,
+   "minimize": -3.325
+  },
+  {
+   "key": "PYRD_TRYCC_2_314_catalytic_0/3w83_B_rec_2e6d_fum_lig_tt_min_0",
+   "stored": -3.29086,
+   "score_only": -2.443,
+   "minimize": -2.74
+  },
+  {
+   "key": "PYRE_BACAN_1_210_0/4rv4_A_rec_4rv4_prp_lig_tt_docked_2",
+   "stored": -7.7956,
+   "score_only": -6.805,
+   "minimize": -6.626
+  },
+  {
+   "key": "QPCT_HUMAN_33_361_0/2zen_A_rec_2afx_1bn_lig_tt_docked_7",
+   "stored": -5.36819,
+   "score_only": -5.278,
+   "minimize": -5.294
+  },
+  {
+   "key": "RG1_RAUSE_1_513_0/3u5y_B_rec_3u57_dh8_lig_tt_min_0",
+   "stored": -9.54379,
+   "score_only": -8.52,
+   "minimize": -8.776
+  },
+  {
+   "key": "RIBB_VIBCH_2_218_0/4p6p_A_rec_4p77_5rp_lig_tt_docked_0",
+   "stored": -7.49938,
+   "score_only": -6.546,
+   "minimize": -6.769
+  },
+  {
+   "key": "ROCO4_DICDI_1009_1292_0/4f1m_A_rec_4f1m_acp_lig_tt_min_0",
+   "stored": -6.92137,
+   "score_only": -5.525,
+   "minimize": -5.647
+  },
+  {
+   "key": "SDIA_ECOLI_1_171_0/4lfu_A_rec_4y13_480_lig_tt_min_0",
+   "stored": -5.9953,
+   "score_only": -5.782,
+   "minimize": -5.746
+  },
+  {
+   "key": "SIR3_HUMAN_117_398_0/5d7n_D_rec_4jt9_1ns_lig_tt_min_0",
+   "stored": -6.55448,
+   "score_only": -6.79,
+   "minimize": -6.673
+  },
+  {
+   "key": "SQHC_ALIAD_1_631_0/1h36_A_rec_1o79_r23_lig_tt_docked_5",
+   "stored": -11.36388,
+   "score_only": -10.889,
+   "minimize": -10.857
+  },
+  {
+   "key": "TBK1_HUMAN_1_303_0/4iwq_A_rec_4jlc_su6_lig_tt_min_0",
+   "stored": -8.26709,
+   "score_only": -8.067,
+   "minimize": -7.951
+  },
+  {
+   "key": "TIAM1_HUMAN_840_931_0/4gvd_A_rec_4nxr_ans_lig_tt_min_0",
+   "stored": -3.82098,
+   "score_only": -3.281,
+   "minimize": -3.463
+  },
+  {
+   "key": "TNKS1_HUMAN_1099_1319_0/4tos_A_rec_4tos_355_lig_tt_min_0",
+   "stored": -15.64895,
+   "score_only": -15.648,
+   "minimize": -15.57
+  },
+  {
+   "key": "TNKS2_HUMAN_948_1162_0/5aeh_A_rec_5aeh_8ir_lig_tt_docked_0",
+   "stored": -12.25542,
+   "score_only": -12.255,
+   "minimize": -12.195
+  },
+  {
+   "key": "TRAR_RHIRD_1_234_0/1l3l_A_rec_1l3l_lae_lig_tt_min_0",
+   "stored": -8.10054,
+   "score_only": -8.153,
+   "minimize": -8.132
+  },
+  {
+   "key": "UBE2T_HUMAN_1_156_0/5ngz_A_rec_5ngz_2bg_lig_tt_min_0",
+   "stored": -4.34761,
+   "score_only": -4.231,
+   "minimize": -4.228
+  },
+  {
+   "key": "UPPS_ECOLI_1_253_0/4h3c_A_rec_5cqj_53q_lig_tt_docked_2",
+   "stored": -7.71212,
+   "score_only": -2.222,
+   "minimize": -8.384
+  },
+  {
+   "key": "VAOX_PENSI_1_560_0/1e8h_A_rec_1e8h_adp_lig_tt_min_0",
+   "stored": -10.03303,
+   "score_only": -8.879,
+   "minimize": -8.81
+  },
+  {
+   "key": "XANLY_BACGL_26_777_0/2e24_A_rec_1j0n_ceg_lig_tt_docked_14",
+   "stored": -6.05373,
+   "score_only": -5.393,
+   "minimize": -5.346
+  },
+  {
+   "key": "Y635_MYCTU_1_158_0/4rlu_A_rec_4rlu_hcc_lig_tt_min_0",
+   "stored": -8.86271,
+   "score_only": -8.252,
+   "minimize": -8.183
+  }
+ ]
+}

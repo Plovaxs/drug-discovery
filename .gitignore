@@ -153,3 +153,6 @@ __pycache__/
 # Track E regenerable caches
 guidance/track_e/_*.npz
 guidance/track_e/__pycache__/
+
+runs_track_e*/
+guidance/track_e/cache/
