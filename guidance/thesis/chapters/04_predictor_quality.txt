@@ -1,0 +1,145 @@
+@ch IV | AFFINITY PREDICTOR QUALITY, THE SPLIT ARTEFACT AND BASELINE GUIDANCE ABLATIONS
+
+This chapter reports the first phase of the experimental work. It starts with the affinity predictor of the original guidance implementation, shows that its poor held-out quality was investigated through a leakage audit, a hyper-parameter sweep and five diagnostics, and then shows that most of the apparent generalisation gap was caused by the way the data had been split. After the predictor had been repaired in this sense, the first guidance ablations were run, on the original and on the repaired predictor. All of them returned null results, which motivated the routes reported in Chapters V to VIII.
+
+@sec The Original Affinity Predictor
+
+@sub Training set-up
+
+The first guidance predictor was the Stage 0 EGNN architecture of {tab:predictors}, trained to regress the experimental pK of a pocket–ligand pair from the docked pose. Training used the official CrossDocked2020 training partition with a random 90/10 division of pocket instances into training and validation sets, a random subsample of 6,000 training instances (507 targets) because of the training time on a 4 GB GPU, and the 27 labelled pockets of the official test partition as the held-out test set (26 targets, disjoint from training). The label distributions were similar (training 6.76 ± 1.84, validation 6.85 ± 1.89, test 5.71 ± 1.81 pK units), although the test mean was lower. Training was run for at most 20 epochs with early stopping, and the checkpoint of the last epoch, which had the lowest validation loss (1.375), was deployed.
+
+@sub Held-out quality
+
+The validation and test results of the deployed predictor differed strongly ({tab:oldquality}). Validation Pearson correlation rose steadily to 0.79, whereas test Pearson correlation fluctuated between 0.12 and 0.39 with no trend, and test R² was negative at every logged epoch, meaning that the predictions were worse than always predicting the training mean. The deployed checkpoint was not even the best on the test set: the highest test correlation (0.386) was recorded at epoch 3, which was not a running-best validation epoch.
+
+@tab oldquality | Old split: validation and test quality of the affinity EGNN at selected epochs
+| Epoch | Val Pearson | Val R² | Test Pearson | Test Spearman | Test R² | Test RMSE (pK) |
+| 3 | n/a | n/a | 0.386 | 0.321 | −0.454 | 2.188 |
+| 5 | 0.682 | 0.452 | 0.315 | 0.237 | −0.401 | 2.148 |
+| 10 | 0.745 | 0.548 | 0.381 | 0.313 | −0.161 | 1.955 |
+| 15 | 0.768 | 0.590 | 0.121 | 0.150 | −0.797 | 2.433 |
+| 19 | 0.795 | 0.616 | 0.327 | 0.304 | −0.275 | 2.049 |
+| 20 (deployed) | 0.788 | 0.616 | 0.233 | 0.141 | −0.537 | 2.250 |
+@note Validation n = 4,061 pocket instances; test n = 27 pockets. Only epochs at which the validation loss improved were logged. Test metrics were logged during training but were not used for checkpoint selection.
+@endtab
+
+The disagreement between validation and test had a structural explanation that was recognised at this point. Because the validation set was a random division of *pocket instances*, and CrossDocked2020 contains many poses of each target, the validation set shared 74% of its targets with the training set (507 training targets and 456 validation targets drawn from one pool of about 1,900 targets). The validation loss therefore measured interpolation among poses of partly seen targets, whereas guidance requires transfer to an unseen pocket, which only the test set measured. With 27 test pockets, however, the test numbers themselves carried large sampling uncertainty.
+
+@sec Leakage and Coverage Audit
+
+Before any retraining, it was checked whether the near-zero test quality, or the later null guidance results, could be explained by leakage. The audit found the following.
+
+(i) Pocket level: the 20 target identifiers of the guidance ablation of Section IV.5 were compared with the training and validation index sets rebuilt with the true training seed, and no target was shared. Seven of these 20 targets were, however, members of the 27-pocket test set of the predictor, for which metrics (not gradients) had been computed during training; this is disclosed because it is relevant for a strict reading of "independent test".
+
+(ii) Label provenance: the labels were experimental pKd, pKi and pIC50 values, not docking scores. This rules out the subtler leakage in which a predictor is trained on labels produced by the same docking configuration that is later used for evaluation.
+
+(iii) Family level: only a coarse gene-symbol comparison was possible at that time. One coincidental match was found between two proteins with the same four-letter mnemonic but different organisms and folds. Because no sequence-identity clustering was available, the audit did not claim the absence of leakage at the fold-family level. The leakage-safe split of Section IV.4 was built to close this gap.
+
+(iv) Coverage: 76,803 of the 184,087 annotated entries had a non-zero pK. The training subsample was wide but shallow, with about 11.8 examples per target.
+
+The audit therefore found no disqualifying leakage in the sense of the guidance evaluation, and it directed the investigation toward generalisation.
+
+@sec Hyper-Parameter Sweep and Diagnostics on the Old Split
+
+@sub Learning rate and depth
+
+A light sweep varied the learning rate and the depth of the EGNN, with all other settings, the data and the seed held fixed, and with a full 20-epoch budget per configuration ({tab:sweep}). Lowering the learning rate to 3 × 10⁻⁵ gave the only configuration with a positive test R² (0.046) and a clearly better test correlation (0.538) than the deployed configuration (0.233). A shallower, four-layer network had the best validation quality of all four configurations (Pearson 0.806) and the worst test quality (0.119), an illustration of how validation loss on shared-target data can select for models that transfer worse.
+
+@tab sweep | Old split: learning-rate and depth sweep (validation n = 4,061, test n = 27 pockets)
+| Configuration | Val Pearson | Val R² | Test Pearson | Test R² | Test RMSE (pK) |
+| Baseline (lr 1e-4, 6 layers; deployed) | 0.788 | 0.616 | 0.233 | −0.537 | 2.250 |
+| lr 3e-5, 6 layers | 0.803 | 0.628 | 0.538 | 0.046 | 1.772 |
+| lr 3e-4, 6 layers | 0.727 | 0.523 | 0.272 | −0.442 | 2.179 |
+| lr 1e-4, 4 layers | 0.806 | 0.641 | 0.119 | −0.671 | 2.346 |
+@note The best configuration was labelled as such on the basis of its test metrics, so its test performance is optimistic; it was used only in the learning-curve diagnostic below and was not deployed as a guidance model.
+@endtab
+
+The improvement must, however, be read with the bootstrap intervals for n = 27. The 95% intervals of the test R² of the best configuration (−0.601 to 0.445) and of the deployed configuration (−1.769 to 0.183) overlapped, so a positive R² could not be claimed. The correlation intervals were more informative: 0.230 to 0.775 for the best configuration, which excludes zero, and −0.145 to 0.595 for the deployed one.
+
+@sub Five diagnostics
+
+Five diagnostics were applied to characterise the gap ({tab:diag}).
+
+@tab diag | Old split: diagnostics of the generalisation gap
+| Diagnostic | Result | Reading |
+| Ligand-only baseline (ECFP4, no protein) | Random forest: test Pearson 0.493, R² 0.047; ridge: 0.427, −0.769 | A model without the pocket matches the best EGNN (0.538, 0.046) |
+| Heavy-atom count vs. prediction | Pearson 0.799 (p < 0.001, n = 27) | Much of the prediction is explained by ligand size |
+| Pocket scrambling (20 pairs) | Mean change of 1.49 pK units (SD of predictions 1.77) | The model reacts to the pocket, without evidence of benefit from it |
+| Per-target error | 26 of 26 groups are singletons | No per-target correlation computable; inconclusive |
+| Learning curve (25/50/75/100% of targets) | Pearson 0.298, 0.305, 0.296, 0.538 (CIs overlap) | Too imprecise to resolve whether more targets help |
+@note The learning curve used 127, 254, 380 and 507 targets with the configuration lr 3e-5. All intervals overlapped with their neighbours.
+@endtab
+
+Two readings are supported by these diagnostics. First, on this split, a representation without any protein information was indistinguishable from the pocket-aware network, so the gap was not specific to the EGNN. Second, the predictions correlated strongly with the ligand's heavy-atom count, the same kind of shortcut that is known to inflate docking scores of generated molecules [@gao2025; @xu2022]. A third possible reading, that more training data would close the gap, was not confirmed: the learning curve was flat between 25 and 75% of the targets and rose only at 100%, but the four intervals overlapped, so the test set with 27 pockets was too small to resolve this question. At this point the investigation concluded that the gap was more consistent with data scarcity and superficial features than with an architecture flaw. This conclusion was revised in the next section.
+
+@sec The Split Artefact: Leakage-Safe Re-Evaluation
+
+@sub Construction of the split
+
+The diagnostics above had been obtained on a split in which the validation set overlapped with the training set by target and the test set contained only 27 pockets. To repeat the evaluation under a defensible protocol, the target-level leakage-safe (LP) split described in Section III.2.3 was constructed. Two calibration problems were found and repaired during its construction: a rule that seeded the test set had to be bounded to avoid its runaway growth, and a ligand-identity overlap between validation and test that had passed the original algorithm was removed by an explicit check. The final split had 779 training targets (46,964 entries), 65 validation targets (6,069 entries) and 127 test targets (11,855 entries), with 31 targets discarded for ligand contamination and verified zero target overlap between any two subsets.
+
+@sub Result
+
+The Stage 0 EGNN configuration was retrained on this split without changing any architecture or hyper-parameter (6,000-entry training subsample, learning rate 10⁻⁴; best validation loss at epoch 4, early stopping after epoch 9). On the 11,855 test entries it reached a Pearson correlation of 0.609 (95% CI 0.597 to 0.621) and R² of 0.342 (0.322 to 0.361), as shown in {tab:lpquality} and {fig:split}. A ligand-only random forest reached R² 0.195, so on the repaired split, the pocket-aware model had a nominal advantage over the ligand-only baseline, opposite to the pattern on the old split (this difference was not tested pairwise, and the complex-level interval is optimistic; see Chapter VIII). The correlation of the predictions with the heavy-atom count decreased modestly, from 0.799 to 0.719, and remained strong.
+
+@tab lpquality | Stage 0 checkpoint on the leakage-safe split (test n = 11,855)
+| Model | Val Pearson | Val R² | Test Pearson (95% CI) | Test R² (95% CI) |
+| Ligand-only ridge | 0.274 | −0.689 | 0.375 | −0.602 |
+| Ligand-only random forest | 0.405 | 0.123 | 0.462 | 0.195 |
+| EGNN (lr 1e-4, 6 layers, unchanged) | 0.637 | 0.394 | 0.609 (0.597, 0.621) | 0.342 (0.322, 0.361) |
+@endtab
+
+@fig split | guidance/thesis/figures/fig_split_artifact.png | 5.6 | Test R² of the affinity predictor on the old split (n = 27 pockets) and on the leakage-safe split (n = 11,855 entries). Ligand-only random forests are shown in grey. Error bars are bootstrap 95% confidence intervals where available.
+
+This result contradicted the expectation stated when the split was built, namely that the split alone would not repair the model, and it contradicted the reading of the previous section. It is reported as such. A substantial part of the earlier gap was a consequence of the split construction (target-overlapping validation data and a 27-pocket test set), and not of the EGNN architecture or an unavoidable data limit. The earlier diagnostics were correct as measurements on that split, but the causal story built upon them was answering the wrong question. Two limits of this conclusion should be noted. The comparison is between models evaluated on different test sets, so the two R² values are not paired estimates; and the size shortcut (correlation 0.719) is still present, so a better-than-baseline predictor is not the same as a predictor that has learned binding chemistry.
+
+@fig quality | guidance/thesis/figures/fig_predictive_quality.png | 5.6 | Test Pearson correlation of every guidance predictor trained in this thesis on the leakage-safe splits. The synthesizability predictor evaluated on its original random split (orange), which had no target-level separation and no test set, was superseded by the leakage-safe evaluation (green; Chapter VII).
+
+@sec Baseline Guidance Ablations
+
+@sub Task F: the original ablation
+
+The first guidance ablation compared unguided sampling with affinity-guided sampling, with the original predictor at λ = 1.0. It used 20 of the 100 official test pockets (every fifth pocket in the official order, with one substitution because a receptor file was missing from the data mirror), each from a distinct protein family, 3 seeds and 10 molecules per (variant, pocket, seed), giving 1,193 scored molecules (597 unguided and 596 guided; 0 failed runs). Docking used AutoDock Vina with exhaustiveness 16 against coordinate-matched receptors; an earlier attempt with receptor files from a different data mirror had produced meaningless zero-interaction scores because of a coordinate-frame mismatch, and was caught in a dry run. The value λ = 1.0 had been chosen in an earlier single-pocket sweep because it was the strongest tested value that left validity unaffected.
+
+No metric differed significantly between the variants ({tab:taskf}); all p-values were above 0.27 and most above 0.6, for both the pooled Mann–Whitney test and the Wilcoxon test paired by pocket (n = 20). The standard deviation of the unguided Vina Dock (10.08 kcal/mol) was four times that of the guided condition (2.41), which indicated a heavy-tailed distribution produced by a few extreme poses; the paired test, which is more robust to such outliers, agreed with the unpaired test. The numerically lower guided mean Vina Dock (−7.25 against −6.81 kcal/mol) was not distinguishable from noise (p = 0.96 unpaired, 0.55 paired), and the ligand efficiency did not worsen (−0.372 against −0.340), so no signature of Vina hacking [@gao2025] was found. Because there was no significant gain, there was also no gain to be tested for authenticity.
+
+@tab taskf | Task F: unguided versus affinity-guided sampling (λ = 1.0), 20 pockets
+| Metric | Unguided | Guided | Mann–Whitney p | Wilcoxon (paired) p |
+| Validity rate | 0.995 | 0.993 | n/a | n/a |
+| QED | 0.449 ± 0.185 | 0.452 ± 0.185 | 0.889 | 0.648 |
+| SA score | 0.601 ± 0.122 | 0.600 ± 0.121 | 0.798 | 0.277 |
+| RA-score | 0.435 ± 0.386 | 0.429 ± 0.387 | 0.816 | 0.312 |
+| Vina Dock (kcal/mol) | −6.813 ± 10.079 | −7.251 ± 2.409 | 0.961 | 0.546 |
+| Ligand efficiency | −0.340 ± 0.749 | −0.372 ± 0.109 | 0.956 | 0.330 |
+| PoseBusters pass rate | 0.551 | 0.545 | n/a | n/a |
+| Standard success rate | 0.0704 | 0.0705 | n/a | n/a |
+| Honest success rate | 0.0302 | 0.0268 | n/a | n/a |
+@note Values are means ± standard deviations over molecules. The dual-guidance configuration was identical to the affinity-only variant because the synthesizability weight had been set to zero after the finding reported in Chapter VII.
+@endtab
+
+@sub Strength re-sweep with the original predictor
+
+Two explanations were considered for the null result: that λ = 1.0 was too weak, or that the predictor's gradient carried no useful signal. The first was tested by docking molecules generated at nine values of λ between 1 and 30 on the bundled example pocket (n = 8 per value). Fragmentation of the molecules started between λ = 20 and λ = 30 (50% single-fragment rate at λ = 30), which defined 20 as the practical safety ceiling. Within the safe range, no comparison with λ = 1.0 was significant (Mann–Whitney p between 0.79 and 1.00 for all eight comparisons), and the mean Vina Dock moved non-monotonically within a band of about 2 kcal/mol. The predictor's own score rose by only about 1.2% across the range, and this drift did not correspond to any trend in real Vina Dock. The first explanation was therefore refuted, and the null result was not an artefact of an overly conservative operating point.
+
+@sub Strength re-sweep with the repaired predictor
+
+The same question was asked again after the repair of Section IV.4, because the improved predictor could have been expected to change the result. The sweep covered eight values of λ from 0 to 100, with n = 8 molecules per value. Robustness improved markedly: fragmentation appeared only at λ = 100 (one of eight molecules), against λ = 30 for the original predictor. The real Vina Dock, however, showed no dose–response ({tab:lpresweep}); the comparison of each value against unguided sampling had p between 0.69 and 1.00.
+
+@tab lpresweep | Repaired predictor: single-pocket strength sweep (n = 8 per value)
+| λ | Single-fragment rate | Mean own score | Mean Vina Dock (kcal/mol) | SD |
+| 0 (unguided) | 1.00 | 7.891 | −10.500 | 1.411 |
+| 0.1 | 1.00 | 7.904 | −10.370 | 1.562 |
+| 0.3 | 1.00 | 7.904 | −10.427 | 1.490 |
+| 1.0 | 1.00 | 7.904 | −10.503 | 1.353 |
+| 3.0 | 1.00 | 7.901 | −10.689 | 1.438 |
+| 10.0 | 1.00 | 7.893 | −10.495 | 1.115 |
+| 30.0 | 1.00 | 7.914 | −10.503 | 1.393 |
+| 100.0 | 0.875 | 7.993 | −10.715 | 0.834 |
+@note Mann–Whitney U tests against λ = 0: p ≥ 0.69 for every value.
+@endtab
+
+A confirmation over eight diverse pockets (one seed, n = 8 per condition, λ = 0.3, 10 and 100, real Vina docking with exhaustiveness 16, 32 runs and no failure) gave all 24 pocket-level comparisons as non-significant (p from 0.105 to 1.000). A paired-by-pocket Wilcoxon test at λ = 0.3 reached nominal significance (p = 0.023), but the effect was a consistent, tiny, wrong-directed shift (+0.030 kcal/mol, that is, slightly worse binding under guidance; seven of eight pockets shifting by +0.01 to +0.055), an order of magnitude below the typical per-molecule standard deviation of 1.1–1.6 kcal/mol. With six primary tests, one nominal p < 0.05 is expected by chance, and the other two λ values showed no pattern (p = 0.547 and 0.742). It was reported for completeness, and was not treated as evidence that guidance works.
+
+@sec Summary of the Chapter
+
+Three results of this chapter carry forward. First, an apparent generalisation gap of the affinity predictor was in large part a split artefact: after moving to a target-disjoint split of adequate size, the same architecture explained 34% of test variance ({fig:quality}), with an interval that excluded zero and a nominal margin over a ligand-only baseline (0.20). Both statements rest on complex-level resampling, and Chapter VIII shows that target-level resampling widens the interval about eight times and makes the network indistinguishable from a two-feature linear baseline. Second, the size shortcut remained (correlation 0.72 with heavy-atom count). Third, and decisive for the rest of the thesis, repairing the predictor was necessary but not sufficient: with the repaired predictor as with the original one, guidance produced no detectable change in real docking score at any tested strength (a span of three orders of magnitude for the repaired predictor). Guidance also changed the predictor's own score only marginally, by 1 to 2%. Two questions followed: whether a differently constructed predictor or a differently constructed guidance mechanism could recover a signal (Chapter V), and whether the same predictor used without a gradient, as a ranker of finished molecules, would do better (Chapter VI).

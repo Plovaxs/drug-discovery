@@ -1,0 +1,110 @@
+@ch III | RESEARCH METHODOLOGY AND EXPERIMENTAL INFRASTRUCTURE
+
+This chapter describes the research design, data, generative model, guidance mechanism, predictors, evaluation metrics, statistical protocol and integrity checks that are shared by all experiments. Track-specific settings are given in the chapter of the corresponding track.
+
+@sec Research Design
+
+The research was organised as a falsification study. A hypothesis, that a learned predictor can steer a frozen diffusion model toward molecules that are better on real outcomes, was tested by mechanistically distinct routes, each of which was assigned a decision rule before its results were inspected. The routes are named Tracks A to E in the experiment logs of the project and in this thesis: Track A (physics-anchored predictor architecture), Track B (three variants of the guidance mechanism on a fixed predictor), Track C (non-gradient rejection sampling), Track D (synthesizability guidance) and Track E (a redesigned training target). A standing rule required two independent routes, one varying the predictor architecture and one varying the mechanism, to both fail before the approach was considered not viable, because a failure of the mechanism alone does not exclude a better predictor, and vice versa.
+
+Every route followed a two-tier protocol. An exploratory tier, with few pockets, few molecules and partially trained models, was used to obtain a cheap first reading and to derive stable operating ranges. A full tier with converged models, more pockets and more molecules was run only when its cost was justified, and its verdict was taken from the pre-declared decision bands. Each checkpoint was dual-criterion: the predictor had to be accurate on held-out targets, and its guidance had to change a real, independently computed outcome. {fig:pipeline} shows the overall pipeline.
+
+@fig pipeline | guidance/thesis/figures/fig_pipeline.png | 5.6 | Overall pipeline. A frozen TargetDiff denoiser proposes a clean-data estimate at each reverse step; a guidance predictor's gradient with respect to atom positions modifies that estimate; and the finished molecules are evaluated by tools that are independent of the guidance predictor and analysed with corrected statistics.
+
+@sec Data
+
+@sub CrossDocked2020 and the pocket representation
+
+All generative sampling used the pretrained TargetDiff model, which was trained on the CrossDocked2020 data set [@francoeur2020; @guan2023]. The processed data set used here is the pocket-cropped version of the original TargetDiff release (residues within 10 Å of the ligand; a stored ligand pose within 1 Å RMSD of the docked pose), held in a lightning memory-mapped database (LMDB) with 166,500 protein–ligand entries. The official split of that release assigns 99,990 pocket instances to training (1,905 unique targets) and 100 to testing (93 unique targets), with no target overlap between the two. Each entry stores protein atom positions and element/amino-acid identifiers, ligand atom positions, elements and bonds, and file names; it does not store residue indices or chains. Since the poses are cross-docking outputs [@gao2025], they were treated throughout as docked poses, not as experimental complexes.
+
+@sub Affinity labels
+
+Experimental binding affinities were taken from the annotation file distributed with the same release, which contains 184,087 entries keyed by the ligand file name, of which 76,803 carry a non-zero pK. These are experimental pKd, pKi or pIC50 values derived from PDBbind, not docking scores, which excludes a possible form of label leakage in which training labels are computed with the same docking configuration that is later used for evaluation. The file also stores, for each pose, an RMSD value and a Vina-type score; the latter is used in Chapter VIII as the anchor of the residual target. Its semantics were examined explicitly (Section VIII.3).
+
+@sub Splits used for predictor training
+
+Three target-level structures were used. The *old split* (the first version of the affinity predictor) took a random 90/10 division of pocket instances of the official training partition as training and validation sets, and the labelled officially-held-out pockets as the test set; this gave 6,000 training instances (507 targets, after a subsampling made necessary by the training time), 4,061 validation instances (456 targets) and only 27 test pockets (26 targets). Because validation and training shared 74% of their targets, validation measured interpolation within seen targets rather than transfer to a new target.
+
+The *leakage-safe (LP) split* was constructed for this thesis by adapting the Leak Proof PDBBind procedure [@li2026lp] to CrossDocked2020 at *target* granularity, so that all entries of a target move together. Targets were assigned to families using UniProt information; a small random test set was seeded per family and expanded with any target whose protein sequence identity exceeded 0.9, whose ligand similarity exceeded 0.99, or whose pocket-histogram cosine similarity exceeded 0.97 to a current test member; a validation set was formed analogously with a protein-identity threshold of 0.5; and any training target with ligand similarity above 0.99 to a validation or test target was discarded. The pocket-similarity threshold was recalibrated from the originally sketched 0.8 and 0.95, because an empirical check on 3,000 random target pairs showed that a 20-dimensional amino-acid-composition histogram is too coarse for two-tier thresholding (mean 0.69, 99.9th percentile 0.94 among unrelated pairs). The resulting split, restricted to entries with a non-zero pK and an RMSD below 2 Å (1,041 targets, 76,803 entries), is summarised in {tab:splits}.
+
+@tab splits | Data splits used for affinity predictors
+| Split | Train (targets / entries) | Validation | Test | Comment |
+| Old split | 507 / 6,000 | 456 / 4,061 | 26 / 27 | Validation shares 74% of targets with training |
+| LP split | 779 / 46,964 | 65 / 6,069 | 127 / 11,855 | Target-disjoint; 31 targets discarded |
+| Synthesizability (LP-derived) | 8,835 entries | 1,015 | 1,940 | 3,210 of 15,000 discarded (target not assigned) |
+@note Entries are complexes (pocket–ligand pairs). Test-set statistics in Chapters VIII use the 127 test targets as the resampling unit.
+@endtab
+
+@sub Synthesizability labels
+
+Synthesizability labels were obtained by computing the RAscore [@thakkar2021] of 15,000 ligands of the training partition, giving a target in [0, 1]. The original random 90/10 split of these labels had no held-out test set and no leakage check; it was replaced (Chapter VII) by the target-level assignment of the LP split, applied by target identity without recomputing any label.
+
+@sec Generative Model and Guidance Mechanism
+
+@sub The frozen diffusion model
+
+The generator was the pretrained TargetDiff checkpoint [@guan2023], used without modification. It models ligand atom coordinates and 13 atom-type classes (atomic number and aromaticity pairs) over 1,000 diffusion steps, conditioned on the pocket. Bonds are not modelled: they are assigned after sampling by a reconstruction procedure that turns coordinates and types into a molecule. The number of ligand atoms is drawn from a prior before sampling begins and is therefore fixed for the whole trajectory.
+
+@sub Guidance on the clean-data estimate
+
+The guidance loop re-implements the reverse sampling step so that the pretrained model and its posterior functions are used unchanged, and a guidance term is added to the clean-data estimate before the posterior step. Denoting the estimate by x̂₀, the guided estimate is
+
+@eq \\hat{x}_0' = \\hat{x}_0 + \\lambda \\nabla_{pos} f(\\hat{x}_0) | guide
+
+where f is the guidance predictor and λ the guidance strength. With λ = 0 the loop performs exactly the same computation as the unguided sampler (verified against the original implementation, up to the non-determinism of GPU scatter operations, which already makes two calls of the original sampler with the same seed differ at the level of 10⁻⁶). The equation above was written with the gradient taken only through the guidance predictor and not through the diffusion network, which is a deliberate compute trade-off on a 4 GB GPU: back-propagation through the denoiser at each of 1,000 steps would multiply memory and runtime by roughly the depth of the network. Consequently, the guidance predictors are trained on clean ligand structures and evaluated on x̂₀, which are the conditions under which the literature reports the mismatch problem for noisy intermediate structures [@huang2026]. Two further scope decisions were made and are disclosed. First, guidance acts on positions only; the gradient with respect to atom types is set to zero, because the predictors use bond-derived features (degree, hydrogen count and hybridisation) that do not exist during sampling. These fields were filled with a fixed placeholder for the affinity predictors, and an alternative, differentiable bond-aware estimate was tested for the synthesizability predictor (Chapter VII). Second, guidance can be restricted to a window of diffusion steps, and the gradient can be rescaled to unit norm per atom before λ is applied; both are used only in the Track B variants.
+
+@sec Predictors
+
+{tab:predictors} summarises the predictors. All were trained on clean structures with mean-squared-error (regression) or cross-entropy (classification) objectives and selected by validation loss.
+
+@tab predictors | Predictors used as guidance signals or ranking functions
+| Predictor | Architecture | Parameters | Training set | Held-out test result |
+| Stage 0 EGNN (affinity) | 6-layer EGNN, hidden 256, 48 nearest neighbours, 10 Å cut-off, MSE | 2.55 M | LP split, 6,000-entry subsample | R² 0.342, Pearson 0.609 (n = 11,855) |
+| GIGN + PIGNet2 (affinity) | 3 GIGN interaction layers, PIGNet2 physics readout, hidden 256 | 0.49 M | LP split, all 46,964 | R² −0.189, Pearson 0.581 (n = 11,855) |
+| Classifier head (affinity) | Linear head on frozen Stage 0 embedding | Head only | Median-binarised pK (7.03) | AUROC 0.677 (test) |
+| SynthPredNet (RA-score) | Ligand-only EGNN, sigmoid output | 0.43 M | LP-derived, 8,835 entries | R² 0.414, Pearson 0.647 (n = 1,940) |
+@note Reference-model details are reproduced in the chapters of the corresponding tracks. Parameter counts are those printed in the training logs.
+@endtab
+
+The *Stage 0 EGNN* is the affinity predictor of the project's original guidance implementation, an E(n)-equivariant network [@satorras2021] applied to the pocket–ligand point cloud, with a scatter-sum readout and an MLP head. It was trained with Adam (learning rate 10⁻⁴), batch size 1, a Gaussian position noise of 0.1 Å, and a plateau learning-rate scheduler with early stopping; the same configuration was retrained, unchanged, on the LP split, which defines the Stage 0 checkpoint. The *GIGN + PIGNet2* predictor combines the heterogeneous interaction layers of GIGN [@yang2023gign], in which covalent (or covalent-proxy) and non-covalent edges share one message pass and are differentiated by separate MLPs, with the physics-decomposed readout of PIGNet [@moon2022]: pairwise Morse-type van der Waals, hydrogen-bond, metal and hydrophobic terms between ligand and protein atoms are summed to the prediction. Protein covalent edges, which are not available in the LMDB, were approximated by a distance cut-off. The *classifier head* is a linear head fitted on the pooled embedding of the frozen Stage 0 network for the task of predicting whether the pK is above the median of the training set; its gradient log p(y = 1 | x) is the classical classifier-guidance target [@dhariwal2021]. *SynthPredNet* is a ligand-only EGNN that regresses the RAscore; it has no protein input.
+
+@sec Evaluation Metrics
+
+Guidance effects were never evaluated with the guidance predictor's own output. Every generated molecule was reconstructed and, when valid, evaluated as summarised in {tab:metrics}.
+
+@tab metrics | Independent evaluation metrics
+| Metric | Definition | Direction |
+| Vina Dock | AutoDock Vina 1.2.6 [@eberhardt2021] re-docking against the real receptor of the pocket, exhaustiveness 8 or 16 (kcal/mol) | Lower is better |
+| Ligand efficiency (LE) | Vina Dock divided by the number of heavy atoms | Lower is better |
+| PoseBusters validity | Fraction of poses passing the PoseBusters checks [@buttenschoen2024] in docking configuration | Higher is better |
+| RA-score | Real RAscore model [@thakkar2021] applied to the reconstructed molecule | Higher is better |
+| QED, SA score | Drug-likeness; synthetic accessibility [@ertl2009] rescaled to [0, 1] following the TargetDiff evaluation code | Higher is better |
+| Validity, uniqueness, diversity | Fraction reconstructable; fraction unique; mean 1 − Tanimoto (Morgan radius 2, 1,024 bits) | Higher is better |
+| Standard success | Vina Dock < −8.18, QED > 0.25 and SA > 0.59 | Higher is better |
+| Honest success | Standard success, additionally PoseBusters-valid with LE within a stated tolerance of the reference ligand | Higher is better |
+@endtab
+
+The receptor files used for docking were coordinate-matched to the processed data (Chapter IV describes an incident in which files from a different mirror produced meaningless scores). Ligand efficiency and the heavy-atom count were computed in every experiment because raw Vina scores can be improved mechanically by enlarging molecules [@gao2025; @xu2022]; PoseBusters validity was computed because a favourable score can be obtained from physically implausible poses [@buttenschoen2024]; and the RAscore was computed with the reference implementation, independently of the guidance model's own approximation.
+
+@sec Statistical Protocol
+
+@sub Tests, corrections and intervals
+
+The primary test of a guidance effect was the two-sample Kolmogorov–Smirnov (KS) test of the Vina Dock distribution of guided versus unguided molecules within a pocket. For every checkpoint, all tests of that checkpoint were corrected together with the Benjamini–Hochberg (BH) procedure for the false discovery rate [@benjamini1995]. Effect sizes were reported with 95% confidence intervals obtained by case-resampling bootstrap [@efron1979] with 2,000 resamples, and the median shift was reported alongside the mean, because a single pathological pose can dominate a mean (an example, a Vina Dock of +286.58 kcal/mol from a malformed pose, is documented in Chapter V). Mann–Whitney U tests (unpaired) and Wilcoxon signed-rank tests (paired by pocket) were used in the earlier ablations. Correlations were Pearson or Spearman with bootstrap intervals; partial correlations were computed by linear residualisation.
+
+@sub Decision bands and negative controls
+
+Each comparison was assigned one of five verdicts by pre-declared rules ({fig:verdict}): *no signal* (fails BH correction); *signal, wrong direction*; *signal but confounded by size* (ligand-efficiency degradation surviving BH correction, or a significant heavy-atom shift); *signal but quality degraded* (PoseBusters validity dropping by more than 10 percentage points); and *clear signal*. A verdict of *suspect implementation bug* was assigned if a scrambled-filter negative control disagreed with a random-subset control (Track C). Because a scrambled top-k selection is mathematically equivalent to a random subset, this control is an implementation sanity check and not an independent hypothesis test.
+
+@fig verdict | guidance/thesis/figures/fig_verdict_flow.png | 5.6 | Decision logic applied to each comparison. The null-consistency check guards against implementation errors; the ligand-efficiency, heavy-atom and PoseBusters checks are applied to every apparent positive before it may be called a clear signal.
+
+@sub Target-clustered statistics for predictor comparisons
+
+For comparisons of predictors on the LP test set (Chapter VIII), the independent unit was the *target* and not the complex, since complexes of one target are strongly dependent. Confidence intervals were obtained by resampling the 127 test targets with replacement (2,000 resamples, fixed seed), and paired differences between two predictors were computed inside each resample so that shared sampling noise cancels. For predictors trained with several seeds, the value of an arm inside a resample was the mean over its seeds. One-sided p-values were BH-adjusted over the tests of a stage, and intervals were reported at 90, 95 and 99%. This resampling unit produces intervals that are several times wider than complex-level bootstrap intervals; the difference is quantified in Chapter VIII.
+
+@sec Computing Environment and Engineering
+
+All experiments ran on a single laptop with an RTX 3050 GPU (4 GB), a 20-thread CPU and 31 GB of RAM. Long runs were made resumable: sampling and docking jobs wrote one result directory per (variant, pocket, seed) unit and could be restarted after a shutdown, which occurred and was recovered from without loss during the Task F run; the Track E trainers additionally wrote atomic, mid-epoch checkpoints and handled termination signals (Chapter VIII). Two optimisations were adopted for the largest run (Track C) after their effect on quality had been checked: bf16 automatic mixed precision for the diffusion core's forward pass only (about 14% faster sampling, with a shift of the Vina Dock mean of 0.1–0.13 kcal/mol, within the run-to-run variation between two fp32 baselines), and docking of two molecules in parallel processes (about twice as fast). Increasing the sampling batch size gave only about 3% higher throughput, and `torch.compile` was not attempted because of the risk of graph breaks in the conditional sampling loop. Together the two adopted changes reduced the per-pool time from about 5.75 h to about 4.6 h.
+
+@sec Integrity Checks
+
+Several checks were made part of the method because they had changed conclusions during the project. (i) *Leakage.* Before any retraining, the target identifiers of the 20 pockets of the guidance ablation were compared with the training and validation index sets of the affinity model, and the intersection was empty; the labels were verified to be experimental affinities and not docking scores. A coarse gene-symbol check found one coincidental mnemonic match between unrelated proteins; because no sequence-level clustering was available at that time, a bill of health at the fold-family level was not asserted, and the LP split was later built precisely to close that gap. (ii) *Coordinate frames.* An early attempt that used receptor files from a different data mirror produced meaningless zero-interaction docking scores because of a coordinate-frame mismatch; it was caught in a dry run and the coordinate-matched files were used. (iii) *Outliers.* A single pathological docking score was investigated and shown to be a genuine, if degenerate, outcome and not a sentinel value (Chapter V). (iv) *Analysis errors.* An exploratory analysis that truncated a pooled sample to its first 300 molecules gave a wrong conclusion and was corrected by re-deriving the numbers from a saved script (Chapter VI). (v) *Checkpoint selection.* All trainers select checkpoints by validation criteria. The Stage 0, Track A and synthesizability trainers also compute and log test metrics at every validation improvement, so that test numbers were visible during development, although they were not used for selection; the Track E trainers evaluate the test set once, after training, and this is enforced by an automated test (Chapter VIII). One older hyper-parameter sweep labelled a configuration as best on the basis of its test metrics (27 pockets), and this configuration was reused in a learning-curve diagnostic; it was not used for any deployed or guidance model, and the diagnostic is read with that caveat (Chapter IV).

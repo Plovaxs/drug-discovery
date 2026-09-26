@@ -1,0 +1,143 @@
+@ch VIII | REDESIGN OF THE TRAINING TARGET: DELTA-LEARNING AGAINST THE DOCKING SCORE (TRACK E)
+
+Chapters IV to VII showed that guidance failed for predictors of different architecture, of different objective and of a different target, and that a size shortcut and a misdirected gradient were the best available explanations. Both explanations point to the *training signal*, not to the capacity of the network: a predictor trained to reproduce the experimental affinity can achieve a respectable correlation by learning that larger ligands bind more strongly (Section IV.4), and the gradient of such a predictor need not concentrate on the contacts that matter (Section V.4). Track E tested two targeted modifications of the training signal, chosen after the failures had been diagnosed and pre-registered before any model was trained. Only the first was executed, because it failed its gate; the second was designed, its infrastructure was verified, and it was not run. This chapter reports the design, the pre-registered criteria, the infrastructure and the result.
+
+@sec Rationale and Premise Checks
+
+@sub The two modifications
+
+*E1 (delta-learning).* Instead of the absolute pK, the network is trained to predict the residual Δ = pK_exp − pK_Vina, where pK_Vina = max(−E_Vina, 0)/1.364 is the docking score converted to a pK scale, and the prediction is reconstructed as ŷ = pK_Vina + Δ̂. The idea, known from the Δ-machine-learning literature, is that a physics-based baseline captures the coarse trend and that the network only needs to learn a correction [@ramakrishnan2015; @wang2017; @yang2022]. The residual is almost uncorrelated with ligand size (Pearson correlation of Δ with the heavy-atom count 0.052, against 0.497 for the absolute pK on the unclipped anchor), so the target formulation removes the size component that the earlier predictors exploited. *E2 (interaction supervision).* Auxiliary heads would predict, for every ligand atom, whether it participates in a hydrogen bond, a hydrophobic contact or a salt bridge, with labels computed from the docked pose by PLIP [@salentin2015], as an inductive bias that pushes the shared encoder toward the contacts that matter for binding.
+
+@sub Premise checks that changed the plan
+
+Four measurements made before training changed the design and the bar for success.
+
+First, "the baseline" was not one number. The old EGNN had R² = −0.537 on the old split, the Track A model −0.189 on the leakage-safe test set, and the Stage 0 EGNN +0.342. Exceeding a negative R² would have been trivial, so the criterion was set against the strongest reference.
+
+Second, simple baselines were as good as the network, and the interval of the earlier comparisons was too narrow. The confidence intervals reported in Chapter IV resampled *complexes*. The independent unit for a new-target claim is the *target*: the test set has 127 targets, with a median of 14 complexes per target and a maximum of 1,392. With a target-clustered bootstrap the interval of the Stage 0 EGNN R² widened from 0.322–0.361 to 0.160–0.465, about eight times wider, and the network became statistically indistinguishable from a two-feature linear model of the Vina score and the heavy-atom count (R² = 0.362) ({tab:e1refs}). Within a pocket, which is where guidance acts, the raw Vina score ranked complexes better than the EGNN (mean within-target Spearman correlation 0.248 against 0.195), which supports the premise of delta-learning directly.
+
+Third, Δ is size-neutral but not lower in variance (training SD 1.753 against 1.801 for pK). The residual can be learnt only if it is a function of the structure, which is an assumption to be tested, not a given.
+
+Fourth, the gradient of the delta model would not be the gradient of affinity. Vina is an external program without a differentiable path in this pipeline, so at generation time only the gradient of the *correction* Δ̂ would be available. Scoring improvement therefore does not imply guidance improvement, and a gradient diagnostic (criterion C4) was declared as the gate to generative use.
+
+@tab e1refs | Track E: reference predictors on the leakage-safe test set (127 targets; target-clustered 95% CI)
+| Reference | R² (95% CI) | Within-target Spearman (95% CI) | Correlation of prediction with heavy-atom count |
+| Constant (training mean) | 0.000 | n/a | n/a |
+| Vina only, raw (−E/1.364, clipped at 0) | 0.076 (−0.213, 0.270) | 0.248 (0.156, 0.334) | 0.622 |
+| Vina only, linearly calibrated | 0.273 (0.152, 0.341) | 0.248 | 0.622 |
+| Heavy-atom count only (linear) | 0.307 (0.135, 0.416) | 0.191 (0.051, 0.331) | 1.000 |
+| Vina + heavy-atom count (linear) | 0.362 (0.200, 0.470) | 0.266 (0.162, 0.368) | 0.940 |
+| Stage 0 EGNN | 0.342 (0.160, 0.465) | 0.195 (0.078, 0.307) | 0.719 |
+| Track A GIGN + PIGNet2 (no bias term) | −0.189 (−0.768, 0.162) | 0.233 (0.142, 0.325) | 0.640 |
+@note Within-target Spearman correlation: mean over the 73 test targets with at least 10 complexes. The ground-truth pK has a correlation of 0.555 with the heavy-atom count on the test set. The anchor is clipped at zero because 79 poses have a positive Vina score (clashes).
+@endtab
+
+@sec Design
+
+@sub Architecture and target
+
+The backbone was the Track A model (Section V.2), reused unchanged in its interaction layers with hidden size 256 and 0.494 M parameters. The E1 head kept the physics-sum readout and added a learned bias b and a learned scale s of free sign, Δ̂ = b + s·(−ΣE_phys): the bias remedies the missing offset that was identified as the cause of the negative R² of Track A, and the scale is not sign-constrained because a positive residual does not need to mean more attraction; it may mean that Vina under-rewards a contact. Since a physics-sum readout could under-represent an arbitrary residual, a scalar MLP on pooled embeddings was a pre-registered *readout ablation* (E1-MLP). The absolute-target control (A0′) used exactly the same backbone and head with the absolute pK as target, so that the only difference between A0′ and E1 was the target ({fig:tedesign}). The residual was standardised on the training set (mean 0.518, SD 1.753), and the loss was the mean squared error on the standardised residual, matching the loss of the earlier models and the R² metric. Huber loss was not used in the primary arms, because a different loss would have confounded the effect of the target.
+
+@fig tedesign | guidance/thesis/figures/fig_trackE_design.png | 5.6 | Design of Track E. A shared GIGN encoder feeds the E1 delta head (physics-sum readout with learned bias and free-sign scale, primary) and a scalar-MLP readout (ablation); the prediction is reconstructed as the Vina anchor plus the predicted correction. The E2 auxiliary head with PLIP labels was designed but not run.
+
+@sub Anchor and its semantics
+
+The Vina scores were taken from the annotation file of the data set, available for all 64,888 entries of the leakage-safe split (none missing). The semantics of that column (score-only against locally minimised) are not documented. They were examined before the target was frozen, by recomputing Vina 1.2.6 scores with this project's preparation for 100 test-set reference poses for which the receptor and the ligand file are on disk. The stored value is a Vina-type score of approximately the stored pose, but it could not be reproduced exactly: the mean difference (stored minus recomputed) was −0.79 kcal/mol for score-only and −0.44 for minimised evaluation, the mean absolute error 0.82 and 0.79 kcal/mol and the Pearson correlation 0.86 and 0.89 ({fig:vinasem}). The two interpretations could not be distinguished, because for 90 of the 100 poses they differ by less than 0.2 kcal/mol under this preparation (the poses are already at a local minimum). The stored anchor was therefore treated as an opaque, fixed score attached to the pose, with a preparation noise of about 0.8 kcal/mol (about 0.6 pK units) relative to a recomputation. This does not affect the scoring comparisons on CrossDocked poses, since training and test use the same anchor, but an anchor recomputed for *generated* molecules would carry a systematic offset of about 0.3 to 0.6 pK units that would have to be calibrated before any guidance use.
+
+@fig vinasem | guidance/thesis/figures/fig_vina_semantics.png | 5.6 | The `vina` column of the annotation file against Vina 1.2.6 scores recomputed with this project's preparation for 100 reference poses. (A) Score-only evaluation; (B) local minimisation. The dashed line is the identity.
+
+@sub The auxiliary head and label reliability (E2, designed)
+
+The auxiliary head was designed as a per-ligand-atom multi-label classifier with masked, class-balanced binary cross-entropy (positive weights clipped at 10) and a fixed weight of 0.3 chosen a priori, because adaptive weighting schemes each add hyper-parameters and none has been validated for a residual main task with geometry-derived labels. Scrambled labels, permuted across complexes with the same number of ligand atoms so that prevalence and loss scale are preserved while the mapping from geometry to label is destroyed, were the mandatory negative control. Labels were to be computed once, offline, from pockets rebuilt from the data base (13.3 complexes per second; 81 minutes for all 64,888 complexes on two workers; zero failures on a 200-complex sample; interaction labels of 8 reconstructed complexes reproduced those of real receptors in 7 of 8 cases, with one hydrogen bond differing).
+
+The labels were, however, tested for stability under a 0.2 Å Gaussian perturbation of the ligand coordinates (100 complexes). Hydrogen-bond, hydrophobic and salt-bridge labels were reasonably stable (atom-level Jaccard 0.81, 0.69 and 0.81), but π-stacking merged with π-cation was not (Jaccard 0.16; complex-level presence agreement 0.69) ({fig:plipjit}). This is a stress test of the whole pipeline and not an error rate against a ground truth, which does not exist, but it showed that π-stacking could not be used as a supervision target. It was therefore excluded from the loss (the labels were stored), and E2 would have been limited to three interaction classes. Even the stable classes churn by 20 to 30% at this perturbation, and labels on diffusion-generated poses, which are noisier than 0.2 Å, would be less reliable still.
+
+@fig plipjit | guidance/thesis/figures/fig_plip_jitter.png | 5.6 | Stability of PLIP interaction labels under a 0.2 Å Gaussian perturbation of the ligand coordinates (100 complexes): (A) agreement at the level of atoms (Jaccard index) and (B) agreement at the level of complexes (presence of at least one interaction of the class).
+
+@sec Pre-Registration
+
+@sub Arms, metrics and decision rules
+
+The design document was committed before any model was trained, and its criteria were frozen at that commit; later changes were made only as dated amendments (eleven amendments, A1 to A11, none of which changed a threshold; the first eight preceded any training, the next two concerned the audit of earlier work and a literature quotation, and the last, a literature detail, was added after the runs had finished). The arms were the matched control A0′, E1, and E1-MLP, each with three seeds, and, in the second stage, E1+E2 and a scrambled-label control. The reference predictors of {tab:e1refs} required no training, and two more seeds of the Stage 0 EGNN (seeds 2022 and 2023) were trained to bound the seed variance of the strongest reference. Three metrics were defined: pooled R² on the test set (M1), within-target mean Spearman correlation over the 73 targets with at least 10 complexes, which is the guidance-relevant metric (M2), and the correlation of the prediction with the heavy-atom count (M3). The resampling unit was the target (paired cluster bootstrap, 2,000 resamples, seed 20260925), an arm's value being the mean over its seeds inside each resample, with Benjamini–Hochberg correction across the tests of a stage.
+
+The pass criteria of the first stage were the following.
+
+(C1a) E1 exceeds the Stage 0 EGNN in R² by at least 0.05, with the lower bound of the paired interval above 0. (C1b) E1 exceeds the linear model of Vina score and heavy-atom count, with the lower bound above 0; the decision D3 at the review gate made the joint passing of C1a and C1b the definition of a positive result. (C1c) E1 exceeds the raw Vina score in within-target Spearman correlation, with the lower bound above 0. (C1d) The correlation of the prediction with the heavy-atom count is at most 0.605 (the ground truth 0.555 plus 0.05). (C1e) E1 exceeds A0′ in R², which attributes any gain to the delta target and not to the backbone or the bias.
+
+If the point estimates met a margin but the interval included zero, the outcome was to be reported as *inconclusive* and never as a positive or a null result. If C1a failed, E1 would be considered falsified at this scale. The second stage (C2a to C2d and the scrambled-label control C3) and the gradient gate C4 (the correlation of the gradient magnitude with the distance to the pocket must have an upper 95% bound below +0.10, against +0.240 in Section V.4) would apply only to arms that passed. The order was a hard rule: after the first stage the work stopped for review, and the second stage was not to start automatically.
+
+@sub Power, disclosed in advance and recomputed
+
+The paired standard deviation of the R² difference between two predictors on the 127 target clusters was measured at 0.044 in the planning phase, for single models, and the disclosed detection probability for a true gain of +0.05 was about 21%; the margins were declared a floor for practical relevance and not a promise of detectability. After the runs, the standard deviation was recomputed for the seed-averaged arms actually used and was 0.075 to 0.085, so that the probability of detecting a true +0.05 gain was only about 8 to 10%. This means that the design could not have *confirmed* a small positive effect. It could, and did, exclude the required one, as shown below.
+
+@sec Infrastructure and Verification
+
+Long runs on a single 4 GB laptop GPU with interruptions require infrastructure that can be trusted. The trainer wrote atomic checkpoints every fixed number of steps and at the end of each epoch, handled termination signals (a SIGTERM mid-epoch produced an atomic checkpoint and an exit code that signals resumption, and a SIGKILL was recovered from the last periodic checkpoint), and resumed exactly. Testing this revealed a real bug: the model was built before the random generators were seeded, so the initial weights were not a function of the seed. After the fix, an interrupted and resumed run was bitwise identical to an uninterrupted run on the CPU (differences exactly 0.0, interrupted mid-epoch 2), and on the GPU the first epoch was bit-identical while later epochs differed at the level of atomic non-determinism (maximum difference of the predictions 0.048 between a resumed and an uninterrupted run, against 0.059 between two uninterrupted runs), so resuming was indistinguishable from re-running. Ten unit tests covered the delta target, its reconstruction and the label scrambling. The analysis pipeline reproduced the recorded R² and Pearson correlation of the Track A model through the new inference path (−0.189 and 0.581), and the fast bootstrap reproduced the frozen reference intervals.
+
+Checkpoint selection was determined by validation data only: the best checkpoint, the learning-rate scheduler, the early stopping (patience 12, at most 30 epochs) and the choice of the readout for the second stage. Test predictions were computed once, from the best checkpoint, after training. This is enforced by an automated static test (five tests: the test split is referenced only at data set construction and inside the final evaluation; the run loop never touches it; the best checkpoint is written only in the branch of a validation improvement), which serves as a positive control against selection on the test set, a practice that has been observed in the field [@gao2025]. The audit of the earlier trackers (Section III.8) is the counterpart for the previous work. No interruption occurred in the production runs (zero pause, resume or failure events), so the equivalence of resumed and uninterrupted runs was verified in the dedicated tests, not on the production runs. The first stage cost about 27 GPU-hours (per run 2.2 to 2.6 h for A0′, 2.2 to 2.4 h for E1, 1.5 to 2.8 h for E1-MLP, and 3.3 to 3.5 h for each extra EGNN seed).
+
+@sec Results of the First Stage
+
+@sub Predictive quality
+
+{tab:e1res} and {fig:ter2} show the test-set results. The delta model with the physics head (E1) reached a mean R² of 0.117 (target-clustered 95% CI −0.197 to 0.316; per seed 0.102, 0.176 and 0.074). The absolute-target control on the same backbone (A0′) reached 0.259 (0.099, 0.360), the Stage 0 EGNN 0.342 (0.160, 0.465), and the linear model of Vina score and heavy-atom count 0.362 (0.200, 0.470). The MLP readout was worse and unstable (mean −0.212; per seed −0.391, −0.368 and +0.123). The within-target Spearman correlation of every arm was between 0.18 and 0.27 with strongly overlapping intervals ({fig:tewithin}); no model demonstrated a within-pocket ranking clearly above the raw Vina score (0.248).
+
+@tab e1res | Track E, first stage: test-set results (127 targets; seed-averaged; target-clustered 95% CI)
+| Model | Per-seed R² | Mean R² (95% CI) | Within-target Spearman | Correlation with heavy atoms |
+| E1 (Δ target, physics head) | 0.102 / 0.176 / 0.074 | 0.117 (−0.197, 0.316) | 0.258 | 0.677 |
+| E1-MLP (Δ target, MLP head) | −0.391 / −0.368 / 0.123 | −0.212 (−0.806, 0.130) | 0.269 | 0.576 |
+| A0′ (absolute target, same backbone) | 0.275 / 0.259 / 0.242 | 0.259 (0.099, 0.360) | 0.225 | 0.611 |
+| Stage 0 EGNN (pre-registered reference) | 0.342 | 0.342 (0.160, 0.465) | 0.195 | 0.719 |
+| EGNN, three seeds | 0.342 / 0.347 / 0.406 | 0.365 (0.196, 0.477) | 0.180 | n/a |
+| Linear: Vina + heavy atoms | n/a | 0.362 (0.200, 0.470) | 0.266 | 0.940 |
+@endtab
+
+@fig ter2 | guidance/thesis/figures/fig_trackE_r2.png | 5.8 | Test R² of the Track E arms and the reference predictors on 127 held-out targets. Bars: target-clustered 95% confidence intervals; ticks: individual seeds; dotted and dashed vertical lines: the Stage 0 EGNN and the linear Vina + heavy-atom baseline.
+
+@fig tewithin | guidance/thesis/figures/fig_trackE_within_target.png | 5.6 | Mean within-target Spearman correlation over the 73 test targets with at least 10 complexes (95% bootstrap intervals). All arms overlap with raw Vina.
+
+@sub Pre-registered criteria
+
+E1 failed every criterion ({tab:e1crit}). The interval of the difference from the Stage 0 EGNN (−0.224; 95% CI −0.422 to −0.091) lay entirely below the required +0.05 and below zero, and the same was true for the difference from the linear baseline (−0.244; −0.444 to −0.121). The comparison that isolates the delta target, against A0′ on the same backbone, gave −0.141 (−0.318 to −0.026), so the delta target did not help and was worse at the 95% level (the 99% interval, −0.379 to +0.007, just includes zero). E1 was not different from raw Vina in within-target ranking (+0.010; −0.018 to +0.038). The heavy-atom guard was also failed (0.677 against the limit 0.605). E1-MLP failed as well (difference from the EGNN −0.553; −1.085 to −0.249), and it passed the size guard only because it was a poorer predictor overall. All BH-adjusted one-sided p-values for the hypothesis that E1 is better were 1.0 (unadjusted 0.25 to 1.00). Effect sizes were z = −2.63 (C1a), −2.97 (C1b) and −1.83 (C1e), and the paired Cohen's d_z of the per-target squared error against the linear baseline was −0.33.
+
+@tab e1crit | Pre-registered criteria of the first stage, applied to E1 (seed-averaged; difference = E1 minus reference)
+| ID | Test | Difference (95% CI) | 99% CI | Verdict |
+| C1a | R² against the Stage 0 EGNN (needs at least +0.05 and lower bound > 0) | −0.224 (−0.422, −0.091) | (−0.499, −0.063) | Fail; significantly worse |
+| C1b | R² against Vina + heavy-atom linear (lower bound > 0) | −0.244 (−0.444, −0.121) | (−0.513, −0.092) | Fail |
+| C1c | Within-target Spearman against raw Vina (lower bound > 0) | +0.010 (−0.018, +0.038) | (−0.028, +0.048) | Fail; not different |
+| C1d | Correlation with heavy atoms at most 0.605 | 0.677 | n/a | Fail |
+| C1e | R² against A0′ (lower bound > 0) | −0.141 (−0.318, −0.026) | (−0.379, +0.007) | Fail; the delta target did not help |
+| Sensitivity | R² against the three-seed EGNN mean | −0.247 (−0.426, −0.134) | (−0.486, −0.108) | Fail; same conclusion |
+@endtab
+
+The outcome is not *inconclusive* in the sense of the pre-registered rule. The design was underpowered to confirm a small gain, but the upper bounds of the three decisive intervals (−0.091, −0.121 and −0.026) lie below zero, so a positive difference of the required size is excluded at this scale. The verdict of the frozen rule was that E1 was falsified at this scale. The second stage was not run, and neither were the conditional gradient-surgery arm, the sensitivity to the auxiliary weight, or the gradient gate C4, since no arm passed the first stage.
+
+@sec Why the Delta Target Failed
+
+Four pieces of evidence, all measured, explain the result, and they are separated here from the hypotheses that were not tested.
+
+(i) The residual was almost unlearnable from structure by this model ({fig:telearn}). The best validation loss of E1 (0.87 to 0.96 in standardised units) was about that of a predictor that always outputs the mean residual (0.92 on the validation set), whereas the absolute-target control genuinely learnt (0.68 to 0.73). The MLP readout had validation losses of 1.02, 1.02 and 0.87 for its three seeds, that is, worse than the constant for two of them.
+
+(ii) The constant residual already scored R² = 0.193 on the test set (ŷ = pK_Vina plus the mean residual), and E1 (0.117) did not exceed it, so the learnt correction added nothing measurable beyond the Vina anchor.
+
+(iii) Both delta arms had their best checkpoint at epoch 1 or 2 (E1-MLP once at epoch 13) and then overfitted, with the training loss falling to about 0.25 while the validation loss increased, as the absolute-target arm and Track A did.
+
+(iv) The reconstruction inherits the size behaviour of the anchor (the correlation of the prediction with the heavy-atom count was 0.68, against 0.56 for the ground truth), so the delta target did not remove the size shortcut from the *predictions* although it removed it from the *target*.
+
+@fig telearn | guidance/thesis/figures/fig_trackE_learnability.png | 5.4 | Best validation error (standardised units; 1.0 corresponds to the variance of the target) of the three arms for each seed. Dashed lines: error of a constant predictor. The absolute target is learnt; the delta target is not learnt better than by a constant.
+
+A fifth observation is a caveat and not a finding: the GIGN + PIGNet2 backbone was itself weaker than the EGNN under this budget (A0′ 0.259 against 0.34 to 0.41), so E1 was tested on the weaker of the two backbones. The comparison C1e is independent of the backbone, and it failed too. Three hypotheses were *not* tested and must not be stated as findings: heterogeneity of the pK labels (Ki, Kd and IC50 are mixed), the cross-docking provenance of the data set (the receptor and the ligand of a pose can come from different structures, so that the label refers to the ligand's measured binding and not necessarily to that receptor conformation, a source of label noise that affects all arms equally and limits the absolute R²), and the 0.8 kcal/mol preparation noise of the anchor, which may cap how much of Δ any structure model can recover.
+
+@sec Limits of the Conclusion
+
+The conclusion is limited to this architecture and training budget, three seeds, a 127-target test set, the cross-docked label regime and a fixed, unweighted squared-error loss. It does not show that delta-learning fails in general: tree-ensemble models of a residual on hand-built features have been reported to succeed [@wang2017; @yang2022], and a different backbone could behave differently. It does not show that E2 cannot help, since E2 was defined as an addition to a *working* E1 and E1 did not work. E1 was tested for scoring only. The results of this stage also show that its own design could not have confirmed a small effect (detection probability 8 to 10%), and that the seed variance of the EGNN reference (0.342, 0.347, 0.406) is smaller than the shortfall of E1 (0.22 to 0.25).
+
+Three optional analyses that would need no retraining were proposed and not carried out: a robustness test that perturbs the anchor at test time, a re-scoring of previously generated molecules with early-recognition metrics, and any new hypothesis such as E2 on the absolute target or a different backbone, which would need a separate scoping decision. The E2 budget of about 28 GPU-hours was left unspent.
+
+@sec Position in the Literature
+
+To the best of the search that could be performed (with the stated limits: a bibliographic search with the tools available, a verification of the most relevant sources by their abstracts or texts, and one paper, DiffInt, whose training loss could not be confirmed), no study was found that combines (a) a delta-learning target against a docking score, (b) a typed per-atom interaction classification loss from PLIP as auxiliary supervision of a separate guidance predictor, and (c) the use of that predictor's gradient to steer a frozen 3D diffusion generator. Typed interactions enter diffusion pipelines in three different ways, none identical to E2: as inference-time conditioning (DeepICL [@zhung2024]), as co-generated diffusion outputs (BInD [@lee2025bind]), and as an auxiliary classification loss inside the generator's own denoiser (InterDiff [@wu2024]). The claim of novelty is therefore restricted to the *combination*, formulated as "we did not find", and Track E does not introduce a new architecture. The name of the "Delta Score" of the evaluation literature [@gao2025], which is a specificity metric computed against a randomly chosen off-target pocket, is unrelated to the residual target used here. Because the second modification was not run, the combination was designed and pre-registered but not tested; what was tested is the first component.
+
+@sec Summary of the Chapter
+
+A pre-registered, verified and adequately reported test of delta-learning against a Vina anchor did not improve the affinity predictor. It was significantly worse than the Stage 0 EGNN and a two-feature linear baseline, it did not beat an absolute-target control on the same backbone, its best validation error did not beat that of a constant predictor, and its within-pocket ranking was not better than that of raw Vina. The negative result closes the last of the routes tested in this thesis and, with Chapters V to VII, shows that neither a change of the predictor architecture, of the guidance mechanism, of the target of guidance, nor of the training target rescued gradient guidance in this setting.

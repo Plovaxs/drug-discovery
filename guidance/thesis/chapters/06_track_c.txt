@@ -1,0 +1,77 @@
+@ch VI | REJECTION SAMPLING: THE AFFINITY PREDICTOR AS A POST-HOC RANKER (TRACK C)
+
+The routes of Chapter V used the predictor through its gradient. A predictor with moderate accuracy might nevertheless be useful in a different role, as a *ranker* of finished molecules. In rejection sampling, or best-of-N selection, a large pool of molecules is generated without guidance and only the molecules with the highest predicted affinity are retained. This mechanism requires no gradient through the predictor, no change to the sampler, and no assumption about the noisy intermediate states. It is a different mechanism class from everything tested in Chapter V, and it had been explicitly left out of the conclusions of that chapter. This chapter tests it with the Stage 0 EGNN as the ranker.
+
+@sec Design
+
+@sub Pools, ranker and evaluation
+
+Fifteen pockets of the 20-pocket set of Section IV.5 were used, with two seeds each, giving 30 *pools*. Each pool consisted of 300 molecules sampled without guidance (λ = 0), reconstructed, scored once by the frozen Stage 0 EGNN (higher score means a stronger predicted binder) and docked once with AutoDock Vina (exhaustiveness 8) and PoseBusters. Between 285 and 300 of the 300 attempted molecules per pool were reconstructed, and no pool failed. The seeds of each pocket were combined, giving pockets of 576 to 600 molecules. Top-k selection, the random subset and the scrambled filter are all post-hoc selections from the same, already docked pool, so no additional generation or docking was necessary for the analysis.
+
+The scope had been reduced during the run, after a review of the time budget: from 20 pockets and 3 seeds (60 pools) to 15 pockets and 2 seeds (30 pools), because a pool cost about 4.6 h after the optimisations of Section III.7 and the run had to fit in the time available for the thesis. Fifteen pockets remain above the number used in the earlier ablations, and two seeds retain a weaker seed-to-seed consistency check. Pools already completed for a third seed of two pockets were excluded from the analysis and not force-included.
+
+@sub Statistics
+
+The primary selection was the top 10% of each pocket's pool by predicted score (sensitivity analyses at 5, 20 and 30%). For each pocket, the following were computed:
+
+(i) the shift of the mean Vina Dock score of the selected molecules against the full pool, with a 95% bootstrap interval (2,000 resamples);
+(ii) an empirical one-sided p-value against 2,000 random subsets of the same size;
+(iii) the negative control of Section III.6.2, a scrambled filter with 2,000 permutations of the predicted scores, together with a null-consistency check (KS test between the two null distributions), which no pocket failed, so no implementation error of the permutation was indicated;
+(iv) a KS test of the selected against the full-pool distribution, corrected with the Benjamini–Hochberg procedure across the 15 pockets;
+(v) three diagnostics of quality degradation: the shift of the heavy-atom count, the PoseBusters pass rate, and the ligand efficiency, which was KS-tested and corrected in the same way.
+
+@sec Results
+
+@sub Raw docking score
+
+The selection improved the raw Vina Dock score in most pockets. The mean shift was −1.31 kcal/mol (median −1.33; range −3.73 to +1.95), and in 14 of 15 pockets the KS test was significant after the correction. The seeds agreed in direction for 14 of 15 pockets; the exception was SQHC (per-seed shifts +0.78 and −1.07), whose raw effect (−0.13, 95% CI −1.22 to +4.66) was weak and inconsistent. Read by themselves, these numbers would suggest a usable rejection-sampling signal.
+
+@sub Ligand efficiency, size and validity
+
+The signal disappeared when the outcome was normalised by molecular size ({tab:trackc} and {fig:trackc}). The ligand efficiency of the selected molecules was significantly worse than that of the pool in 14 of 15 pockets (BH-corrected p < 0.0001 in all these; mean shift +0.099 kcal/mol per heavy atom, where positive is worse); the one exception, PNTM_STRAE, had a small improvement (−0.030). The selected molecules were larger by 12.0 heavy atoms on average (median 12.7; range 7.4 to 15.1), and their PoseBusters pass rate was lower by 28.8 percentage points on average (median 31.6; range 5.7 to 52.7; mean pass rate 0.57 for the pool and 0.28 for the selection). This is the signature of Vina hacking [@gao2025]: larger molecules with poses that are often invalid can receive favourable raw scores without a corresponding gain of binding per atom. The raw improvement reflects, at least in part, that the ranker prefers larger molecules, a preference that is consistent with the correlation of 0.72 between the predictor's output and the heavy-atom count (Chapter IV).
+
+@tab trackc | Track C: top 10% selection by the Stage 0 ranker, per pocket
+| Pocket | n (pool) | Vina Dock shift (95% CI) | Heavy atoms shift | Ligand-efficiency shift | PoseBusters pass rate, pool → selection | Verdict |
+| NOS2 | 599 | −3.73 (−4.07, −3.30) | +14.3 | +0.091 | 0.79 → 0.43 | Confounded by size |
+| PNTM | 596 | −3.45 (−6.02, −1.96) | +9.5 | −0.030 | 0.62 → 0.45 | Confounded by size |
+| PAK4 | 598 | −2.83 (−3.11, −2.55) | +14.8 | +0.116 | 0.77 → 0.48 | Confounded by size |
+| PYRD | 597 | −2.70 (−2.99, −2.36) | +13.6 | +0.090 | 0.71 → 0.23 | Confounded by size |
+| XANLY | 599 | −2.54 (−2.92, −2.16) | +10.5 | +0.054 | 0.68 → 0.52 | Confounded by size |
+| DPP2 | 596 | −2.13 (−2.45, −1.70) | +15.1 | +0.145 | 0.64 → 0.28 | Confounded by size |
+| CD38 | 591 | −1.41 (−1.78, −0.97) | +8.2 | +0.033 | 0.48 → 0.42 | Confounded by size |
+| IMA1 | 600 | −1.33 (−1.56, −1.15) | +12.7 | +0.161 | 0.80 → 0.38 | Confounded by size |
+| MENE | 598 | −1.31 (−1.61, −0.99) | +7.4 | +0.021 | 0.48 → 0.40 | Confounded by size |
+| HDAC8 | 597 | −1.00 (−2.04, −0.28) | +14.8 | +0.165 | 0.55 → 0.12 | Confounded by size |
+| NQO1 | 597 | −0.90 (−1.26, −0.62) | +10.1 | +0.072 | 0.61 → 0.28 | Confounded by size |
+| SQHC | 576 | −0.13 (−1.22, +4.66) | +13.4 | +0.077 | 0.27 → 0.10 | Confounded by size |
+| BSD | 594 | +0.21 (−0.14, +0.58) | +10.9 | +0.094 | 0.35 → 0.03 | No signal |
+| P2Y12 | 578 | +1.57 (+0.77, +2.46) | +10.8 | +0.097 | 0.29 → 0.09 | Wrong direction |
+| RIBB | 592 | +1.95 (+1.28, +2.65) | +14.4 | +0.304 | 0.54 → 0.02 | Wrong direction |
+@note Negative Vina Dock shifts are improvements; positive ligand-efficiency shifts are degradations. Vina Dock in kcal/mol; ligand efficiency in kcal/mol per heavy atom. Pockets are sorted by Vina Dock shift; short names denote PNTM_STRAE, PYRD_TRYCC, XANLY_BACGL, MENE_BACSU, SQHC_ALIAD, BSD_ASPTE and RIBB_VIBCH. The verdict of SQHC rests on a weak, seed-inconsistent effect.
+@endtab
+
+@fig trackc | guidance/thesis/figures/fig_trackC.png | 6.2 | Track C, top 10% selection by the Stage 0 ranker in 15 pockets. (A) Shift of the raw Vina Dock score with 95% bootstrap intervals; (B) shift of ligand efficiency (red: worse, green: better); (C) drop of the PoseBusters pass rate in percentage points.
+
+The verdicts by the pre-declared bands were: 12 of 15 pockets *signal but confounded by size*, 2 of 15 *signal in the wrong direction*, 1 of 15 *no signal*, and none *clear signal*.
+
+@sub Two pockets with the opposite behaviour
+
+In two pockets, RIBB_VIBCH and P2Y12, the top-10% selection was significantly *worse* than a random subset of the same size on the raw score (empirical p_random = 1.0000 for RIBB_VIBCH, that is, none of 2,000 random draws did as poorly). This held at all four values of k tested for RIBB_VIBCH. In these pockets the ranker was anti-correlated with the real docking outcome, and not just uninformative.
+
+@sub Sensitivity to the selection fraction
+
+The raw-score effect was not stable when the selected fraction was varied. Averaged over pockets, the shift of the raw Vina Dock score was −1.38, −1.31, −0.94 and −0.55 kcal/mol at k = 5, 10, 20 and 30%, and the number of pockets with a negative shift fell from 11 to 12, 10 and 10. Individual pockets reversed sign (HDAC8: −1.41 at 5% but +1.01 at 30%; PNTM_STRAE: −2.91 at 20% but +1.38 at 30%). The degradation of ligand efficiency was the more robust finding at all fractions. It should be read as a monotone weakening of the raw effect with increasing k, which is the expected behaviour of a ranker whose first-ranked molecules are the largest.
+
+@sec Post-Hoc Analysis of the Validity Loss
+
+The drop in the PoseBusters pass rate ranged widely across pockets (5.7 to 52.7 points), and it was asked, after seeing this variation, whether it could be explained. Two exploratory hypotheses were examined, both with n = 15 pockets, Spearman correlations and case-resampling bootstrap intervals, none of them pre-registered or corrected for multiple testing.
+
+The pocket size (the number of protein atoms in the 10 Å crop) correlated *negatively* with the drop (Spearman r = −0.59; 95% CI −0.83 to −0.13; Pearson r = −0.54, p = 0.039; between −0.53 and −0.71 under leave-one-out). Larger pockets thus tolerated the selection better, the opposite of the naive expectation. As a plausibility check, the pocket size correlated with the mean size of the unguided molecules (r = +0.72; 95% CI +0.20 to +0.96). A possible reading is that molecules generated in a small, tight pocket already fit closely, so that a shift toward larger molecules has no room and produces clashes, whereas a large pocket can accommodate a somewhat larger molecule. The spread of heavy-atom counts within the pool predicted the drop independently of the pocket size (partial Spearman r = +0.70; 95% CI +0.17 to +0.91), while the diversity of the pool did not (r = +0.24; CI −0.26 to +0.59). An earlier version of this analysis had truncated each pool to its first 300 molecules, that is, to a single seed, and had produced a non-significant partial correlation; the error was found by re-running the saved script on the complete pool, and the corrected result is the one reported here.
+
+These correlations are hypotheses for a future, targeted study, for example a model of pocket volume against clash rate, and not findings. With n = 15 and post-hoc selection of the questions asked, they are at the limit of what can be supported.
+
+@sec Interpretation
+
+Three conclusions are supported. First, the same frozen predictor that failed as a gradient signal also failed as a post-hoc ranker, by a different route: the selection produced a raw-score gain that turned into a loss when normalised by molecular size, and it lowered physical validity substantially. Second, the negative control behaved as designed (the scrambled-filter and random-subset nulls agreed in all pockets), so the failure is not an implementation error of the selection. Third, the mechanism of failure that this chapter documents is specific: the *selection* is dominated by size. It differs from the mechanism diagnosed for the gradient in Chapter V, where the gradient magnitude was not correlated with atom heaviness in the direction that a size shortcut would predict, and was instead concentrated on atoms far from the pocket. Some earlier summaries of this project describe both failures as having the same root cause, molecular size. This is not what the data show. The two failures are compatible with a common upstream cause, a predictor that encodes ligand-side properties and not pocket-specific interaction, but the evidence for that common cause is indirect (Chapter IX).
+
+Two limits should be kept in mind. The ranker was applied to *unguided* pools of the diffusion model, not to a pool with a different composition. A predictor trained with an explicit size control could behave differently as a ranker, and this was not tested; in particular, the combination of the Track A predictor with rejection sampling was considered and not run, because the size correlation of that predictor (0.64) was only slightly lower. Finally, the result concerns *top-10% selection* by one specific ranker with a stated set of pockets and seeds; the significant effects of the raw-score improvement and of the degradation are large and consistent across pockets, whereas per-pocket verdicts, such as those of SQHC_ALIAD and BSD_ASPTE, rest on weaker evidence.

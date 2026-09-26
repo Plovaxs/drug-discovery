@@ -1,0 +1,77 @@
+@ch VII | SYNTHESIZABILITY GUIDANCE (TRACK D)
+
+The title of the thesis names two guidance signals, affinity and synthesizability. The chapters so far concerned the first. This chapter applies the same standards to the second: whether the gradient of a learned predictor of synthesizability can steer the frozen generator toward molecules that are more synthesizable according to an independent measure. Synthesizability is a categorically different target from affinity: it is a property of the ligand alone, it is derived from a fingerprint-based classifier, and its predictor was expected to be easier to learn.
+
+@sec Target, Predictor and Guidance Design
+
+The independent measure was the RAscore [@thakkar2021], a neural classifier that estimates whether a retrosynthesis planner would find a route for a molecule; its value lies in [0, 1]. The guidance predictor, SynthPredNet, is a ligand-only EGNN with a sigmoid output (0.43 M parameters) trained to regress the RAscore of a ligand from its 3D graph. Since it has no protein input, the guidance depends on the ligand's own geometry only. A guidance function of this kind faces the problem of Section III.3.2: the predictor was trained on features derived from bonds (degree, number of hydrogens and hybridisation), which do not exist during sampling. Two designs were therefore compared: a *placeholder* design in which the three bond-derived fields were set to a fixed "unknown" value, and a *bond-aware* design in which they were replaced by a parameter-free, differentiable estimate computed from the interatomic distances of the current diffusion state (a soft version of the bond-length rule used in the stability evaluation). Two errors were found and corrected in this estimator with a synthetic-geometry test before it was used: element pairs with no such bond order were scored as if they had the single-bond value, and the steepness of the sigmoid saturated within a fraction of a picometre, which made the indicator a hard step with almost zero gradient on realistic geometries.
+
+@sec The Original Design: Divergence between the Own Score and the Real Score
+
+The first experiment used the placeholder design on the single bundled example pocket, with 8 molecules per value of λ_synth and a single seed, without any statistical test. The predictor's own score increased with λ while the real RAscore of the finished molecules decreased ({tab:synthorig} and {fig:trackd}A). At λ = 0.03 the own score was 29% higher and the real score 53% lower than in the unguided run. Per molecule, 6 of 8 real scores were lower and none was meaningfully higher at λ = 0.03, whereas at λ = 0.01 six were unchanged, one higher and one lower, so no safe and beneficial window was found. Molecules fragmented at λ ≥ 1.
+
+@tab synthorig | Original (placeholder) design, one pocket, n = 8 per value
+| λ_synth | Single-fragment rate | Predictor's own score | Real RA-score |
+| 0 (unguided) | 100% | 0.458 | 0.361 |
+| 0.01 | 100% | 0.487 (+6%) | 0.365 (+1%) |
+| 0.03 | 100% | 0.591 (+29%) | 0.168 (−53%) |
+| 0.1 | 100% | 0.645 (+41%) | 0.154 (−48%) |
+| 0.3 | 100% | 0.735 (+61%) | 0.126 (−58%) |
+| 1.0 | 12.5% | 0.864 | one valid molecule |
+| ≥ 3.0 | 0% | n/a | none scoreable |
+@note Two independent unguided baselines with the same seed gave real RA-scores of 0.361 and 0.299, because the two runs consumed a different number of random draws before the baseline point. This indicates the size of the run-to-run noise at n = 8.
+@endtab
+
+The suggested root cause was the train–inference mismatch of the bond-derived features. The bond-aware design was the test of this hypothesis, and it did not resolve the divergence. At λ = 0.1 (5 of 8 molecules intact) the own score rose by 12% while the real score fell by 16%, and fragmentation started earlier than in the placeholder design (single-fragment rate 0.625 at λ = 0.1, 0.125 at 0.3, 0 at 1.0). A plausible explanation is that the bond-aware features add a second gradient path (position to estimated bonds to features to score), so that the same nominal λ corresponds to a larger effective step. Time-dependent scheduling and a richer guidance architecture were also considered and were explicitly not attempted, because the result of the bond-aware design did not point to timing or capacity as a suspect, and continuing without a specific hypothesis would have been a search for a fix rather than a test of one.
+
+The precision of these statements is limited. They come from one pocket, n = 8 and a single seed, with no test and no confidence intervals, and a re-examination of the work in the next section confirmed this limitation.
+
+@sec Re-Examination: Convergence and Leakage of the Synthesizability Predictor
+
+Before repeating the guidance experiment at higher power, the state of the predictor itself was audited, as had been done for the affinity predictor. Two problems were found. (i) The predictor had been trained with a fixed ceiling of 40 epochs and stopped with its early-stopping counter at 1 of 6, so it had not converged. (ii) Its data were divided by a random 90/10 split of the 15,000 labelled entries with no held-out test set and no leakage check, so the reported quality (validation R² = 0.769, Pearson 0.878) rested on a split in which the same pocket or a near-identical ligand could occur in both subsets.
+
+The 15,000 entries were re-partitioned by target identity with the leakage-safe assignment of Section III.2.4, without recomputing any label, giving 8,835 training, 1,015 validation and 1,940 test entries (3,210 entries were discarded because their target was not covered by the assignment). The same architecture was retrained without an epoch ceiling (early stopping at epoch 20 with a patience of 15; best checkpoint at epoch 5). On the held-out test set it reached R² = 0.414, Pearson 0.647, Spearman 0.649 and RMSE 0.287 ({tab:synthq} and {fig:quality}). Its quality was therefore clearly better than chance, and higher than the affinity predictors' correlations (0.58 to 0.61). The drop from the earlier values is consistent with the removal of leakage-driven inflation, but the two evaluations differ in more than the split (they also differ in the evaluation set and in convergence), so the difference is not a controlled estimate of the size of the leakage.
+
+@tab synthq | SynthPredNet: original and leakage-safe evaluation
+| Evaluation | R² | Pearson | Spearman | RMSE |
+| Original (random split, validation only, not converged) | 0.769 | 0.878 | 0.871 | 0.192 |
+| Leakage-safe (target-disjoint test set, n = 1,940, converged) | 0.414 | 0.647 | 0.649 | 0.287 |
+@endtab
+
+@sec Guidance with the Leakage-Safe Predictor
+
+With the retrained predictor and the bond-aware design, the strength sweep was repeated on the same single pocket (BSD_ASPTE) with 30 molecules per value, the full 1,000 steps and a grid from 0 to 30 ({tab:synthd3}). A KS test of the real RAscore, guided against unguided, was applied to each of the five values with enough scoreable molecules, and the five tests were corrected with the Benjamini–Hochberg procedure.
+
+@tab synthd3 | Leakage-safe predictor, bond-aware design, pocket BSD_ASPTE, n = 30 per value
+| λ_synth | Single-fragment rate | Scoreable (n) | Own score | Real RA-score | Shift of real score (95% CI) | KS p (BH) |
+| 0 (unguided) | 0.90 | 27 | 0.5605 | 0.2581 | n/a | n/a |
+| 0.01 | 0.90 | 27 | 0.5668 | 0.2515 | −0.009 (−0.161, 0.140) | 0.997 |
+| 0.03 | 0.90 | 26 | 0.5922 | 0.1916 | −0.066 (−0.207, 0.079) | 0.997 |
+| 0.1 | 0.77 | 23 | 0.5784 | 0.1863 | −0.071 (−0.212, 0.072) | 0.997 |
+| 0.3 | 0.21 | 6 | 0.5577 | 0.0659 | −0.192 (−0.315, −0.078) | 0.997 |
+| 1.0 | 0.07 | 2 | 0.7925 | 0.2391 | −0.018 (−0.194, 0.148) | 0.997 |
+| ≥ 3.0 | 0.00 | 0 | n/a | n/a | n/a | n/a |
+@endtab
+
+@fig trackd | guidance/thesis/figures/fig_trackD.png | 6.2 | Track D. (A) Original design (placeholder features, n = 8, one pocket): the predictor's own score and the real RA-score as a function of guidance strength. (B) Leakage-safe predictor with bond-aware features (n = 30, same pocket): shift of the real RA-score with 95% bootstrap intervals; grey points rest on 6 and 2 scoreable molecules.
+
+No comparison survived the correction (corrected p = 0.997 for all five). The mean shift of the real score was negative at every non-zero strength, and never positive, but all intervals except that of λ = 0.3 included zero, and the interval at λ = 0.3 rests on only 6 scoreable molecules because of fragmentation (single-fragment rate 0.21), which is precisely the kind of large point estimate from a tiny sample that the standards of this work forbid to report as a finding. Two further cautions apply to the consistent sign. The conditions share their initial noise (one seed), so the five shifts are not independent observations. And the run-to-run noise of the unguided baseline was already about 0.06 to 0.1 RAscore units between nominally equivalent baselines of the same unguided sampler (0.361 and 0.299 at n = 8, {tab:synthorig}; 0.258 at n = 30), which is as large as most shifts in the table. The predictor's own score rose by at most 5.7% at the largest well-powered strength (λ = 0.03: 0.5605 to 0.5922, with a real score change of −25.8% in the mean) and was *not* monotone (0.5577 at λ = 0.3), and no test was applied to it. The divergence between the two scores that was striking in the original design is thus reproduced in sign, but not established statistically, in the leakage-safe design.
+
+What the data support is therefore limited to the following statements: there was no strength at which a meaningful or statistically supported increase of the real RAscore was observed (the only higher mean, +1% at λ = 0.01 in the original design, was within the run-to-run noise); the guidance destroyed the connectivity of the molecules at λ ≥ 0.3; and in the exploratory design, a divergence of the own score and the real score was observed, with a magnitude that the small sample could not confirm. The multi-pocket confirmation (step D.4) was skipped, by a gating rule that had been declared in advance: if the divergence persisted even partially, the investigation should proceed to the mechanistic diagnostic and not spend multi-pocket effort on an unresolved single-pocket result. The consequence is that the whole of Track D rests on one pocket, and this is a real limitation.
+
+@sec Diagnostic of the Synthesizability Gradient
+
+The diagnostic of Section V.4 was adapted to the ligand-only predictor. Clean-data estimates were captured from unguided trajectories at three timesteps, for three pockets with 16 samples each (144 states), and the per-atom gradient magnitude of the bond-aware guidance was correlated with three proxies that could plausibly relate to the classifier's behaviour ({tab:synthdiag}). The distance to the pocket does not apply, since the predictor has no protein input.
+
+@tab synthdiag | Track D diagnostic: gradient magnitude against three atom-level proxies (n = 144 states)
+| Proxy | Mean correlation | 95% CI | Reading |
+| Heaviness of the atom type | 0.032 | (−0.019, 0.083) | Not distinguishable from 0 |
+| Aromatic fraction | −0.014 | (−0.061, 0.036) | Not distinguishable from 0 |
+| Heteroatom fraction (N, O, S, P, halogens) | 0.042 | (−0.008, 0.091) | Not distinguishable from 0 |
+@endtab
+
+None of the three proxies explained the gradient. In contrast with the affinity gradient, for which a concrete correlate (distance to the pocket) was found, no correlate was found here. The intervals are narrow, so correlations above about 0.09 in magnitude with these three proxies are excluded, but the proxies are simple, scalar and per-atom; they do not exclude that the gradient follows a more complex direction. Two candidate explanations were not tested. The first is the known failure mode of classifier guidance in which the gradient exploits directions in the input space that raise the classifier's output without changing the property that it was trained to recognise [@dhariwal2021]. The second is that a fingerprint-based target may have a structure that a smooth, continuous 3D gradient cannot approximate. The asymmetry between the two halves of the thesis, a diagnosed mechanism for affinity and an undiagnosed one for synthesizability, is a real difference in explanatory power and is reported as such.
+
+@sec Conclusion of Track D
+
+The gradient of a moderately accurate, leakage-safe synthesizability predictor (test R² = 0.41) gave no evidence of improving the real RAscore in the single pocket that was examined at adequate sample size, destroyed the connectivity of the molecules at strengths of 0.3 or more, and produced, in the exploratory design, a divergence of the predictor's own score from the real score that was not confirmed statistically after the predictor was retrained. Two fixes had been attempted (bond-aware features and a leakage-safe, converged retrain) and three diagnostic proxies had been excluded. The conclusion is that no benefit was demonstrated, not that harm was demonstrated. The finding also has a methodological corollary that is important for the rest of the thesis: the quality that had been reported for the original predictor came from an unaudited split, and the audit changed it substantially.

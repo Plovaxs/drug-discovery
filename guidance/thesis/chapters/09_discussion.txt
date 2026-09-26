@@ -1,0 +1,78 @@
+@ch IX | SYNTHESIS AND DISCUSSION
+
+This chapter draws the experiments of Chapters IV to VIII together. It states what the evidence supports and with what strength, discusses alternative explanations and threats to validity, and relates the findings to the literature. Statements are graded: a *measured* fact is a number that was computed in this work; a *consistent* interpretation is one that the measurements are compatible with and that no measurement contradicts; and a *hypothesis* is an explanation that was not tested.
+
+@sec Summary of the Evidence
+
+{tab:grand} summarises the routes. Each row states what was changed relative to the previous routes, the outcome on the pre-declared criteria, and the main limitation of that route. No route produced a defensible improvement in an independently measured outcome.
+
+@tab grand | Summary of the experimental routes
+| Route | What was varied | Outcome | Main limitation |
+| Baseline ablation (IV) | Guidance strength λ, original and repaired EGNN predictor | No effect on real Vina Dock at any tested strength (20 pockets; 8 pockets, 3 strengths); fragmentation at large λ | Predictor is size-correlated (0.72); position-only guidance |
+| Track A (V) | Predictor architecture (physics-anchored GIGN + PIGNet2) | 0 of 24 comparisons significant; direction consistency 89% to 67% with more data; PoseBusters collapse at λ = 1.0 | 8 pockets, n = 30; per-pocket detectable shift about 1 to 1.4 kcal/mol |
+| Track B (V) | Scale (B1), objective (B2) and timing (B3) of the gradient | 0 of 23 comparisons significant; B2 worse by median in 6 of 6 with severe validity loss | 2 to 3 pockets, n = 20 |
+| Diagnostic (V) | Gradient direction of the EGNN | Gradient magnitude correlates with distance to pocket (+0.240) and not with heaviness (−0.127) | One predictor; correlational |
+| Track C (VI) | Non-gradient use as a ranker (top 10%) | Raw docking gain in 12 of 15 pockets turns into worse ligand efficiency in 14 of 15, +12 heavy atoms, −29 points PoseBusters | Unguided pools; one ranker |
+| Track D (VII) | Target of guidance: synthesizability | No supported gain; divergence between own and real score in the exploratory design, not confirmed statistically | One pocket for the powered test; three proxies tested for the mechanism |
+| Track E (VIII) | Training target: delta against Vina | Significantly worse than the Stage 0 EGNN and a two-feature linear baseline; not better than a constant in validation | Scoring only; E2 not run; weaker backbone |
+@endtab
+
+@sec What the Evidence Supports
+
+@sub Main finding
+
+Under the conditions tested (a frozen TargetDiff model, position-only guidance on the clean-data estimate, predictors trained on clean docked poses, evaluation with Vina docking, PoseBusters, ligand efficiency and the RAscore, and pocket sets of 1 to 20 targets) neither the gradient of a learned affinity predictor, nor its use as a ranker, nor the gradient of a learned synthesizability predictor produced a defensible improvement. The result was reproduced for predictors of different quality (Pearson correlation 0.58 to 0.65 on leakage-safe test sets), architecture and target, and it was not explained by low predictor accuracy or by a bad choice of strength, since the strength was varied over three orders of magnitude and the structural integrity of the molecules limited it from above.
+
+@sub Grading the explanations
+
+*Measured.* (i) The affinity predictors' outputs are strongly correlated with the ligand size (0.64 to 0.72). (ii) Selection by the ranker enriches larger molecules by about 12 heavy atoms and lowers physical validity by about 29 percentage points, and the raw docking gain does not survive normalisation by size. (iii) The magnitude of the affinity gradient is positively correlated with the distance of an atom from the pocket (+0.240; 95% CI 0.194 to 0.285) and not with its heaviness. (iv) The delta target is not learnt better than a constant by the model used.
+
+*Consistent.* The failure of the gradient routes and the failure of the ranker route are compatible with a common upstream cause: a point predictor trained to minimise the error of the experimental affinity encodes ligand-side properties (size), which are informative for the *average* complex, and not the pocket-specific interactions that a generator would need to exploit. The gradient diagnostic (iii) is compatible with this reading, and so is the null result of every mechanism that left the representation unchanged (B1 to B3). The evidence for a *common* cause is, however, indirect: the two failures have different measured signatures, and the earlier project summaries that stated that the size confound was the root cause of both were not supported by the data. The gradient is not correlated with heaviness in the direction that a size shortcut would predict (Section V.4); the ranker's selection is dominated by size (Chapter VI).
+
+*Hypotheses, not tested.* (a) The mismatch between the clean, docked poses on which the predictors were trained and the noisy clean-data estimates on which they are evaluated during sampling may make the gradient unreliable at early steps. A related study reports that an interaction prior pretrained on accurate poses degraded generation when queried on noisy intermediate structures [@huang2026]. Training the predictor on noised inputs would test this and was outside the compute budget. (b) The evaluation target was Vina, whereas the predictors were trained on experimental affinities; a predictor of the Vina energy itself, evaluated by Vina, would ask a different question from the one tested here. (c) Position-only guidance may be too weak or too blunt: the gradient of atom types was set to zero, and the gradient was not propagated through the denoiser. (d) For synthesizability, a smooth 3D gradient may be a poor way to steer a fingerprint-based target.
+
+@sub The role of statistical power
+
+Most of the results are null results, and a null result is only as informative as the design that produced it. For the per-pocket gradient tests the detectable shift was about 1 kcal/mol at the nominal level and 1.4 kcal/mol after correction (Section V.1). Effects smaller than that cannot be excluded at the pocket level, and pooled tests suggest that pooled effects are small (Chapter IV). The routes with a strong, consistent effect, the ranker of Chapter VI (a shift of −1.31 kcal/mol on average, with 14 of 15 pockets significant), were detected, and the loss of physical validity in the gradient routes at large λ was detected and was dose-dependent. The design could therefore detect large effects of both signs. It could not detect small beneficial effects, and it was not designed to. The stated conclusion is thus "no effect of practical size was found", and not "no effect exists". For Track E the power calculation was reported in advance and again after the runs, and the result excluded the required effect.
+
+@sec Methodological Findings
+
+Several results of this work concern the *evaluation* of learned guidance and predictors, and they are, together with the negative outcome, the main transferable findings.
+
+*The split can create a generalisation gap.* A validation set that shared 74% of its targets with the training set and a test set of 27 pockets gave a picture of a poor and unfixable predictor (R² = −0.54; a ligand-only baseline that matched the network). A target-disjoint split with 127 test targets showed R² = 0.34 and a nominal margin over the ligand-only baseline for the same architecture and hyper-parameters (Chapter IV). The earlier diagnostics were correct measurements of the wrong split, and a causal story built on them was revised.
+
+*The unit of resampling matters.* Resampling complexes instead of targets gave intervals about eight times too narrow (Chapter VIII). The margin over simple baselines that the narrow interval suggested was not supported by the target-clustered interval: the EGNN was statistically indistinguishable from a linear model of two scalar features.
+
+*Leakage can go unnoticed on either side of the coupled title.* The reported quality of the synthesizability predictor came from a random split without a held-out test set, and dropped when re-evaluated on a target-disjoint set (although the comparison was not controlled).
+
+*Summary statistics can mislead.* One malformed pose (+286.58 kcal/mol) shifted a mean by 14 kcal/mol; medians and rank-based tests were reported next to means. A fragmentation check did not detect the loss of physical validity that PoseBusters detected. A raw docking gain of 1.3 kcal/mol was an artefact of size, visible only after normalisation. A three-pocket exploratory tier with eight of nine effects in the correct direction became 16 of 24 in a properly sized replication that included the same pockets.
+
+*Negative controls and gates worked.* The scrambled-filter control found no implementation error in the ranker analysis; the pre-declared gates stopped work on unresolved results (D.4 in Track D, E2 in Track E) and made the decision to stop transparent; the automated test of test-set isolation gives a positive control for a practice that is documented to be common in the field [@gao2025].
+
+*Errors were found by the process and reported.* They include a receptor-file mirror with a different coordinate frame, a truncation of pools to a single seed in an exploratory analysis, the seeding order bug of the trainer, two errors of the differentiable bond estimator, and inconsistent counts in earlier finding documents (for example, the Track B2 count of comparisons worse by median, and a statement about ligand-efficiency degradation in Track B3). The numbers of this thesis were re-derived from the raw result files.
+
+@sec Threats to Validity
+
+@sub Internal validity
+
+The predictors were each trained once for the guidance experiments (the Track E arms and the EGNN reference had three seeds); the seed variance of the guidance predictors was therefore not measured. The pocket sets differ between routes (1, 3, 8, 15 and 20 pockets), and the exploratory tiers used 2 to 3 pockets and 20 molecules per condition, so their power was low. Docking used Vina with exhaustiveness 8 for most gradient routes and 16 for the ablations, and a single docking program was used as the main outcome. Statistical tests were corrected within a checkpoint but not across checkpoints, and several analyses were post hoc and flagged as such (the pocket-size analysis of Chapter VI, for example). The Track D result in the powered design rests on a single pocket.
+
+@sub External validity
+
+All results concern one generator (TargetDiff), one data set (CrossDocked2020, whose poses are cross-docking outputs whose selection is known to be biased toward ligands favoured by docking software [@gao2025]), guidance on the clean-data estimate, and position-only steering. Nothing in this work bears on guidance that is trained on noisy inputs, that propagates the gradient through the denoiser, that also steers atom types, or that uses a generator with a different conditioning scheme. The reference frame for the outcome was docking, which is itself an approximation of binding; no experimental validation was possible.
+
+@sub Construct validity
+
+The RAscore is a proxy of synthesizability. Vina Dock is a proxy of affinity that is size-biased [@xu2022]; ligand efficiency and PoseBusters were used to control this, but they are proxies too. The experimental pK labels are heterogeneous (Ki, Kd, IC50) and attached to docked poses whose receptor may come from a different structure, which limits the absolute quality of any predictor and affects all arms equally.
+
+@sec Relation to the Literature
+
+The results agree with three lines of published work. First, docking scores of generated molecules are known to be inflated by the size and chemistry of the ligand, and it has been observed that some models use trained Vina predictors to guide sampling at the cost of hacking the score [@gao2025; @xu2022]; Chapter VI shows the mechanism in an isolated setting, a ranker whose selection is dominated by size, although the observation of that study concerned evaluation and not gradient guidance. Second, learned affinity predictors are sensitive to leakage and to ligand-only shortcuts [@volkov2022; @graber2025; @li2026lp]; the size correlation of 0.64 to 0.72 of the predictors and the match between a ligand-only baseline and the network on the old split are instances. Third, the mismatch between clean training inputs and noisy intermediate inputs has been reported to degrade guidance-like priors [@huang2026].
+
+The results do not contradict studies that report improved docking scores with interaction-aware generation [@zhung2024; @wu2024; @lee2025bind], because those studies place the interaction information in the *generator* (as conditioning, as a co-generated output or inside the denoiser's loss), and not in a separate guidance predictor, which is the design that was tested here. Whether interaction supervision would rescue a guidance predictor (the E2 hypothesis) remains untested in this work.
+
+@sec Implications and Recommendations
+
+For practitioners who want to steer a frozen generator with a learned predictor, the results suggest four checks that can be made cheaply before a costly sampling study: (i) evaluate the predictor with a target-disjoint split and target-clustered intervals; (ii) test its output against ligand size and against ligand-only baselines; (iii) measure the direction of its gradient against pocket-contact proximity on captured mid-trajectory states, a diagnostic that took about 20 minutes in this work; and (iv) evaluate any docking gain after normalising by size and with a validity check, since both the raw gain and the loss of validity were visible in the same data.
+
+For future research, the results point to experiments that follow from the diagnosed failures and are not covered here: predictors trained on noised inputs at every diffusion time, with an explicit size control or contact-aligned gradient objective; a matched-size comparison of rankers, in which the candidates are selected within strata of heavy-atom count; a powered multi-pocket repetition of the synthesizability experiment with a different, rule-based synthesizability score to test whether the divergence is specific to the learned RAscore; the auxiliary interaction supervision (E2) on the absolute target; evaluation with an orthogonal scoring method; and larger pocket sets sized by an explicit power calculation.

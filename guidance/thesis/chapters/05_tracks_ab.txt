@@ -1,0 +1,120 @@
+@ch V | ARCHITECTURE AND MECHANISM ROUTES: TRACKS A AND B, AND THE GRADIENT DIAGNOSTIC
+
+Chapter IV ended with a null result for the Stage 0 predictor, even after the predictor had been repaired. Two explanations remained that could not be excluded by that result alone. The first was that the *predictor* was the limiting factor, and that a differently constructed predictor would give a gradient that steers generation. The second was that the *mechanism* by which the gradient is applied, in its scale, timing or training objective, was the limiting factor. This chapter tests both explanations in separate routes, Track A and Track B, and then reports a diagnostic that examines the gradient itself.
+
+@sec Decision Rule for the Two Routes
+
+A standing rule was declared before the routes were run: affinity guidance would be considered not viable only if both routes, independently, failed. A failure of the mechanism alone would not exclude a better predictor, and a failure of the predictor alone would not exclude a better mechanism. Every checkpoint was assessed with the dual-criterion protocol of Chapter III: a stability check of the guidance strength (fragmentation of the generated molecules), a gradient-informativeness test (KS test of the real Vina Dock distribution, guided against unguided, with the same pocket and seed, corrected with the Benjamini–Hochberg procedure across all tests of the checkpoint), and a degradation check (ligand efficiency and PoseBusters validity). Both routes were run in two tiers: an exploratory tier (2 to 3 pockets, 20 molecules per condition), and a full tier only where justified.
+
+A remark on statistical power applies to everything in this chapter. The standard deviation of the Vina Dock score within one pocket was about 1.1 to 1.6 kcal/mol. With 30 molecules per condition, the standard error of the difference between two conditions is thus about 0.3 to 0.4 kcal/mol. By a normal approximation, a per-pocket test at the nominal 5% level therefore has 80% power to detect a shift of roughly 1 kcal/mol, and a test at the corrected level of 24 comparisons only for shifts of roughly 1.4 kcal/mol. A null result in this chapter thus means that no effect of this order of magnitude was observed at the pocket level; it does not exclude smaller effects. Pooling across pockets increases the power, and the pooled Mann–Whitney tests of Chapter IV (p > 0.8) suggest that pooled effects, if present, are small. These are approximations derived from the reported standard deviations, and not the outcomes of a formal power analysis.
+
+@sec Track A: A Physics-Anchored Predictor
+
+@sub Architecture and training
+
+Track A replaced the black-box EGNN readout with a predictor whose output is a sum of physically interpretable terms. The backbone consists of three heterogeneous interaction layers of the GIGN type [@yang2023gign] with hidden size 256, which produce an embedding for each protein and ligand atom. The output is the sum of pairwise energy terms between all ligand and protein atoms, as in PIGNet2 [@moon2022]: a Morse-type van der Waals term, a hydrogen-bond term, a metal–ligand term and a hydrophobic term, in which the learned atom-pair embeddings set the well depth and width and the coefficients of the remaining terms are initialised at the values of the released PIGNet2 configuration. Following that configuration, the ionic term and the correction of the van der Waals radii were omitted, the rotor penalty was omitted because rotatable-bond counts were not computed by the featuriser, and no learned output head was added, so that the prediction is the raw energy sum. This last choice preserves interpretability but has a known consequence: without a learned bias and scale, the R² of the predictions is expected to be poor even when their correlation with the labels is good. The data augmentation with additional decoy poses that belongs to the original PIGNet2 protocol was not used, in agreement with a scope reduction that was approved for the 4 GB GPU. Protein covalent edges, which are not stored in the data, were approximated with a distance cut-off.
+
+The model was trained on the complete leakage-safe training set (46,964 entries), with Adam (learning rate 10⁻⁴), batch size 1 and early stopping with a patience of 12 epochs on the validation loss. Training stopped at epoch 13, after 8,620 s, and the best checkpoint was the one of epoch 1 by both validation loss and test generalisation; a checkpoint selected by validation correlation at epoch 5 did not hold up on the test set. The comparison of these two saved checkpoints was inspected on the test set, but the retained checkpoint is also the one with the lowest validation loss. An earlier, partially trained version (5,000 iterations, about 1.7 epochs over a 3,000-entry subsample) had been used for the exploratory tier.
+
+@sub Predictive quality
+
+The two versions were compared with the Stage 0 EGNN on the same 11,855 test entries ({tab:archcomp}). The correlations of the physics-anchored model (0.583 partial, 0.581 full) were slightly lower than the EGNN's (0.609), and its R² was negative (−0.110 partial, −0.189 full). The predictive quality of the full model was almost identical to that of the partial one, although the former had seen 15 times more data and had been trained to convergence; this suggests that the architecture was near its ceiling in this set-up, and was not limited by the amount of training. The hoped-for reduction of the heavy-atom-count correlation below 0.4 was not achieved (0.719 for the EGNN, 0.640 for the physics-anchored model).
+
+@tab archcomp | Track A: predictive quality on the leakage-safe test set (n = 11,855)
+| Model | Pearson | Spearman | R² | Correlation with heavy-atom count |
+| Stage 0 EGNN | 0.609 | n/a | 0.342 | 0.719 |
+| GIGN + PIGNet2, partial (5,000 iterations) | 0.583 | 0.623 | −0.110 | not measured |
+| GIGN + PIGNet2, full training | 0.581 (0.564, 0.596) | 0.608 (0.595, 0.620) | −0.189 (−0.274, −0.114) | 0.640 (0.621, 0.658) |
+@note Values in parentheses are bootstrap 95% confidence intervals. RMSE of the full model: 1.797 pK units.
+@endtab
+
+@sub Exploratory tier
+
+The stability check of the partially trained model showed a much narrower usable range of guidance strength than for the EGNN: with a single pocket and four molecules per value, the single-fragment rate was 1.00 at λ = 0.1, 0.75 at 0.3 and 1.0, and 0.00 at 3.0 and 10, whereas the repaired EGNN remained intact up to λ = 30 (one of eight molecules fragmented at λ = 100). A plausible explanation, which was not tested, is that the physics head sums unbounded terms over all atom pairs, so that the same nominal λ corresponds to a much larger gradient on the positions. The exploratory checkpoint used λ = 0.1, 0.3 and 1.0 on three pockets with 20 molecules per condition ({tab:aexp}).
+
+@tab aexp | Track A exploratory tier: 9 comparisons with the unguided baseline
+| Pocket : λ | KS p (raw) | KS p (BH) | Mean shift (kcal/mol) | PoseBusters pass rate (unguided → guided) |
+| BSD_ASPTE : 0.1 | 0.336 | 0.431 | −0.70 | not degraded |
+| BSD_ASPTE : 0.3 | 0.012 | 0.111 | −1.41 | not degraded |
+| BSD_ASPTE : 1.0 | 0.079 | 0.182 | −1.48 | 0.25 → 0.06 |
+| HDAC8 : 0.1 | 0.175 | 0.262 | −0.32 | not degraded |
+| HDAC8 : 0.3 | 0.081 | 0.182 | −0.54 | not degraded |
+| HDAC8 : 1.0 | 0.037 | 0.168 | −0.54 | 0.60 → 0.21 |
+| CD38 : 0.1 | 0.571 | 0.630 | −0.46 | not degraded |
+| CD38 : 0.3 | 0.175 | 0.262 | −0.88 | 0.40 → 0.35 |
+| CD38 : 1.0 | 0.630 | 0.630 | +0.15 | 0.40 → 0.00 |
+@note Negative mean shifts indicate better (more negative) docking scores. n = 20 molecules per condition. No comparison survived the correction.
+@endtab
+
+No comparison survived the correction (smallest corrected p = 0.111), so the formal verdict was *no signal*. The pattern was, however, qualitatively different from the earlier nulls: eight of nine comparisons had the correct direction, the raw shifts of up to 1.5 kcal/mol were about ten times larger than any seen with the EGNN, and two raw p-values were below 0.05. The apparent effect was confounded with a loss of physical validity, because the PoseBusters pass rate collapsed at λ = 1.0 in all three pockets (CD38: 0.40 to 0.00). Since part of an apparent docking gain can come from implausible poses that Vina still scores favourably, this exploratory tier was recorded as a yellow flag. It justified running the more expensive full tier, but it also had a selection risk that was recognised at the time: three pockets, and the largest of nine effects reported against the smaller rest.
+
+@sub Full tier
+
+The full tier used the fully trained model, eight pockets (including the three above), a freshly derived stability check (single-fragment rate 0.88 at λ = 0.1 to 0.3, 0.62 at 1.0, complete fragmentation at 3.0 and above; the narrow range was therefore not an artefact of partial training), and 30 molecules per condition ({tab:afull} and {fig:trackA}). The 24 comparisons (8 pockets × 3 strengths) were corrected together. None was significant: the smallest raw p was 0.0065 (HDAC8, λ = 1.0), and the smallest corrected p 0.157. Two raw p-values were below 0.05 (0.035 and 0.0065), against about 1.2 expected by chance among 24 tests under the null hypothesis.
+
+@tab afull | Track A full tier: summary over eight pockets by guidance strength
+| λ | Mean of pocket mean shifts (kcal/mol) | Pockets with negative mean shift | Pockets with negative median shift | Mean PoseBusters pass rate (unguided 0.561) | Pockets with PoseBusters degradation | Pockets with LE degradation |
+| 0.1 | −0.154 | 4 / 8 | 4 / 8 | 0.583 | 1 / 8 | 4 / 8 |
+| 0.3 | −0.390 | 7 / 8 | 6 / 8 | 0.528 | 3 / 8 | 1 / 8 |
+| 1.0 | −0.175 | 5 / 8 | 7 / 8 | 0.165 | 8 / 8 | 3 / 8 |
+@note 24 KS tests with Benjamini–Hochberg correction; 0 significant. n = 29 to 30 molecules per condition. LE: ligand efficiency.
+@endtab
+
+@fig trackA | guidance/thesis/figures/fig_trackA_full.png | 6.0 | Track A, full tier. (A) Mean shift of the real Vina Dock score for each pocket and guidance strength (negative is better; no shift was significant after correction). (B) PoseBusters pass rate of the unguided samples (λ = 0) and of the guided samples, for each pocket (grey) and on average (red).
+
+Two features of the full tier are worth noting. First, the direction consistency did not strengthen when the sample was enlarged: 16 of 24 comparisons (67%) had a negative mean shift, against 8 of 9 (89%) in the exploratory tier, and the three exploratory pockets were also part of the full set, so this was not even an independent replication. This is the pattern expected if the exploratory impression was a small-sample selection effect. Second, the loss of physical validity was dose-dependent and, at λ = 1.0, universal: all eight pockets degraded and the mean pass rate fell from 0.56 to 0.17. Ligand efficiency degradation did not follow a dose–response. The validity result alone rules out λ = 1.0, and probably λ = 0.3, as operating points, regardless of the docking shift.
+
+By the pre-declared bands the outcome was a clean null. It should be reported precisely as follows: no comparison was significant after correction, the direction consistency was weak and weakened with more data, and the only strength at which a consistent trend of the median shift appeared (λ = 1.0, seven of eight pockets) coincided with the collapse of the PoseBusters pass rate, so that it cannot be interpreted as improved binding. As noted in Section V.1, effects below about 1 to 1.4 kcal/mol per pocket cannot be excluded.
+
+@sec Track B: Three Mechanism Variants
+
+Track B kept the Stage 0 EGNN representation fixed and changed how its output was turned into a guidance signal. All three variants used the same evaluation harness ({tab:bsummary}, {fig:trackB}).
+
+@sub B3: timestep-windowed guidance
+
+If the gradient carried usable signal only in a part of the diffusion trajectory, uniform guidance would dilute it. Guidance was therefore restricted to the first, the middle or the last third of the 1,000 steps, at λ = 10 (the safe operating point of the repaired predictor), for two pockets with 20 molecules per condition and the same seed within each pocket. All 8 comparisons were *no signal*. Raw KS p-values ranged from 0.57 to 0.98, and all corrected values were essentially 1. Six of eight mean shifts were in the correct direction, but they were tiny (for example −0.002 kcal/mol against a standard deviation of about 1.6), and no PoseBusters degradation was detected in any condition. The ligand-efficiency flag was raised in three of eight comparisons (the middle and late thirds at BSD_ASPTE and the late third at HDAC8), which is not consistent with the statement in the original finding document that no degradation was detected in any condition; the table values were used. Windowing therefore did not create a signal that uniform guidance lacked, which is expected if there was no signal at any time of the trajectory.
+
+@sub B1: gradient-norm normalisation
+
+A possible cause of the null was a poor scale of the raw gradient (about 0.0012 per atom in a smoke test). B1 rescaled the gradient to a fixed norm per atom before applying λ. A three-way design compared unguided sampling, the raw gradient at its established stable strength (λ = 10) and the normalised gradient at a freshly derived stable strength (λ = 0.1, the largest value with a single-fragment rate of 1.00; 0.25 at λ = 0.3 and 0.00 at 1.0). The decisive comparison was normalised against raw, on three pockets with 20 molecules per condition. None of the nine tests survived the correction (smallest corrected p = 0.192). In two of three pockets the normalised gradient was worse than the raw one (medians +0.46 and +0.68 kcal/mol), and in the third it was numerically better (−0.61) but with degraded PoseBusters validity. The hypothesis that a badly scaled magnitude was the cause was thus not supported.
+
+Two lessons of this checkpoint are recorded because they changed the method. First, one raw-gradient molecule of the BSD_ASPTE pocket had a Vina Dock score of +286.58 kcal/mol, against a normal range of −12 to −5. It was verified to be a genuine, if pathological, outcome of a severely malformed pose (the docking code contains no sentinel-value path, and Vina's score is not bounded for catastrophic clashes) and not an error code. This single value shifted the mean of that condition by +14.3 kcal/mol whereas the median shift was +0.06, and it is the reason why the KS test and the median are reported next to the mean. Second, λ = 0.1 had passed the fragmentation check but still reduced the PoseBusters pass rate (HDAC8: 0.60 to 0.30; CD38: 0.40 to 0.25), so whole-molecule connectivity and fine-grained physical validity are different failure modes and a stability check must include both.
+
+@sub B2: classifier-guidance reformulation
+
+B2 replaced the regression gradient with the classical classifier-guidance target [@dhariwal2021]. A linear head was trained on the frozen pooled embedding of the Stage 0 network to predict whether the pK is above the training median (7.03), reaching a validation AUROC of 0.783 and a test AUROC of 0.677, and its guidance gradient was that of log σ(logit). The gradient was more tolerant of large strengths (single-fragment rate 1.00 from λ = 1 to 100, and 0.00 at 300), and λ = 100 was used. The unguided and raw conditions were reused from B1, which is valid because unguided sampling does not depend on a guidance model and the raw condition is the same EGNN at the same strength; only the classifier condition was generated (3 pockets, 20 molecules per condition, 6 comparisons).
+
+None of the six tests survived the correction (smallest corrected p = 0.263). By median, however, the classifier gradient made the Vina Dock score *worse* in all six comparisons (the original finding document counted five of six), and it caused the most severe collapse of physical validity of all Track A and B checkpoints (HDAC8: 0.60 to 0.05). The formal verdict was *no signal*, and not a demonstrated harm, since n = 20 is modest for the score variance, but no comparison looked favourable even before considering significance. The higher tolerance for large λ did not become a more effective signal: a larger displacement was applied before the structure broke, with no benefit for real docking. One mean-based row (BSD_ASPTE, classifier against raw) had the correct direction only because of the +286.58 outlier of the raw condition; its median was +0.73.
+
+@tab bsummary | Track B: summary of the three mechanism variants (Stage 0 EGNN, 2 to 3 pockets, n = 20 per condition)
+| Variant | Mechanism | Strength used | Tests (significant after BH) | Median-shift direction | Physical validity |
+| B3 | Guidance in one third of the trajectory | λ = 10 | 8 (0) | Mixed, tiny | No degradation detected |
+| B1 | Unit-norm gradient per atom | λ = 0.1 (raw: 10) | 9 (0) | Normalised worse than raw in 2 of 3 pockets | Degraded in 2 of 3 pockets |
+| B2 | Classifier head, gradient of log σ(logit) | λ = 100 | 6 (0) | Worse in 6 of 6 | Degraded in 2 of 3 pockets, severe at HDAC8 |
+@endtab
+
+@fig trackB | guidance/thesis/figures/fig_trackB.png | 5.8 | Track B: median shift of the real Vina Dock score for every comparison (positive is worse). Open symbols mark comparisons in which the PoseBusters pass rate decreased. None of the 23 comparisons was significant after correction. Medians are shown because a single +286.58 kcal/mol outlier dominates the mean of one B1 and one B2 comparison.
+
+@sec Diagnostic of the Gradient Direction
+
+The two routes above established that neither the mechanism variants nor a change of architecture produced an effect. A separate diagnostic asked what the Stage 0 gradient actually points at. It was a standalone diagnostic and not a guidance checkpoint, so no pass or fail gate applied.
+
+@sub Method
+
+Clean-data estimates were captured from *unguided* trajectories at three timesteps (i = 150, 500 and 850, representing the late, middle and early thirds), for three pockets with 16 samples each (144 states), by a read-only hook that does not alter the sampled trajectory. At each state the raw gradient of the Stage 0 predictor was computed post hoc, and the per-atom gradient magnitude was correlated, sample by sample, with two atom properties: (i) the *heaviness* of the atom under its current soft type distribution (the expected atomic number under the softmax of the type logits), as a continuous proxy for the shortcut of preferring heavy elements, and (ii) the minimum distance of the atom to any pocket atom. Per-sample Pearson correlations were averaged and given a bootstrap 95% interval with 2,000 resamples.
+
+@sub Results
+
+The gradient magnitude correlated weakly and negatively with heaviness (mean −0.127; 95% CI −0.178 to −0.075) and moderately and positively with the distance to the pocket (mean +0.240; 95% CI 0.194 to 0.285) ({fig:diag1}). Both intervals exclude zero.
+
+@fig diag1 | guidance/thesis/figures/fig_diag1.png | 5.0 | Correlation of the per-atom gradient magnitude of the Stage 0 predictor with the heaviness of the atom type and with its distance to the pocket, over 144 captured states (3 pockets, 3 timesteps, 16 samples). Points are means of per-sample Pearson correlations; bars are bootstrap 95% confidence intervals.
+
+@sub Interpretation and its limits
+
+The first correlation does not support the hypothesis that the gradient direction is dominated by the same size shortcut that dominates the predictor's point predictions (Chapter IV): the gradient is, if anything, slightly larger on atoms leaning toward lighter types. This result also has a mechanical counterpart, since the number of ligand atoms is fixed before sampling begins and cannot be increased by guidance within a trajectory. It should be noted that this contradicts a statement found in some earlier project summaries, in which the failure of guidance was attributed to molecular size; the diagnostic data do not show a size effect on the *gradient*. Size acts on the *predictor's output* and on post-hoc *selection* (Chapter VI), which is a different mechanism.
+
+The second correlation is the more informative one. If the gradient was concentrated on the contacts that determine binding, its magnitude would be expected to decrease with the distance to the pocket, that is, a negative correlation. The observed positive correlation means that the strongest pull acts on the atoms that are on average farthest from the pocket. This is consistent with the persistence of the null result under changes of scale (B1), timing (B3) and training objective (B2), since none of these changes alters what the representation encodes. It should be read as a correlational finding with a plausible explanation, not as a demonstrated cause. Alternative explanations were not excluded: atoms far from the pocket have fewer neighbours within the cut-off of the network, and the predictor had been trained on clean structures with only 0.1 Å of noise, so it may respond unreliably to the noisy clean-data estimates of early timesteps, a mismatch that has been reported to degrade generation in a related setting [@huang2026]. The diagnostic was also run on the EGNN only. A physics-anchored model with distance-decaying pair terms could be expected to produce a negative distance correlation by construction, and re-running the diagnostic on the Track A checkpoint would be a cheap, natural follow-up that was not performed.
+
+@sec Conclusions of Tracks A and B
+
+Both independent routes failed under the declared criteria. Changing the architecture to a physics-anchored predictor with comparable quality (Track A, 0 of 24 significant comparisons, with weakening direction consistency and universal loss of validity at the highest strength), and changing the scale, timing or objective of the guidance on the fixed representation (Track B, 0 of 23 significant comparisons, with two variants reducing validity) each gave no detectable improvement in the real docking score. The gradient diagnostic offers a testable, if partial, account: the strongest gradient acts on atoms far from the pocket. The logical possibility that a combination of the two routes, for example normalisation applied to the Track A predictor, would work was considered and not pursued, because B1 gave no positive reason to expect that it would behave differently on another representation. The two routes did not address non-gradient use of the predictor, which is the subject of Chapter VI.
