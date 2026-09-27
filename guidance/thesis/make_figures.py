@@ -374,7 +374,116 @@ def fig_track_d():
     fig.tight_layout(); fig.savefig(f'{OUT}/fig_trackD.png', bbox_inches='tight'); plt.close(fig)
 
 
+def fig_overview_significance():
+    """New figure. Fraction of comparisons significant after Benjamini-Hochberg
+    correction, one bar per checkpoint that used the shared KS+BH gradient-
+    informativeness protocol of Section III.6.1. Counts are read directly from
+    each checkpoint's own results file (or, where noted, copied from the
+    already-published table in the corresponding chapter) -- no new statistics
+    are computed here beyond a fraction and a mean effect size.
+    Sources: guidance/track_a_exploratory_results/, guidance/track_a_full_results/,
+    guidance/track_b{1,2,3}_results/, guidance/track_e/d6.. (Chapter VII Table 7.3),
+    guidance/track_c_analysis/track_c_analysis_results.json.
+    """
+    import csv, json
+    rows_src = {
+        'Track A\nexploratory (9)': ('guidance/track_a_exploratory_results/gradient_informativeness_results.csv', None),
+        'Track A\nfull tier (24)': ('guidance/track_a_full_results/gradient_informativeness_results.csv', None),
+        'Track B1 (9)': ('guidance/track_b1_results/gradient_informativeness_results.csv', None),
+        'Track B2 (6)': ('guidance/track_b2_results/gradient_informativeness_results.csv', None),
+        'Track B3 (8)': ('guidance/track_b3_results/gradient_informativeness_results.csv', None),
+    }
+    labels, sig_frac, n_tests, note_color = [], [], [], []
+    for lab, (path, _) in rows_src.items():
+        rs = list(csv.DictReader(open(path)))
+        sig = sum(r['significant_after_correction'] == 'True' for r in rs)
+        labels.append(lab); sig_frac.append(sig / len(rs)); n_tests.append(len(rs)); note_color.append(BLUE)
+    # Track D, D.3 (leakage-safe predictor, pocket BSD_ASPTE, 5 testable lambdas; all BH p = 0.997 -- Chapter VII, Table 7.3)
+    labels.append('Track D\nD.3 (5)'); sig_frac.append(0 / 5); n_tests.append(5); note_color.append(BLUE)
+    # Track C: KS test of top-10% selection vs. full pool, BH-corrected across 15 pockets (Chapter VI)
+    d = json.load(open('guidance/track_c_analysis/track_c_analysis_results.json'))
+    pp = d['per_pocket_primary']
+    sigC = sum(v['ks_reject_bh'] for v in pp.values())
+    labels.append('Track C\nranker (15)'); sig_frac.append(sigC / len(pp)); n_tests.append(len(pp)); note_color.append(ORANGE)
+
+    fig, ax = plt.subplots(figsize=(7.0, 3.6))
+    x = np.arange(len(labels))
+    bars = ax.bar(x, sig_frac, color=note_color, width=0.6, edgecolor=DARK, lw=0.7)
+    for i, (f, n) in enumerate(zip(sig_frac, n_tests)):
+        ax.text(i, f + 0.02, f'{int(round(f * n))}/{n}', ha='center', fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(labels, fontsize=8)
+    ax.set_ylabel('Fraction significant after BH correction', fontsize=9)
+    ax.set_ylim(0, 1.05)
+    ax.text(len(labels) - 1, 1.0 + 0.03, 'confounded by size\n(Chapter VI)', ha='center', fontsize=7.5, color=ORANGE)
+    fig.tight_layout(); fig.savefig(f'{OUT}/fig_overview_significance.png', bbox_inches='tight'); plt.close(fig)
+
+
+def fig_power_curve():
+    """New figure. Minimum Vina Dock shift detectable at 80% power for a
+    two-sample comparison, as a function of the number of molecules per
+    condition, computed from the standard normal-approximation formula
+    MDD = (z_(1-a/2) + z_(1-b)) * SD * sqrt(2/n), using the range of
+    within-pocket Vina Dock standard deviations actually measured in this
+    project's sweeps (1.1-1.6 kcal/mol; e.g. guidance/LPSPLIT_LAMBDA_RESWEEP_FINDING.md,
+    guidance/AFFINITY_LAMBDA_RESWEEP_FINDING.md). This is a textbook power
+    calculation, not a new empirical result; it is provided to make the
+    statistical-power argument of Section IX.2.3 quantitative and visual.
+    """
+    from scipy.stats import norm
+    z_beta = norm.ppf(0.8)
+    n = np.arange(8, 41)
+    def mdd(alpha, sd):
+        z_a = norm.ppf(1 - alpha / 2)
+        return (z_a + z_beta) * sd * np.sqrt(2 / n)
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    for sd, ls in [(1.1, '-'), (1.6, '--')]:
+        ax.plot(n, mdd(0.05, sd), color=BLUE, ls=ls, lw=1.6,
+                label=f'$\\alpha=0.05$, SD={sd}')
+        ax.plot(n, mdd(0.05 / 24, sd), color=RED, ls=ls, lw=1.6,
+                label=f'$\\alpha=0.05/24$, SD={sd}')
+    for nn in (20, 30):
+        ax.axvline(nn, color=GRAY, lw=0.7, ls=':')
+    ax.text(20, ax.get_ylim()[1] * 0.96, 'n = 20\n(Track B)', fontsize=7, ha='center', color=GRAY)
+    ax.text(30, ax.get_ylim()[1] * 0.96, 'n = 30\n(Track A full,\nTask F)', fontsize=7, ha='center', color=GRAY)
+    ax.set_xlabel('Molecules per condition (n)', fontsize=9)
+    ax.set_ylabel('Minimum detectable Vina Dock shift\nat 80% power (kcal/mol)', fontsize=9)
+    ax.legend(fontsize=7.5, frameon=False, loc='upper right')
+    fig.tight_layout(); fig.savefig(f'{OUT}/fig_power_curve.png', bbox_inches='tight'); plt.close(fig)
+
+
+def fig_scale_by_track():
+    """New figure. Number of pockets vs. molecules (or complexes) per
+    condition for every checkpoint reported in Chapters IV-VIII, on a log
+    y-axis, to make visible how much the evidentiary base differs between
+    an exploratory tier and a full tier, and why Track C's ranker result
+    and Track E's scoring result are much better powered than the single-
+    pocket checkpoints. Values are the pocket/molecule counts already
+    stated in the corresponding chapter; no new counts are introduced.
+    """
+    pts = [
+        ('Task F baseline\n(Ch. IV)', 20, 30, BLUE, (6, 6)),
+        ('Repaired-predictor\nconfirmation (Ch. IV)', 8, 8, BLUE, (6, -18)),
+        ('Track A exploratory\n(Ch. V)', 3, 20, BLUE, (6, 10)),
+        ('Track A full\n(Ch. V)', 8, 30, BLUE, (6, 6)),
+        ('Track B1/B2\n(Ch. V)', 3, 20, BLUE, (-70, -20)),
+        ('Track B3\n(Ch. V)', 2, 20, BLUE, (10, -22)),
+        ('Track C ranker\n(Ch. VI)', 15, 594, ORANGE, (6, 6)),  # mean pool size 593.9, see track_c_analysis_results.json
+        ('Track D exploratory\n(Ch. VII)', 1, 8, GREEN, (6, -18)),
+        ('Track D powered\n(Ch. VII)', 1, 30, GREEN, (6, 6)),
+        ('Track E test set\n(Ch. VIII)', 127, 14, '#7a4fa3', (-95, 6)),  # median complexes/target (Chapter III); mean is 93 but skewed by one target with 1,392
+    ]
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
+    for lab, npk, nmol, c, off in pts:
+        ax.scatter(npk, nmol, s=60, color=c, zorder=3, edgecolor=DARK, lw=0.6)
+        ax.annotate(lab, (npk, nmol), fontsize=7, xytext=off, textcoords='offset points')
+    ax.set_xscale('log'); ax.set_yscale('log')
+    ax.set_xlabel('Pockets or targets', fontsize=9)
+    ax.set_ylabel('Molecules or complexes per pocket/condition', fontsize=9)
+    ax.set_xlim(0.7, 250); ax.set_ylim(5, 1500)
+    fig.tight_layout(); fig.savefig(f'{OUT}/fig_scale_by_track.png', bbox_inches='tight'); plt.close(fig)
+
+
 if __name__ == '__main__':
     for f in (fig_pipeline, fig_verdict_flow, fig_track_e_design, fig_track_e_r2, fig_track_e_learnability,
-              fig_track_e_within_target, fig_plip_jitter, fig_vina_semantics, fig_split_artifact, fig_predictive_quality, fig_track_a_full, fig_track_b, fig_diag1, fig_track_c, fig_track_d):
+              fig_track_e_within_target, fig_plip_jitter, fig_vina_semantics, fig_split_artifact, fig_predictive_quality, fig_track_a_full, fig_track_b, fig_diag1, fig_track_c, fig_track_d, fig_overview_significance, fig_power_curve, fig_scale_by_track):
         f(); print('ok', f.__name__)

@@ -17,6 +17,10 @@ This chapter draws the experiments of Chapters IV to VIII together. It states wh
 | Track E (VIII) | Training target: delta against Vina | Significantly worse than the Stage 0 EGNN and a two-feature linear baseline; not better than a constant in validation | Scoring only; E2 not run; weaker backbone |
 @endtab
 
+{fig:overviewsig} shows the same pattern from a different angle: the fraction of pre-registered comparisons that survived Benjamini–Hochberg correction, for every checkpoint that used the shared KS-test protocol of Section III.6.1. Every gradient-based checkpoint (Tracks A, B and the powered Track D comparison) has a fraction of exactly zero; the one checkpoint with a large surviving fraction is the rejection-sampling ranker of Chapter VI, and that checkpoint is precisely the one whose apparent signal was traced to a molecular-size artefact.
+
+@fig overviewsig | guidance/thesis/figures/fig_overview_significance.png | 6.4 | Fraction of comparisons significant after Benjamini–Hochberg correction, for every checkpoint that used the KS-test protocol of Section III.6.1. Counts in parentheses are the number of comparisons in that checkpoint. The one large fraction (Track C) is the ranker result that Chapter VI shows to be confounded by ligand size, not a genuine affinity signal.
+
 @sec What the Evidence Supports
 
 @sub Main finding
@@ -34,6 +38,10 @@ Under the conditions tested (a frozen TargetDiff model, position-only guidance o
 @sub The role of statistical power
 
 Most of the results are null results, and a null result is only as informative as the design that produced it. For the per-pocket gradient tests the detectable shift was about 1 kcal/mol at the nominal level and 1.4 kcal/mol after correction (Section V.1). Effects smaller than that cannot be excluded at the pocket level, and pooled tests suggest that pooled effects are small (Chapter IV). The routes with a strong, consistent effect, the ranker of Chapter VI (a shift of −1.31 kcal/mol on average, with 14 of 15 pockets significant), were detected, and the loss of physical validity in the gradient routes at large λ was detected and was dose-dependent. The design could therefore detect large effects of both signs. It could not detect small beneficial effects, and it was not designed to. The stated conclusion is thus "no effect of practical size was found", and not "no effect exists". For Track E the power calculation was reported in advance and again after the runs, and the result excluded the required effect.
+
+{fig:power} makes this quantitative. Using the standard two-sample power formula and the within-pocket Vina Dock standard deviations actually measured in this project's sweeps (1.1 to 1.6 kcal/mol; Chapters IV and V), the minimum shift detectable at 80% power with 20 molecules per condition (the size used in most of Track B) is about 1.0 to 1.4 kcal/mol at the nominal 5% level, and about 1.4 to 2.0 kcal/mol once a Bonferroni-equivalent correction for 24 simultaneous tests is applied; at 30 molecules per condition (Track A's full tier and the Task F ablation) the corresponding range is about 0.8 to 1.6 kcal/mol. This is a standard calculation from a textbook formula, not a new measurement; it is shown to make the qualitative statements above precise and falsifiable.
+
+@fig power | guidance/thesis/figures/fig_power_curve.png | 5.4 | Minimum Vina Dock shift detectable at 80% power as a function of the number of molecules per condition, computed from the two-sample normal-approximation formula at the range of within-pocket standard deviations measured in this project (1.1 to 1.6 kcal/mol), at the nominal 5% level and at a Bonferroni-equivalent level for 24 simultaneous tests. Vertical lines mark the sample sizes actually used in Track B (20) and in Track A's full tier and the Task F ablation (30).
 
 @sec Methodological Findings
 
@@ -55,7 +63,9 @@ Several results of this work concern the *evaluation* of learned guidance and pr
 
 @sub Internal validity
 
-The predictors were each trained once for the guidance experiments (the Track E arms and the EGNN reference had three seeds); the seed variance of the guidance predictors was therefore not measured. The pocket sets differ between routes (1, 3, 8, 15 and 20 pockets), and the exploratory tiers used 2 to 3 pockets and 20 molecules per condition, so their power was low. Docking used Vina with exhaustiveness 8 for most gradient routes and 16 for the ablations, and a single docking program was used as the main outcome. Statistical tests were corrected within a checkpoint but not across checkpoints, and several analyses were post hoc and flagged as such (the pocket-size analysis of Chapter VI, for example). The Track D result in the powered design rests on a single pocket.
+The predictors were each trained once for the guidance experiments (the Track E arms and the EGNN reference had three seeds); the seed variance of the guidance predictors was therefore not measured. The pocket sets differ between routes (1, 3, 8, 15 and 20 pockets), and the exploratory tiers used 2 to 3 pockets and 20 molecules per condition, so their power was low. {fig:scale} shows this variation directly: the evidentiary base of Track C's ranker result (15 pockets, pools of about 590 molecules) and of Track E's scoring result (127 targets) is substantially larger than that of any single gradient-guidance checkpoint (1 to 20 pockets, 8 to 30 molecules per condition), which is why the former two produced statistically decisive results (a confounded positive and a confirmed negative, respectively) while most gradient checkpoints produced only a bounded null. Docking used Vina with exhaustiveness 8 for most gradient routes and 16 for the ablations, and a single docking program was used as the main outcome. Statistical tests were corrected within a checkpoint but not across checkpoints, and several analyses were post hoc and flagged as such (the pocket-size analysis of Chapter VI, for example). The Track D result in the powered design rests on a single pocket.
+
+@fig scale | guidance/thesis/figures/fig_scale_by_track.png | 6.0 | Number of pockets or targets against the number of molecules or complexes evaluated per pocket or condition, for every checkpoint of Chapters IV to VIII (logarithmic scales). The pocket/molecule counts are those already stated in the corresponding chapter.
 
 @sub External validity
 
