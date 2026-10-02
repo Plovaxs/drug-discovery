@@ -13,6 +13,12 @@ frozen, pretrained diffusion model:
 > **Coupled Affinity-Synthesizability Guidance for Target-Conditional
 > Molecular Diffusion in Structure-Based Drug Design**
 
+Full thesis document: `guidance/thesis/Thesis_Coupled_Guidance_SBDD.pdf`
+(148 pages, 10 chapters + 4 appendices, built via `guidance/thesis/
+build_thesis.py`).
+
+### Core thesis: four independent falsifications
+
 The thesis investigates whether generation can be steered toward
 molecules with better predicted binding affinity and synthesizability,
 using four independent, statistically rigorous tracks — each governed by
@@ -30,12 +36,62 @@ and mandatory negative controls, never a bare mean-difference claim):
 All four tracks converge on the same root cause (diagnosed in
 `guidance/DIAG1_SIZE_CONFOUND_FINDING.md`): the trained affinity model's
 signal is dominated by molecular size, not target-specific binding
-chemistry — a negative result treated as a legitimate, reportable
-scientific finding rather than a dead end.
+chemistry.
+
+### Follow-up investigation: does fixing the diagnosed mechanism help? (12 checkpoints, still no)
+
+A second phase systematically tested whether directly repairing DIAG1's
+diagnosed mechanism — rather than working around it — produces a real
+guidance effect. Four interventions were tried alone, in combination
+(Track A follow-up), and all stacked together (kitchen-sink), on top of
+the original Stage 0 EGNN and Track A's GIGN+PIGNet2 backbones:
+
+| Checkpoint | Best fix | Real-docking effect |
+|---|---|---|
+| Noise-matched EGNN | Diffusion-matched noise curriculum | Null |
+| Vina-target EGNN | Vina-derived pK label instead of experimental | Null |
+| Gradient-alignment EGNN | Directly minimizes DIAG1's gradient/distance correlation (-0.78, strongest fix of any checkpoint) | Null — flattest result of all, no encouraging direction at any λ |
+| ESM2-augmented EGNN | Adds a protein language-model (ESM2) global feature; best predictive quality (R²=0.460) and best correctly-signed diagnostic (-0.072, significant) of any checkpoint | Closest near-miss — raw p=0.04 at λ=3, but BH-adjusted p≈0.08 and a new validity cost appears at n=24 |
+| Track A follow-up (GIGN+PIGNet2 + 2 fixes) | Noise-matching + Vina-target combined | Null — 87.5% direction-consistency (best of this architecture) still 0/16 significant |
+| **Kitchen-sink** (all 4 combined) | Every intervention above, stacked | Null — closes the ablation space; no emergent synergy, worst size-confound of any checkpoint |
+
+**Pooled result across the entire follow-up phase: 38 independent
+statistical tests, 0 significant after Benjamini-Hochberg correction**
+(`guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md`). The central finding:
+every mechanism-level fix improves its own diagnostic or predictive
+target, and none of them produce a defensible real-docking effect —
+evidence that the guidance mechanism itself, not any single diagnosed
+confound, is the bottleneck.
+
+### Side finding: AlphaFold-predicted structures vs. crystal structures
+
+For the question "would this guidance pipeline still work on a novel
+target with no experimental structure, using an AlphaFold model
+instead?" — `guidance/alphafold_pocket_robustness.py` compares AlphaFold
+DB models against the real crystal structure at the binding pocket
+specifically, across 835 LP-split targets (using the full raw
+CrossDocked2020 v1.1 archive, not just a small demo subset). Median
+pocket RMSD 0.47 Å, pLDDT-RMSD correlation r=-0.63 (p≈1e-92) — strong
+overall agreement, but 13/835 (1.6%) targets are "confidently wrong"
+(pLDDT>80 yet RMSD>5 Å), a real failure mode pLDDT alone cannot flag.
+Full result: `guidance/ALPHAFOLD_POCKET_ROBUSTNESS_FINDING.md`.
+
+### Current phase: PLIP interaction-type validation
+
+In progress: `guidance/plip_interaction_validation.py` asks a sharper
+question than "did the Vina score improve" — does guidance increase the
+number of *real, named* interactions (H-bonds, hydrophobic contacts,
+pi-stacking, salt bridges, via PLIP) a docked pose actually forms. Not
+to be confused with the separately-gated, untrained Track E plan
+(`guidance/TRACK_E_DESIGN.md`, a ~38 GPU-hour model-training proposal
+awaiting its own go-ahead) — this is a lighter analysis of molecules
+sampled from checkpoints already trained above.
 
 **Start here:**
-- `guidance/STAGE2_PLUS_EXPERIMENT_LOG.md` — single source of truth, every experiment logged
-- `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md`, `guidance/DUAL_FALSIFICATION_CONCLUSION.md` — full write-ups
+- `guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md` — the single pooled statistical verdict across the whole follow-up phase
+- `guidance/STAGE2_PLUS_EXPERIMENT_LOG.md` — single source of truth, every core-thesis experiment logged
+- `guidance/DUAL_FALSIFICATION_CONCLUSION.md`, `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md` — core-thesis full write-ups
+- `guidance/GRADALIGN_GUIDANCE_FINDING.md`, `guidance/ESM2_GUIDANCE_FINDING.md`, `guidance/KITCHENSINK_GUIDANCE_FINDING.md`, `guidance/TRACK_A_FOLLOWUP_FULL_TIER_FINDING.md` — follow-up phase per-checkpoint write-ups
 - `guidance/generate_molecules_for_target.py` — generate & score candidate molecules for any of the 100 test-set pockets
 - `guidance/render_examples.py`, `guidance/build_pptx_glb.py` — publication-quality and PowerPoint-ready 3D visualizations of generated binding poses
 

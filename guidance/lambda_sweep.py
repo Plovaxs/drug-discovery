@@ -33,6 +33,7 @@ on the chosen operating point.
 """
 import argparse
 import json
+import os
 
 import numpy as np
 import torch
@@ -180,6 +181,7 @@ def run_one_point(data, model, affinity_model, synth_model, lambda_affinity, lam
                 row['qed'] = chem['qed']
                 row['sa'] = chem['sa']
                 row['real_ra_score'] = ra
+                row['n_heavy_atoms'] = mol.GetNumHeavyAtoms()
             except Exception:
                 pass
 
@@ -244,6 +246,23 @@ def main():
                              './guidance_models/affinity_egnn_lpsplit.pt to use the Stage 0 '
                              'leakage-safe-split-retrained EGNN instead of the original deployed one')
     parser.add_argument('--verbose', action='store_true')
+    parser.add_argument('--use_soft_v', action='store_true',
+                        help='exploratory follow-up: also let the affinity guidance gradient act on '
+                             'atom type (element/aromaticity), via a softmax relaxation of v0, instead '
+                             'of the position-only default (grad_v is otherwise structurally zero -- '
+                             'see guidance/affinity_guidance.py)')
+    parser.add_argument('--resume', action='store_true',
+                        help='skip grid/pair points already present (by lambda_affinity, lambda_synth) '
+                             'in an existing --out file, and append newly computed points to it -- '
+                             'safe to re-run the exact same command after an interruption')
+    parser.add_argument('--use_esm2', action='store_true',
+                        help='follow-up branch: use AffinityGuidanceESM2 (guidance/lp_split/'
+                             'train_egnn_stage0_esm2.py-trained checkpoint) instead of plain '
+                             'AffinityGuidance. --affinity_ckpt must point to an ESM2-trained '
+                             "checkpoint. The ESM2 vector is set for EXAMPLE_PDB's own target "
+                             '(SQHC_ALIAD_1_631_0, PDB 1h36) since this whole script is scoped to '
+                             "that one fixed pocket -- do not reuse this flag's wiring for a "
+                             'different pocket without also changing the hardcoded target name.')
     args = parser.parse_args()
 
     if not args.verbose:
@@ -251,8 +270,14 @@ def main():
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     data, model = load_everything(device)
-    affinity_model = AffinityGuidance(args.affinity_ckpt, device=device,
-                                      use_bond_aware=args.use_bond_aware)
+    if args.use_esm2:
+        from guidance.affinity_guidance_esm2 import AffinityGuidanceESM2
+        affinity_model = AffinityGuidanceESM2(args.affinity_ckpt, device=device)
+        affinity_model.set_pocket('SQHC_ALIAD_1_631_0')
+    else:
+        affinity_model = AffinityGuidance(args.affinity_ckpt, device=device,
+                                          use_bond_aware=args.use_bond_aware,
+                                          use_soft_v=args.use_soft_v)
     synth_model = SynthGuidance('./guidance_models/synth_ra_score.pt', device=device,
                                 use_bond_aware=args.use_bond_aware)
 
@@ -269,7 +294,17 @@ def main():
             points = [(args.fixed_other, lam) for lam in grid]
 
     results = []
+    done = set()
+    if args.resume and os.path.exists(args.out):
+        with open(args.out) as f:
+            results = json.load(f)
+        done = {(r['lambda_affinity'], r['lambda_synth']) for r in results}
+        print(f'--resume: {len(done)} point(s) already in {args.out}, skipping those: {sorted(done)}')
+
     for la, ls in points:
+        if (la, ls) in done:
+            print(f'=== stage={args.stage} lambda_affinity={la} lambda_synth={ls} -- already done, skipping ===')
+            continue
         print(f'=== stage={args.stage} lambda_affinity={la} lambda_synth={ls} '
              f'(n={args.n_samples}, steps={args.num_steps}) ===')
         res = run_one_point(data, model, affinity_model, synth_model, la, ls,

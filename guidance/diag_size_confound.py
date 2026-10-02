@@ -145,6 +145,9 @@ def main():
     parser.add_argument('--n_pockets', type=int, default=3)
     parser.add_argument('--n_samples', type=int, default=16)
     parser.add_argument('--out', type=str, default='./guidance/diag_size_confound_results.json')
+    parser.add_argument('--affinity_ckpt', type=str, default=AFFINITY_CHECKPOINT,
+                         help='Override the affinity guidance checkpoint (default: the original '
+                              'Stage 0 LP-split EGNN, reproducing the frozen DIAG1 result).')
     args = parser.parse_args()
 
     with open(args.pockets_file) as f:
@@ -152,7 +155,7 @@ def main():
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     model, test_set = load_model_and_dataset(device)
-    guidance_model = AffinityGuidance(AFFINITY_CHECKPOINT, device=device, normalize_gradient=False)
+    guidance_model = AffinityGuidance(args.affinity_ckpt, device=device, normalize_gradient=False)
 
     all_size_corrs, all_dist_corrs = [], []
     per_pocket = {}
@@ -170,6 +173,7 @@ def main():
     print(f'Distance-to-pocket correlation: mean={dist_mean:.3f} 95% CI=[{dist_lo:.3f}, {dist_hi:.3f}] (n={len(all_dist_corrs)})')
 
     result = {
+        'affinity_ckpt': args.affinity_ckpt,
         'per_pocket': per_pocket,
         'size_correlation': {'mean': size_mean, 'ci_lo': size_lo, 'ci_hi': size_hi, 'n': len(all_size_corrs)},
         'distance_correlation': {'mean': dist_mean, 'ci_lo': dist_lo, 'ci_hi': dist_hi, 'n': len(all_dist_corrs)},

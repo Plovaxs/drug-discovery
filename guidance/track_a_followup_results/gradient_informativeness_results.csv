@@ -1,0 +1,7 @@
+label,n_unguided,n_guided,ks_stat,ks_p,mean_shift,median_shift,direction,ligand_efficiency_shift,ligand_efficiency_degraded,pb_valid_rate_unguided,pb_valid_rate_guided,pb_degraded,ks_p_bh_corrected,significant_after_correction,verdict
+BSD_ASPTE_1_130_0:lambda_0.1,20,20,0.25,0.571336004933722,-0.4841500000000014,0.005499999999999616,correct (more negative/better),-0.017731939617602333,False,0.25,0.55,False,0.571336004933722,False,no_signal
+BSD_ASPTE_1_130_0:lambda_0.3,20,20,0.35,0.17453300569806826,-1.2088999999999999,-0.39449999999999896,correct (more negative/better),-0.03982898477537594,False,0.25,0.25,False,0.3715510151066566,False,no_signal
+HDAC8_HUMAN_1_377_0:lambda_0.1,20,20,0.35,0.17453300569806826,-0.38789999999999836,-0.6365000000000007,correct (more negative/better),-0.017830584036348407,False,0.6,0.7,False,0.3715510151066566,False,no_signal
+HDAC8_HUMAN_1_377_0:lambda_0.3,20,19,0.33157894736842103,0.1857755075533283,-0.24492631578947321,-0.31899999999999995,correct (more negative/better),-0.01829229737218685,False,0.6,0.631578947368421,False,0.3715510151066566,False,no_signal
+CD38_HUMAN_44_300_0:lambda_0.1,20,20,0.25,0.571336004933722,-0.3824499999999995,-0.35499999999999954,correct (more negative/better),-0.012950600812103197,False,0.4,0.55,False,0.571336004933722,False,no_signal
+CD38_HUMAN_44_300_0:lambda_0.3,20,20,0.3,0.33559098126008213,-0.881400000000002,-0.6420000000000003,correct (more negative/better),-0.028878585428326387,False,0.4,0.25,True,0.5033864718901232,False,no_signal

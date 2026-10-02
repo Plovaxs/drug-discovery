@@ -1,0 +1,32 @@
+{
+  "original": {
+    "ckpt": "./guidance_models/affinity_egnn_lpsplit.pt",
+    "grad_mag_mean": 0.001011010965919293,
+    "grad_mag_median": 0.0007427243399433792,
+    "grad_mag_std": 0.0010890080447064068,
+    "grad_mag_max": 0.015922967344522476,
+    "own_score_mean": 6.269079367319743,
+    "own_score_std": 0.8765592691628886,
+    "n_atoms": 3774
+  },
+  "noisematched": {
+    "ckpt": "./logs_lp_split_stage0_noisematched/crossdocked_affinity_egnn_2026_09_27__14_39_18_t500/checkpoints/best.pt",
+    "grad_mag_mean": 0.000652876724570025,
+    "grad_mag_median": 0.00046544552606064826,
+    "grad_mag_std": 0.0006583847047685772,
+    "grad_mag_max": 0.007716461084783077,
+    "own_score_mean": 6.559783190488815,
+    "own_score_std": 1.1341333116748622,
+    "n_atoms": 3774
+  },
+  "vinatarget": {
+    "ckpt": "./logs_lp_split_stage0_vinatarget/crossdocked_affinity_egnn_2026_09_29__17_05_51_t500/checkpoints/best.pt",
+    "grad_mag_mean": 0.0003370792939477364,
+    "grad_mag_median": 0.00031411547388415784,
+    "grad_mag_std": 0.00015933741192976437,
+    "grad_mag_max": 0.0012216389877721667,
+    "own_score_mean": 5.269891823331515,
+    "own_score_std": 1.0168300253705196,
+    "n_atoms": 3774
+  }
+}
