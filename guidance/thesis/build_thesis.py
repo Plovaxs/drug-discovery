@@ -572,6 +572,7 @@ def build_docx(pages=None, path=OUT_DOCX):
     idx = next((i for i, b in enumerate(nb) if b[0] == 'appendix'), len(nb))
     main, apps = nb[:idx], nb[idx:]
     bld = Builder(main + apps, abstract, xref, toc, tabs, figs, pages)
+    bld.blocks = main
     bld.front(); bld.body()
     bld.blocks = apps
     for b in apps:                       # register appendix citations before the reference list is written
@@ -601,6 +602,18 @@ def norm(s):
     return re.sub(r'\s+', ' ', s).strip()
 
 
+def to_lower_roman(v):
+    if v <= 0:
+        return ''
+    vals = [(1000, 'm'), (900, 'cm'), (500, 'd'), (400, 'cd'), (100, 'c'), (90, 'xc'),
+            (50, 'l'), (40, 'xl'), (10, 'x'), (9, 'ix'), (5, 'v'), (4, 'iv'), (1, 'i')]
+    out = []
+    for n, sym in vals:
+        k, v = divmod(v, n)
+        out.append(sym * k)
+    return ''.join(out)
+
+
 def compute_pages(pdf, toc, tabs, figs):
     pages = [norm(p) for p in pdf_pages(pdf)]
     raw = pdf_pages(pdf)
@@ -613,7 +626,7 @@ def compute_pages(pdf, toc, tabs, figs):
         if i >= p_ch1:
             return str(i - p_ch1 + 1)
         v = i - p_ded + 2
-        return ['', '', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'][v]
+        return to_lower_roman(v)
     res = {}
     res[('front', 'dedication')] = disp(p_ded)
     for key, pat in [('ack', r'^\s*ACKNOWLEDGMENTS\s*$'), ('lot', r'^\s*LIST OF TABLES\s*$'), ('lof', r'^\s*LIST OF FIGURES\s*$'), ('loa', r'^\s*LIST OF ABBREVIATIONS\s*$')]:
@@ -635,11 +648,25 @@ def compute_pages(pdf, toc, tabs, figs):
                 needle = norm(f'{num} {title}')[:22]
                 i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), body_start)
         res[key] = disp(i)
+    def cap_prefix(cap, n=30):
+        cut = len(cap)
+        for ch in '{[':
+            p = cap.find(ch)
+            if p != -1:
+                cut = min(cut, p)
+        return re.sub(r'[*^_]', '', cap[:cut]).strip()[:n]
     for kind, lst in (('tab', tabs), ('fig', figs)):
         for num, cap in lst:
             label = 'Table' if kind == 'tab' else 'Figure'
-            needle = f'{label} {num} '
-            i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), body_start)
+            # match the caption's own distinctive wording, not just "<label> <num>" (which an inline
+            # cross-reference like "{tab:key} shows ..." also resolves to, on an earlier page) and not
+            # a literal trailing space (the tab character between the number and the caption is not
+            # always rendered as whitespace by pdftotext)
+            needle = norm(f'{label} {num}' + cap_prefix(cap))
+            i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), None)
+            if i is None:
+                needle = f'{label} {num}'
+                i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), body_start)
             res[(kind, num)] = disp(i)
     i_ref = next(i for i in range(body_start, len(raw)) if re.search(r'^\s*REFERENCES\s*$', raw[i], re.M))
     res[('front', 'refs')] = disp(i_ref)

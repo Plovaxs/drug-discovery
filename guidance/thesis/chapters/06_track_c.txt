@@ -52,6 +52,10 @@ The signal disappeared when the outcome was normalised by molecular size ({tab:t
 
 @fig trackc | guidance/thesis/figures/fig_trackC.png | 6.2 | Track C, top 10% selection by the Stage 0 ranker in 15 pockets. (A) Shift of the raw Vina Dock score with 95% bootstrap intervals; (B) shift of ligand efficiency (red: worse, green: better); (C) drop of the PoseBusters pass rate in percentage points.
 
+{fig:trackcexamples} shows three concrete examples of what a high-scoring selected molecule from this analysis actually looks like: one top-ranked molecule from the pool of each of three pockets, re-docked with AutoDock Vina and rendered with its principal hydrogen-bond partners labelled. These are illustrative, not a random or representative sample of the 15 pockets' selections, and are included to make the quantitative pattern of {fig:trackc} concrete rather than to support a statistical claim.
+
+@fig trackcexamples | guidance/example_render/composite_binding_poses.png | 5.77 | Three top-ranked molecules from Track C pools (SQHC_ALIAD, XANLY_BACGL, CD38_HUMAN), re-docked and rendered with hydrogen-bond partner residues labelled. The large, high-affinity-scoring poses illustrate the kind of molecule the ranker favours before the size normalisation of {fig:trackc} is applied.
+
 The verdicts by the pre-declared bands were: 12 of 15 pockets *signal but confounded by size*, 2 of 15 *signal in the wrong direction*, 1 of 15 *no signal*, and none *clear signal*.
 
 @sub Two pockets with the opposite behaviour

@@ -1,0 +1,10 @@
+{
+  "CDK6": {"our_pk_min": 5.142667503568732, "our_pk_max": 7.823909, "our_n": 23,
+           "chembl_pchembl_min": 6.55, "chembl_pchembl_max": 9.80, "chembl_n": 4, "chembl_total": 4},
+  "HDAC8": {"our_pk_min": 5.537602002101044, "our_pk_max": 7.045757490560675, "our_n": 21,
+            "chembl_pchembl_min": 4.68, "chembl_pchembl_max": 10.4, "chembl_n": 41, "chembl_total": 885},
+  "CD38": {"our_pk_min": 3.585026652029182, "our_pk_max": 4.251811972993799, "our_n": 21,
+           "chembl_pchembl_min": 7.85, "chembl_pchembl_max": 9.52, "chembl_n": 4, "chembl_total": 4},
+  "AKT1": {"our_pk_min": 6.522878745280337, "our_pk_max": 9.30103, "our_n": 64,
+           "chembl_pchembl_min": 4.98, "chembl_pchembl_max": 9.82, "chembl_n": 48, "chembl_total": 48}
+}

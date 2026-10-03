@@ -1,0 +1,23 @@
+[
+  {
+    "data_id": 87,
+    "target": "CDK6_HUMAN_1_312_0",
+    "protein_filename": "CDK6_HUMAN_1_312_0/4aua_A_rec_4aua_4au_lig_it2_tt_docked_7_pocket10.pdb",
+    "ligand_filename": "CDK6_HUMAN_1_312_0/4aua_A_rec_4aua_4au_lig_it2_tt_docked_7.sdf",
+    "expected_protein_pdb": "CDK6_HUMAN_1_312_0/4aua_A_rec.pdb"
+  },
+  {
+    "data_id": 88,
+    "target": "CDK6_HUMAN_1_312_0",
+    "protein_filename": "CDK6_HUMAN_1_312_0/2f2c_B_rec_1xo2_fse_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "CDK6_HUMAN_1_312_0/2f2c_B_rec_1xo2_fse_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "CDK6_HUMAN_1_312_0/2f2c_B_rec.pdb"
+  },
+  {
+    "data_id": 98,
+    "target": "DYRK2_HUMAN_145_550_0",
+    "protein_filename": "DYRK2_HUMAN_145_550_0/4azf_A_rec_5lxc_7aa_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "DYRK2_HUMAN_145_550_0/4azf_A_rec_5lxc_7aa_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "DYRK2_HUMAN_145_550_0/4azf_A_rec.pdb"
+  }
+]

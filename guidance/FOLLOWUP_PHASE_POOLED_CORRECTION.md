@@ -1,11 +1,28 @@
 # Follow-up Phase, Pooled Multiple-Comparison Correction: 0/27 Significant
 
+**Update 5:** 5 more tests added (Phase 3's ESM2-pocket-only checkpoint
+-- prelambda exploratory tier, λ∈{0.1,0.3,1.0,3.0,10.0}, see
+`ESM2POCKET_GUIDANCE_FINDING.md` -- a weak monotonic trend that only
+approaches significance (p=0.063) exactly where structural validity has
+already collapsed, the same confound pattern as the whole-protein ESM2
+checkpoint's own near-miss). **Running total: 48 tests pooled, 0/48
+significant after BH correction** (min raw p=0.0306 unchanged; min
+BH-corrected p=0.525).
+
+**Update 4:** 5 more tests added (family-holdout checkpoint -- entire
+PF00069 kinase family held out of training, tested on CDK6_HUMAN, a
+pocket the model never saw any family-member of -- prelambda exploratory
+tier, λ∈{0.1,0.3,1.0,3.0,10.0}, see
+`FAMILY_HOLDOUT_GENERALIZATION_FINDING.md` -- another clean null, now
+under the strictest train/test separation this project can construct).
+**Running total: 43 tests pooled, 0/43 significant after BH correction**
+(min raw p=0.0306 unchanged; min BH-corrected p=0.523).
+
 **Update 3:** 6 more tests added (kitchen-sink checkpoint -- all four
 interventions combined -- prelambda exploratory tier,
 λ∈{0.1,0.3,1.0,3.0,10.0,30.0}, see `KITCHENSINK_GUIDANCE_FINDING.md` --
-another clean null, closing the ablation space). **Running total: 38
-tests pooled, 0/38 significant after BH correction** (min raw p=0.0306
-unchanged; min BH-corrected p=0.462).
+another clean null, closing the ablation space), giving 38 tests, 0/38
+significant at that point.
 
 **Update 2:** 5 more tests added (gradient-alignment checkpoint's
 prelambda exploratory tier, λ∈{0.1,0.3,1.0,3.0,10.0}, see

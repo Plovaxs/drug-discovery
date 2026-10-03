@@ -58,14 +58,32 @@ EXAMPLE_PDB = 'examples/1h36_A_rec_1h36_r88_lig_tt_docked_0_pocket10.pdb'
 CHECKPOINT = 'pretrained_models/pretrained_diffusion.pt'
 
 
-def load_everything(device):
+def load_everything(device, data_id=None):
+    """data_id: optional index into the diffusion model's own native
+    sampling test set (datasets.get_dataset, the ORIGINAL TargetDiff
+    100-pocket split -- the same set guidance/diag_size_confound.py reads
+    pockets from), used in place of the fixed EXAMPLE_PDB pocket.
+    Added for the family-holdout generalization test (guidance/
+    FOLLOWUP_PHASE_POOLED_CORRECTION.md's second Phase 2 branch): every
+    other real-docking test in this project uses the same fixed pocket
+    (SQHC_ALIAD_1_631_0) for direct comparability across checkpoints, but
+    that pocket is not held out of the family-holdout training split, so
+    it cannot test this checkpoint's actual generalization claim -- a
+    pocket from the held-out kinase family is needed instead.
+    """
     ckpt = torch.load(CHECKPOINT, map_location=device, weights_only=False)
     protein_featurizer = trans.FeaturizeProteinAtom()
     ligand_atom_mode = ckpt['config'].data.transform.ligand_atom_mode
     ligand_featurizer = trans.FeaturizeLigandAtom(ligand_atom_mode)
-    transform = Compose([protein_featurizer])
-    data = pdb_to_pocket_data(EXAMPLE_PDB)
-    data = transform(data).to(device)
+    if data_id is None:
+        transform = Compose([protein_featurizer])
+        data = pdb_to_pocket_data(EXAMPLE_PDB)
+        data = transform(data).to(device)
+    else:
+        from datasets import get_dataset
+        transform = Compose([protein_featurizer, ligand_featurizer, trans.FeaturizeLigandBond()])
+        _, subsets = get_dataset(config=ckpt['config'].data, transform=transform)
+        data = subsets['test'][data_id].to(device)
     model = ScorePosNet3D(
         ckpt['config'].model, protein_atom_feature_dim=protein_featurizer.feature_dim,
         ligand_atom_feature_dim=ligand_featurizer.feature_dim,
@@ -114,7 +132,7 @@ def synth_own_score(synth_model, pos, v_discrete, device):
 
 def run_one_point(data, model, affinity_model, synth_model, lambda_affinity, lambda_synth,
                   n_samples, num_steps, seed, device, batch_size=None, verbose=False,
-                  dock=False, dock_exhaustiveness=8):
+                  dock=False, dock_exhaustiveness=8, receptor_pdb=None):
     misc.seed_all(seed)
     # Guidance holds extra memory (the guidance model's own forward+backward
     # graph, refreshed every step) on top of the diffusion core's inference
@@ -187,7 +205,7 @@ def run_one_point(data, model, affinity_model, synth_model, lambda_affinity, lam
 
             if dock:
                 try:
-                    task = VinaDockingTask(EXAMPLE_PDB, mol)
+                    task = VinaDockingTask(receptor_pdb or EXAMPLE_PDB, mol)
                     dock_result = task.run(mode='dock', exhaustiveness=dock_exhaustiveness)
                     vina_dock = dock_result[0]['affinity']
                     vina_dock_list.append(vina_dock)
@@ -224,6 +242,14 @@ def main():
     parser.add_argument('--num_steps', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--out', type=str, default='./guidance/lambda_sweep_results.json')
+    parser.add_argument('--data_id', type=int, default=None,
+                        help='use this index into the diffusion model\'s native 100-pocket test '
+                             'set instead of the fixed EXAMPLE_PDB pocket -- see load_everything\'s '
+                             'docstring. --receptor_pdb must also be given (Vina docking needs the '
+                             'real receptor file; it is not derivable from the pocket10-clipped '
+                             'conditioning input alone).')
+    parser.add_argument('--receptor_pdb', type=str, default=None,
+                        help='full receptor PDB for Vina docking, required with --data_id')
     parser.add_argument('--stage', type=str, choices=['affinity', 'synth', 'dual'], required=True)
     parser.add_argument('--grid', type=float, nargs='+', default=None,
                         help='for stage=affinity/synth: values for the swept lambda')
@@ -263,17 +289,35 @@ def main():
                              '(SQHC_ALIAD_1_631_0, PDB 1h36) since this whole script is scoped to '
                              "that one fixed pocket -- do not reuse this flag's wiring for a "
                              'different pocket without also changing the hardcoded target name.')
+    parser.add_argument('--use_esm2_pocket', action='store_true',
+                        help='with --use_esm2: use the pocket-only ESM2 embedding cache '
+                             '(train_egnn_stage0_esm2pocket.py) instead of the whole-protein one. '
+                             'Requires --esm2_pocket_target (that cache is keyed by target name, '
+                             'not accession, and SQHC_ALIAD_1_631_0 is not guaranteed to be in it).')
+    parser.add_argument('--esm2_pocket_target', type=str, default=None,
+                        help='target name to look up in the pocket-only ESM2 cache, e.g. '
+                             'CDK6_HUMAN_1_312_0 -- required with --use_esm2_pocket, optional '
+                             '(defaults to SQHC_ALIAD_1_631_0) for plain --use_esm2')
     args = parser.parse_args()
+    if args.use_esm2_pocket and not args.use_esm2:
+        raise ValueError('--use_esm2_pocket requires --use_esm2')
 
     if not args.verbose:
         RDLogger.DisableLog('rdApp.*')
 
+    if args.data_id is not None and not args.receptor_pdb:
+        raise ValueError('--data_id requires --receptor_pdb (see its help text)')
+
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    data, model = load_everything(device)
+    data, model = load_everything(device, data_id=args.data_id)
     if args.use_esm2:
         from guidance.affinity_guidance_esm2 import AffinityGuidanceESM2
-        affinity_model = AffinityGuidanceESM2(args.affinity_ckpt, device=device)
-        affinity_model.set_pocket('SQHC_ALIAD_1_631_0')
+        vec_for_target = None
+        if args.use_esm2_pocket:
+            from guidance.lp_split.train_egnn_stage0_esm2pocket import build_pocket_vec_for_target
+            vec_for_target, _, _ = build_pocket_vec_for_target()
+        affinity_model = AffinityGuidanceESM2(args.affinity_ckpt, device=device, vec_for_target=vec_for_target)
+        affinity_model.set_pocket(args.esm2_pocket_target or 'SQHC_ALIAD_1_631_0')
     else:
         affinity_model = AffinityGuidance(args.affinity_ckpt, device=device,
                                           use_bond_aware=args.use_bond_aware,
@@ -310,7 +354,8 @@ def main():
         res = run_one_point(data, model, affinity_model, synth_model, la, ls,
                             args.n_samples, args.num_steps, args.seed, device,
                             batch_size=args.batch_size, verbose=args.verbose,
-                            dock=args.dock, dock_exhaustiveness=args.dock_exhaustiveness)
+                            dock=args.dock, dock_exhaustiveness=args.dock_exhaustiveness,
+                            receptor_pdb=args.receptor_pdb)
         print(f'  {res}')
         results.append(res)
 

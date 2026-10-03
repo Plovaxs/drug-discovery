@@ -41,6 +41,7 @@ def sample_diffusion_ligand_guided(
         lambda_affinity=0.0, lambda_synth=0.0,
         guidance_timestep_window=None,
         capture_timesteps=None, capture_list=None,
+        grad_capture_list=None,
         use_amp=False):
     """Same signature/return shape as ScorePosNet3D.sample_diffusion, plus
     optional guidance models and their weights.
@@ -86,6 +87,16 @@ def sample_diffusion_ligand_guided(
     noise. Guidance's own gradient computation (the small guidance model,
     not the diffusion core) is left in fp32 regardless of this flag --
     autocast is only applied around the `model(...)` call below.
+
+    grad_capture_list: optional read-only instrumentation hook for
+    guidance/trace_guidance_trajectory.py, which asks a different question
+    than capture_timesteps does -- not "what would the gradient look like"
+    (DIAG1, on an unguided trajectory) but "what did guidance actually do,
+    step by step, on a trajectory where it was live". When guidance is
+    active at step `i`, appends a detached
+    (i, pos0_before_guidance, grad_pos, pos0_after_guidance) snapshot. Has
+    zero effect on the sampled trajectory (only .detach().clone() reads of
+    tensors already computed) unless explicitly passed.
     """
     if num_steps is None:
         num_steps = model.num_timesteps
@@ -182,6 +193,12 @@ def sample_diffusion_ligand_guided(
                         protein_pos, protein_v, batch_protein)
                     grad_pos = grad_pos + lambda_synth * g_pos
                     grad_v = grad_v + lambda_synth * g_v
+
+            if grad_capture_list is not None:
+                grad_capture_list.append((
+                    i, pos0_detached.detach().clone(), grad_pos.detach().clone(),
+                    (pos0_detached + grad_pos).detach().clone(),
+                ))
 
             pos0_from_e = (pos0_from_e + grad_pos).detach()
             v0_from_e = (v0_from_e + grad_v).detach()

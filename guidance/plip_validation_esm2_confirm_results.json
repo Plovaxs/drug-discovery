@@ -1,0 +1,274 @@
+{
+  "0.0": [
+    {
+      "sample_idx": 0,
+      "status": "ok",
+      "vina_dock": -8.454,
+      "hbond": 1,
+      "hydrophobic": 12,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 1,
+      "status": "ok",
+      "vina_dock": -11.559,
+      "hbond": 3,
+      "hydrophobic": 5,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 2,
+      "status": "ok",
+      "vina_dock": -11.955,
+      "hbond": 2,
+      "hydrophobic": 10,
+      "pi_stack": 3,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 3,
+      "status": "ok",
+      "vina_dock": -12.8,
+      "hbond": 4,
+      "hydrophobic": 14,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 4,
+      "status": "ok",
+      "vina_dock": -10.824,
+      "hbond": 2,
+      "hydrophobic": 13,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 5,
+      "status": "fragmented",
+      "n_fragments": 2
+    },
+    {
+      "sample_idx": 6,
+      "status": "ok",
+      "vina_dock": -14.893,
+      "hbond": 5,
+      "hydrophobic": 15,
+      "pi_stack": 4,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 7,
+      "status": "ok",
+      "vina_dock": -11.48,
+      "hbond": 0,
+      "hydrophobic": 8,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 8,
+      "status": "ok",
+      "vina_dock": -10.643,
+      "hbond": 2,
+      "hydrophobic": 12,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 9,
+      "status": "ok",
+      "vina_dock": -10.646,
+      "hbond": 2,
+      "hydrophobic": 15,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 10,
+      "status": "ok",
+      "vina_dock": -10.23,
+      "hbond": 5,
+      "hydrophobic": 10,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 11,
+      "status": "ok",
+      "vina_dock": -12.775,
+      "hbond": 2,
+      "hydrophobic": 7,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 12,
+      "status": "ok",
+      "vina_dock": -10.285,
+      "hbond": 2,
+      "hydrophobic": 8,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 13,
+      "status": "ok",
+      "vina_dock": -9.883,
+      "hbond": 3,
+      "hydrophobic": 12,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 14,
+      "status": "ok",
+      "vina_dock": -11.388,
+      "hbond": 2,
+      "hydrophobic": 15,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 15,
+      "status": "ok",
+      "vina_dock": -12.205,
+      "hbond": 3,
+      "hydrophobic": 16,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    }
+  ],
+  "3.0": [
+    {
+      "sample_idx": 0,
+      "status": "ok",
+      "vina_dock": -10.833,
+      "hbond": 1,
+      "hydrophobic": 13,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 1,
+      "status": "ok",
+      "vina_dock": -12.73,
+      "hbond": 2,
+      "hydrophobic": 9,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 2,
+      "status": "ok",
+      "vina_dock": -13.376,
+      "hbond": 1,
+      "hydrophobic": 10,
+      "pi_stack": 4,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 3,
+      "status": "ok",
+      "vina_dock": -10.646,
+      "hbond": 1,
+      "hydrophobic": 20,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 4,
+      "status": "ok",
+      "vina_dock": -11.343,
+      "hbond": 0,
+      "hydrophobic": 10,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 5,
+      "status": "reconstruct_failed",
+      "error": ""
+    },
+    {
+      "sample_idx": 6,
+      "status": "ok",
+      "vina_dock": -16.112,
+      "hbond": 8,
+      "hydrophobic": 17,
+      "pi_stack": 3,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 7,
+      "status": "ok",
+      "vina_dock": -11.877,
+      "hbond": 0,
+      "hydrophobic": 12,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 8,
+      "status": "reconstruct_failed",
+      "error": ""
+    },
+    {
+      "sample_idx": 9,
+      "status": "ok",
+      "vina_dock": -10.101,
+      "hbond": 2,
+      "hydrophobic": 17,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 10,
+      "status": "fragmented",
+      "n_fragments": 4
+    },
+    {
+      "sample_idx": 11,
+      "status": "ok",
+      "vina_dock": -14.035,
+      "hbond": 3,
+      "hydrophobic": 7,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 12,
+      "status": "ok",
+      "vina_dock": -12.212,
+      "hbond": 2,
+      "hydrophobic": 9,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 13,
+      "status": "ok",
+      "vina_dock": -14.957,
+      "hbond": 3,
+      "hydrophobic": 14,
+      "pi_stack": 1,
+      "salt_bridge": 2
+    },
+    {
+      "sample_idx": 14,
+      "status": "ok",
+      "vina_dock": -10.973,
+      "hbond": 2,
+      "hydrophobic": 16,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 15,
+      "status": "fragmented",
+      "n_fragments": 2
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "0.0": [
+    {
+      "sample_idx": 0,
+      "status": "ok",
+      "vina_dock": -13.003,
+      "hbond": 3,
+      "hydrophobic": 8,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 1,
+      "status": "ok",
+      "vina_dock": -8.705,
+      "hbond": 1,
+      "hydrophobic": 14,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 2,
+      "status": "ok",
+      "vina_dock": -9.931,
+      "hbond": 0,
+      "hydrophobic": 9,
+      "pi_stack": 2,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 3,
+      "status": "ok",
+      "vina_dock": -11.615,
+      "hbond": 0,
+      "hydrophobic": 14,
+      "pi_stack": 1,
+      "salt_bridge": 1
+    },
+    {
+      "sample_idx": 4,
+      "status": "ok",
+      "vina_dock": -10.023,
+      "hbond": 2,
+      "hydrophobic": 17,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 5,
+      "status": "ok",
+      "vina_dock": -11.17,
+      "hbond": 3,
+      "hydrophobic": 14,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 6,
+      "status": "ok",
+      "vina_dock": -8.235,
+      "hbond": 4,
+      "hydrophobic": 18,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 7,
+      "status": "ok",
+      "vina_dock": -10.99,
+      "hbond": 2,
+      "hydrophobic": 15,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    }
+  ],
+  "1.0": [
+    {
+      "sample_idx": 0,
+      "status": "ok",
+      "vina_dock": -13.33,
+      "hbond": 3,
+      "hydrophobic": 13,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 1,
+      "status": "ok",
+      "vina_dock": -10.919,
+      "hbond": 0,
+      "hydrophobic": 10,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 2,
+      "status": "ok",
+      "vina_dock": -11.675,
+      "hbond": 2,
+      "hydrophobic": 8,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 3,
+      "status": "ok",
+      "vina_dock": -12.084,
+      "hbond": 1,
+      "hydrophobic": 13,
+      "pi_stack": 1,
+      "salt_bridge": 1
+    },
+    {
+      "sample_idx": 4,
+      "status": "ok",
+      "vina_dock": -11.326,
+      "hbond": 1,
+      "hydrophobic": 15,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 5,
+      "status": "ok",
+      "vina_dock": -9.386,
+      "hbond": 2,
+      "hydrophobic": 7,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 6,
+      "status": "ok",
+      "vina_dock": -11.456,
+      "hbond": 2,
+      "hydrophobic": 16,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 7,
+      "status": "ok",
+      "vina_dock": -14.538,
+      "hbond": 2,
+      "hydrophobic": 15,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    }
+  ],
+  "3.0": [
+    {
+      "sample_idx": 0,
+      "status": "ok",
+      "vina_dock": -12.639,
+      "hbond": 2,
+      "hydrophobic": 10,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 1,
+      "status": "ok",
+      "vina_dock": -9.648,
+      "hbond": 0,
+      "hydrophobic": 15,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 2,
+      "status": "ok",
+      "vina_dock": -10.808,
+      "hbond": 3,
+      "hydrophobic": 6,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 3,
+      "status": "fragmented",
+      "n_fragments": 2
+    },
+    {
+      "sample_idx": 4,
+      "status": "ok",
+      "vina_dock": -10.526,
+      "hbond": 1,
+      "hydrophobic": 6,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 5,
+      "status": "ok",
+      "vina_dock": -13.059,
+      "hbond": 0,
+      "hydrophobic": 10,
+      "pi_stack": 0,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 6,
+      "status": "ok",
+      "vina_dock": -16.442,
+      "hbond": 1,
+      "hydrophobic": 17,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    },
+    {
+      "sample_idx": 7,
+      "status": "ok",
+      "vina_dock": -14.82,
+      "hbond": 2,
+      "hydrophobic": 11,
+      "pi_stack": 1,
+      "salt_bridge": 0
+    }
+  ]
+}

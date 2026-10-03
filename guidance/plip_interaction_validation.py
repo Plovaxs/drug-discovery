@@ -169,12 +169,19 @@ def main():
     parser.add_argument('--affinity_ckpt', type=str, required=True)
     parser.add_argument('--lambdas', type=float, nargs='+', default=[0.0, 1.0])
     parser.add_argument('--n_samples', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=4,
+                        help='guidance holds extra memory per internal batch -- 4 was the '
+                             'largest safe value found for n_samples=8+ on this 4GB GPU '
+                             '(see lambda_sweep.py\'s own docstring note on the same OOM)')
     parser.add_argument('--num_steps', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--out', type=str, required=True)
     parser.add_argument('--use_esm2', action='store_true',
                         help='same meaning as lambda_sweep.py --use_esm2: use AffinityGuidanceESM2 '
                              'for an ESM2-trained checkpoint, pocket fixed to SQHC_ALIAD_1_631_0.')
+    parser.add_argument('--resume', action='store_true',
+                        help='skip lambdas already present in --out and append to it, same '
+                             'intent as lambda_sweep.py --resume')
     args = parser.parse_args()
     RDLogger.DisableLog('rdApp.*')
 
@@ -188,19 +195,27 @@ def main():
         affinity_model = AffinityGuidance(args.affinity_ckpt, device=device)
 
     all_results = {}
+    if args.resume and os.path.exists(args.out):
+        with open(args.out) as f:
+            all_results = json.load(f)
+        print(f'--resume: {list(all_results.keys())} already in {args.out}')
+
     for lam in args.lambdas:
+        if str(lam) in all_results:
+            print(f'=== lambda_affinity={lam} -- already done, skipping ===')
+            continue
         print(f'=== lambda_affinity={lam} ===')
         res = sample_and_score(data, model, affinity_model, args.n_samples, lam,
-                               args.num_steps, args.seed, device)
+                               args.num_steps, args.seed, device, batch_size=args.batch_size)
         ok = [r for r in res if r['status'] == 'ok']
         print(f'  {len(ok)}/{len(res)} ok; statuses: {[r["status"] for r in res]}')
         for c in CLASSES:
             if ok:
                 print(f'  mean {c}: {sum(r[c] for r in ok)/len(ok):.2f}')
         all_results[str(lam)] = res
+        with open(args.out, 'w') as f:
+            json.dump(all_results, f, indent=2)
 
-    with open(args.out, 'w') as f:
-        json.dump(all_results, f, indent=2)
     print(f'Saved to {args.out}')
 
 

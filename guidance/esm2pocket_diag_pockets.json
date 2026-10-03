@@ -1,0 +1,26 @@
+[
+  {
+    "data_id": 5,
+    "lmdb_idx": 7659,
+    "target": "HDAC8_HUMAN_1_377_0",
+    "protein_filename": "HDAC8_HUMAN_1_377_0/4rn0_B_rec_4rn1_l8g_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "HDAC8_HUMAN_1_377_0/4rn0_B_rec_4rn1_l8g_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "HDAC8_HUMAN_1_377_0/4rn0_B_rec.pdb"
+  },
+  {
+    "data_id": 10,
+    "lmdb_idx": 20612,
+    "target": "CD38_HUMAN_44_300_0",
+    "protein_filename": "CD38_HUMAN_44_300_0/3dzh_A_rec_3u4i_cvr_lig_tt_docked_0_pocket10.pdb",
+    "ligand_filename": "CD38_HUMAN_44_300_0/3dzh_A_rec_3u4i_cvr_lig_tt_docked_0.sdf",
+    "expected_protein_pdb": "CD38_HUMAN_44_300_0/3dzh_A_rec.pdb"
+  },
+  {
+    "data_id": 25,
+    "lmdb_idx": 42180,
+    "target": "PAK4_HUMAN_291_591_ATP_0",
+    "protein_filename": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec_5vef_m77_lig_tt_min_0_pocket10.pdb",
+    "ligand_filename": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec_5vef_m77_lig_tt_min_0.sdf",
+    "expected_protein_pdb": "PAK4_HUMAN_291_591_ATP_0/5i0b_A_rec.pdb"
+  }
+]

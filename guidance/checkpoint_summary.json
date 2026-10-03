@@ -1,0 +1,11 @@
+{
+  "_comment": "Test-set predictive quality (R2/Pearson/Spearman) read directly from each checkpoint's training log at the time it finished; DIAG1 correlations loaded from the corresponding diag_size_confound*_results.json. One row per independently-trained checkpoint in the follow-up phase (does not include the original 4 core-thesis tracks, which are summarized separately in THESIS_FINDINGS_SYNTHESIS.md).",
+  "original_egnn": {"label": "Original EGNN", "r2": 0.342, "pearson": 0.609, "spearman": null},
+  "noisematched": {"label": "Noise-matched", "r2": 0.333, "pearson": 0.599, "spearman": null},
+  "vinatarget": {"label": "Vina-target", "r2": 0.400, "pearson": 0.652, "spearman": null},
+  "gradalign": {"label": "Gradient-alignment", "r2": 0.345, "pearson": 0.626, "spearman": 0.615},
+  "esm2": {"label": "ESM2 (whole-protein)", "r2": 0.460, "pearson": 0.731, "spearman": 0.748},
+  "kitchensink": {"label": "Kitchen-sink (all 4)", "r2": 0.413, "pearson": 0.664, "spearman": 0.686},
+  "family_holdout": {"label": "Family-holdout (unseen kinase)", "r2": 0.507, "pearson": 0.713, "spearman": 0.755},
+  "esm2pocket": {"label": "ESM2 (pocket-only)", "r2": 0.280, "pearson": 0.686, "spearman": 0.723}
+}

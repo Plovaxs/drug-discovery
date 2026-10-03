@@ -29,7 +29,15 @@ from guidance.lp_split.train_egnn_stage0_esm2 import PropPredNetESM2, build_targ
 
 
 class AffinityGuidanceESM2(GuidanceModel):
-    def __init__(self, ckpt_path, device='cuda:0', normalize_gradient=False):
+    def __init__(self, ckpt_path, device='cuda:0', normalize_gradient=False, vec_for_target=None):
+        """vec_for_target: optional override of the target_name -> ESM2
+        vector lookup. Default (None) uses build_target_to_esm2's
+        whole-protein, accession-keyed cache (train_egnn_stage0_esm2.py's
+        checkpoints). Pass guidance/lp_split/train_egnn_stage0_esm2pocket.py's
+        build_pocket_vec_for_target()[0] for a pocket-only checkpoint --
+        that cache is keyed by target name directly, not accession, since
+        the pocket (not just the protein) determines the embedding.
+        """
         ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
         self.device = device
         self.model = PropPredNetESM2(
@@ -44,7 +52,10 @@ class AffinityGuidanceESM2(GuidanceModel):
             p.requires_grad_(False)
         self._ligand_atom_feature_dim = ckpt['ligand_atom_feature_dim']
         self.normalize_gradient = normalize_gradient
-        self._vec_for_target, _, _ = build_target_to_esm2()
+        if vec_for_target is not None:
+            self._vec_for_target = vec_for_target
+        else:
+            self._vec_for_target, _, _ = build_target_to_esm2()
         self.esm2_vec = None  # set via set_pocket before sampling
 
     def set_pocket(self, target_name):
