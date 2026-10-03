@@ -40,7 +40,7 @@ The 15,000 entries were re-partitioned by target identity with the leakage-safe 
 
 @sec Guidance with the Leakage-Safe Predictor
 
-With the retrained predictor and the bond-aware design, the strength sweep was repeated on the same single pocket (BSD_ASPTE) with 30 molecules per value, the full 1,000 steps and a grid from 0 to 30 ({tab:synthd3}). A KS test of the independently computed RAscore, guided against unguided, was applied to each of the five values with enough scoreable molecules, and the five tests were corrected with the Benjamini–Hochberg procedure.
+With the retrained predictor and the bond-aware design, the strength sweep was repeated with the same single-pocket design as Section VII.2, now on pocket BSD_ASPTE rather than the bundled example pocket used there, with 30 molecules per value, the full 1,000 steps and a grid from 0 to 30 ({tab:synthd3}). A KS test of the independently computed RAscore, guided against unguided, was applied to each of the five values with enough scoreable molecules, and the five tests were corrected with the Benjamini–Hochberg procedure.
 
 @tab synthd3 | Leakage-safe predictor, bond-aware design, pocket BSD_ASPTE, n = 30 per value
 | λ_synth | Single-fragment rate | Scoreable (n) | Own score | Independently computed RA-score | Shift of independently computed score (95% CI) | KS p (BH) |
