@@ -14,8 +14,11 @@ frozen, pretrained diffusion model:
 > Molecular Diffusion in Structure-Based Drug Design**
 
 Full thesis document: `guidance/thesis/Thesis_Coupled_Guidance_SBDD.pdf`
-(148 pages, 10 chapters + 4 appendices, built via `guidance/thesis/
-build_thesis.py`).
+(176 pages, 10 chapters + 5 appendices, 33 figures, built via
+`guidance/thesis/build_thesis.py`). Appendix E documents the full
+follow-up investigation below (8 further independently-trained
+checkpoints, three phases, and a direct mechanistic trace) in the same
+statistical rigor as the core thesis.
 
 ### Core thesis: four independent falsifications
 
@@ -38,13 +41,18 @@ All four tracks converge on the same root cause (diagnosed in
 signal is dominated by molecular size, not target-specific binding
 chemistry.
 
-### Follow-up investigation: does fixing the diagnosed mechanism help? (12 checkpoints, still no)
+### Follow-up investigation: does fixing the diagnosed mechanism help? (8 checkpoints, three phases, still no)
 
-A second phase systematically tested whether directly repairing DIAG1's
-diagnosed mechanism — rather than working around it — produces a real
-guidance effect. Four interventions were tried alone, in combination
-(Track A follow-up), and all stacked together (kitchen-sink), on top of
-the original Stage 0 EGNN and Track A's GIGN+PIGNet2 backbones:
+A second phase, reported in full as Appendix E of the thesis, tested
+whether directly repairing DIAG1's diagnosed mechanism — rather than
+working around it — produces a real guidance effect, then pushed the
+question harder with independent validation, the strictest generalization
+split available, and a direct trace of the guidance mechanism itself.
+
+**Phase 1 — repair the predictor (6 checkpoints).** Four interventions
+tried alone, in combination (Track A follow-up), and all stacked together
+(kitchen-sink), on top of the original Stage 0 EGNN and Track A's
+GIGN+PIGNet2 backbones:
 
 | Checkpoint | Best fix | Real-docking effect |
 |---|---|---|
@@ -55,43 +63,68 @@ the original Stage 0 EGNN and Track A's GIGN+PIGNet2 backbones:
 | Track A follow-up (GIGN+PIGNet2 + 2 fixes) | Noise-matching + Vina-target combined | Null — 87.5% direction-consistency (best of this architecture) still 0/16 significant |
 | **Kitchen-sink** (all 4 combined) | Every intervention above, stacked | Null — closes the ablation space; no emergent synergy, worst size-confound of any checkpoint |
 
-**Pooled result across the entire follow-up phase: 38 independent
+**Phase 2 — independent validation and the hardest generalization test (1
+new checkpoint + 2 analyses on existing checkpoints).** `guidance/PLIP_INTERACTION_VALIDATION_FINDING.md`
+asks a sharper question than "did the Vina score improve": does guidance
+increase the number of *real, named* interactions (H-bonds, hydrophobic
+contacts, pi-stacking, salt bridges, via PLIP) a docked pose actually
+forms? An n=8 exploratory signal (interactions down −3.71, Vina Dock up
+−2.27 kcal/mol) reversed sign on confirmation at n=16 (interactions
++1.00) — not weakened, reversed. `guidance/FAMILY_HOLDOUT_GENERALIZATION_FINDING.md`
+retrains with an entire protein family (PF00069, kinases) held out of
+training and tests on CDK6, a major real-world kinase target the model
+never saw any relative of: predictive quality holds (R²=0.507) and the
+diagnostic is correctly signed and significant (−0.086) for the first
+time on a non-forced checkpoint, but the real-docking effect is still
+null. `guidance/ALPHAFOLD_POCKET_ROBUSTNESS_FINDING.md` (side analysis)
+checks whether AlphaFold DB models could substitute for crystal pockets
+across 835 LP-split targets: median pocket RMSD 0.47 Å, pLDDT-RMSD
+correlation r=−0.63 (p≈1e-92), but 13/835 (1.6%) targets are "confidently
+wrong" (pLDDT>80 yet RMSD>5 Å) — a failure mode pLDDT alone cannot flag.
+
+**Phase 3 — sharpen the signal and check the labels (1 new checkpoint + 1
+label-verification analysis).** `guidance/ESM2POCKET_GUIDANCE_FINDING.md` restricts the ESM2 feature to
+only the binding-pocket residues instead of the whole protein: predictive
+quality gets *worse* (R²=0.280, down from 0.460), the first checkpoint in
+this investigation to actively regress by trying to sharpen a signal.
+`guidance/CHEMBL_CROSSVALIDATION_FINDING.md` independently cross-checks
+this project's affinity labels against ChEMBL for 4 recurring targets: 3
+of 4 agree, but CD38's labels disagree completely (this project: pK
+3.6–4.3; ChEMBL: pChEMBL 7.9–9.5) — a genuine discrepancy reported as
+such, with a plausible but unverified explanation (PDBBind vs. ChEMBL
+literature-selection bias).
+
+**Direct mechanistic trace.** `guidance/GUIDANCE_MECHANISM_TRACE_FINDING.md`
+answers the question directly: one molecule, sampled twice from
+bit-identical noise (unguided vs. guided), with every reverse-diffusion
+step's position gap measured atom by atom. The gap is exactly zero until
+guidance starts, grows smoothly, and only accelerates in the final third
+of sampling, ending at 0.05 Å mean / 0.13 Å max — about 1% of what the
+raw cumulative nudge magnitude (9.49 units) would suggest if nudges
+simply added up. The guidance signal is not being actively cancelled; it
+is mostly drowned out by the sampler's own intrinsic step noise for most
+of the trajectory, a specific and falsifiable account of why position-only
+guidance is too weak to matter. (The two molecules' discrete atom types
+still end up completely different — a separate, flagged-as-open "butterfly
+effect" in the categorical sampling channel.)
+
+**Pooled result across the entire follow-up phase: 48 independent
 statistical tests, 0 significant after Benjamini-Hochberg correction**
 (`guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md`). The central finding:
 every mechanism-level fix improves its own diagnostic or predictive
-target, and none of them produce a defensible real-docking effect —
-evidence that the guidance mechanism itself, not any single diagnosed
-confound, is the bottleneck.
-
-### Side finding: AlphaFold-predicted structures vs. crystal structures
-
-For the question "would this guidance pipeline still work on a novel
-target with no experimental structure, using an AlphaFold model
-instead?" — `guidance/alphafold_pocket_robustness.py` compares AlphaFold
-DB models against the real crystal structure at the binding pocket
-specifically, across 835 LP-split targets (using the full raw
-CrossDocked2020 v1.1 archive, not just a small demo subset). Median
-pocket RMSD 0.47 Å, pLDDT-RMSD correlation r=-0.63 (p≈1e-92) — strong
-overall agreement, but 13/835 (1.6%) targets are "confidently wrong"
-(pLDDT>80 yet RMSD>5 Å), a real failure mode pLDDT alone cannot flag.
-Full result: `guidance/ALPHAFOLD_POCKET_ROBUSTNESS_FINDING.md`.
-
-### Current phase: PLIP interaction-type validation
-
-In progress: `guidance/plip_interaction_validation.py` asks a sharper
-question than "did the Vina score improve" — does guidance increase the
-number of *real, named* interactions (H-bonds, hydrophobic contacts,
-pi-stacking, salt bridges, via PLIP) a docked pose actually forms. Not
-to be confused with the separately-gated, untrained Track E plan
-(`guidance/TRACK_E_DESIGN.md`, a ~38 GPU-hour model-training proposal
-awaiting its own go-ahead) — this is a lighter analysis of molecules
-sampled from checkpoints already trained above.
+target, independent chemistry-level validation and the hardest
+generalization split both agree with the raw-score result, and the
+mechanistic trace shows specifically why — the guidance mechanism itself,
+not any single diagnosed confound, is the bottleneck.
 
 **Start here:**
 - `guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md` — the single pooled statistical verdict across the whole follow-up phase
+- `guidance/GUIDANCE_MECHANISM_TRACE_FINDING.md` — the direct, step-by-step trace of what guidance does to one molecule
 - `guidance/STAGE2_PLUS_EXPERIMENT_LOG.md` — single source of truth, every core-thesis experiment logged
 - `guidance/DUAL_FALSIFICATION_CONCLUSION.md`, `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md` — core-thesis full write-ups
-- `guidance/GRADALIGN_GUIDANCE_FINDING.md`, `guidance/ESM2_GUIDANCE_FINDING.md`, `guidance/KITCHENSINK_GUIDANCE_FINDING.md`, `guidance/TRACK_A_FOLLOWUP_FULL_TIER_FINDING.md` — follow-up phase per-checkpoint write-ups
+- `guidance/GRADALIGN_GUIDANCE_FINDING.md`, `guidance/ESM2_GUIDANCE_FINDING.md`, `guidance/ESM2POCKET_GUIDANCE_FINDING.md`, `guidance/KITCHENSINK_GUIDANCE_FINDING.md`, `guidance/TRACK_A_FOLLOWUP_FULL_TIER_FINDING.md` — Phase 1 per-checkpoint write-ups
+- `guidance/PLIP_INTERACTION_VALIDATION_FINDING.md`, `guidance/FAMILY_HOLDOUT_GENERALIZATION_FINDING.md`, `guidance/CHEMBL_CROSSVALIDATION_FINDING.md` — Phase 2/3 write-ups
+- `guidance/thesis/chapters/11_appendices.txt` (Appendix E) — all of the above assembled into the thesis document itself, with 14 figures and 7 tables
 - `guidance/generate_molecules_for_target.py` — generate & score candidate molecules for any of the 100 test-set pockets
 - `guidance/render_examples.py`, `guidance/build_pptx_glb.py` — publication-quality and PowerPoint-ready 3D visualizations of generated binding poses
 
