@@ -36,7 +36,7 @@ Not every route in this thesis carries the same evidentiary status, and the dist
 | Track B (V) | Stage 0 EGNN | Gradient scale (B1), objective (B2), timing (B3) | 2–3 pockets | 20 molecules | Vina Dock (KS) | BH, 23 tests | 0/23 significant |
 | Diagnostic (V.4) | Stage 0 EGNN | None (read-only probe) | 3 pockets, 144 states | n/a | Gradient–distance correlation | Bootstrap CI only; no gate | +0.240, wrong direction |
 | Track C (VI) | Stage 0 EGNN (as ranker) | Post-hoc top-10% selection | 15 pockets | ~590 molecules/pocket pool | Vina Dock, LE, PoseBusters (KS) | BH, 15 tests | Raw gain confounded by size |
-| Track D (VII) | SynthPredNet | Synthesizability guidance | 1 pocket (powered tier) | 30 molecules | Real RAscore (KS) | BH, 5 tests | 0/5 significant |
+| Track D (VII) | SynthPredNet | Synthesizability guidance | 1 pocket (powered tier) | 30 molecules | Independently computed RAscore (KS) | BH, 5 tests | 0/5 significant |
 | Track E (VIII) | GIGN delta head | Training target (residual vs. Vina) | 127 test targets | n/a (predictor comparison) | Target-clustered R² | Pre-registered gate (bootstrap CI) | Falsified at this scale |
 | Follow-up (App. E) | 8 further checkpoints (EGNN / GIGN variants) | 4 mechanism-level fixes, alone and combined, plus validation and a mechanistic trace | 1 fixed pocket + CDK6 (unseen family) + 835 (AlphaFold side-check) | 8–24 molecules per λ | Vina Dock, PLIP interactions, R² | Pooled BH, 48 tests | 0/48 significant |
 @note "n/a" marks routes that compare trained predictors on a held-out test set rather than generated molecules under guidance. The diagnostic of row 4 is not a guidance checkpoint and carried no pass/fail gate (Section V.4).
@@ -108,7 +108,7 @@ Guidance effects were never evaluated with the guidance predictor's own output. 
 | Vina Dock | AutoDock Vina 1.2.6 [@eberhardt2021] re-docking against the real receptor of the pocket, exhaustiveness 8 or 16 (kcal/mol) | Lower is better |
 | Ligand efficiency (LE) | Vina Dock divided by the number of heavy atoms | Lower is better |
 | PoseBusters validity | Fraction of poses passing the PoseBusters checks [@buttenschoen2024] in docking configuration | Higher is better |
-| RA-score | Real RAscore model [@thakkar2021] applied to the reconstructed molecule | Higher is better |
+| RA-score | Independently computed RAscore model [@thakkar2021] applied to the reconstructed molecule | Higher is better |
 | QED, SA score | Drug-likeness; synthetic accessibility [@ertl2009] rescaled to [0, 1] following the TargetDiff evaluation code | Higher is better |
 | Validity, uniqueness, diversity | Fraction reconstructable; fraction unique; mean 1 − Tanimoto (Morgan radius 2, 1,024 bits) | Higher is better |
 | Standard success | Vina Dock < −8.18, QED > 0.25 and SA > 0.59 | Higher is better |
