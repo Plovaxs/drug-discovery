@@ -60,7 +60,7 @@ The verdicts by the pre-declared bands were: 12 of 15 pockets *signal but confou
 
 @sub Two pockets with the opposite behaviour
 
-In two pockets, RIBB_VIBCH and P2Y12, the top-10% selection was significantly *worse* than a random subset of the same size on the raw score (empirical p_random = 1.0000 for RIBB_VIBCH, that is, none of 2,000 random draws did as poorly). This held at all four values of k tested for RIBB_VIBCH. In these pockets the ranker was anti-correlated with the real docking outcome, and not just uninformative.
+In two pockets, RIBB_VIBCH and P2Y12, the top-10% selection was significantly *worse* than a random subset of the same size on the raw score (empirical p_random = 1.0000 for RIBB_VIBCH, that is, none of 2,000 random draws did as poorly). This held at all four values of k tested for RIBB_VIBCH. In these pockets the ranker was anti-correlated with the independently computed docking outcome, and not just uninformative.
 
 @sub Sensitivity to the selection fraction
 

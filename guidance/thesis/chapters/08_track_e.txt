@@ -110,7 +110,7 @@ E1 failed every criterion ({tab:e1crit}). The interval of the difference from th
 | Sensitivity | R² against the three-seed EGNN mean | −0.247 (−0.426, −0.134) | (−0.486, −0.108) | Fail; same conclusion |
 @endtab
 
-The outcome is not *inconclusive* in the sense of the pre-registered rule. The design was underpowered to confirm a small gain, but the upper bounds of the three decisive intervals (−0.091, −0.121 and −0.026) lie below zero, so a positive difference of the required size is excluded at this scale. The verdict of the frozen rule was that E1 was falsified at this scale. The second stage was not run, and neither were the conditional gradient-surgery arm, the sensitivity to the auxiliary weight, or the gradient gate C4, since no arm passed the first stage.
+The outcome is not *inconclusive* in the sense of the pre-registered rule. The design was underpowered to confirm a small gain, but the upper bounds of the three decisive intervals (−0.091, −0.121 and −0.026) lie below zero, so a positive difference of the required size is excluded at this scale. The verdict of the frozen rule was that E1 was falsified at this scale: the tested delta-learning configuration (this backbone, this anchor, this loss, three seeds, the 127-target leakage-safe test set) was falsified against its pre-registered criterion at the evaluated scale, not delta-learning as a general methodology, which other backbones and feature sets have been reported to use successfully elsewhere (Section II.6) and which Section VIII.7 returns to explicitly. The second stage was not run, and neither were the conditional gradient-surgery arm, the sensitivity to the auxiliary weight, or the gradient gate C4, since no arm passed the first stage.
 
 @sec Why the Delta Target Failed
 
