@@ -10,6 +10,38 @@ Every route followed a two-tier protocol. An exploratory tier, with few pockets,
 
 @fig pipeline | guidance/thesis/figures/fig_pipeline.png | 5.6 | Overall pipeline. A frozen TargetDiff denoiser proposes a clean-data estimate at each reverse step; a guidance predictor's gradient with respect to atom positions modifies that estimate; and the finished molecules are evaluated by tools that are independent of the guidance predictor and analysed with corrected statistics.
 
+@sub Pre-registration status of each route
+
+Not every route in this thesis carries the same evidentiary status, and the distinction matters for how its result should be read. Four categories are used throughout, and every analysis in this thesis belongs to exactly one of them. *Pre-registered* means a frozen, version-controlled document fixed the hypothesis, the primary metric, the decision thresholds and the stopping rule before any model of that route was trained; only Track E (Chapter VIII) meets this bar, and its amendments are logged, dated and never edited in place (Appendix D). *Planned, not pre-registered* means the decision bands, correction procedure and quality-degradation checks were declared in the project's working log before the results of that specific checkpoint were inspected, following the shared protocol of this chapter, but without a frozen external document; Tracks A, B, C and D, the baseline ablation of Chapter IV, and the gradient diagnostic of Section V.4 are of this kind. *Post hoc* means a question was formed after seeing a result and is reported as exploratory and uncorrected for multiple comparisons unless stated otherwise; this applies to specific, individually flagged analyses, such as the pocket-size correlation of Section VI.3 and the pooled Mann–Whitney check of Chapter IV. *Appendix E follow-up* means the analysis was conducted after Chapter IX's synthesis had been written and frozen, outside the decision sequence of Tracks A to E described below; it follows this project's general exploratory-then-confirmatory discipline (Section III.6.1) but was not pre-registered, and it is reported in full as Appendix E with its own, explicitly dated chronology (Section E.1).
+
+{tab:gates} makes explicit where a pass/fail gate was actually applied, since not every route had one. Tracks A to D were stopped or extended by the shared decision bands of Section III.6.2 (no comparison may be called a clear signal without surviving correction and the degradation checks), applied after each tier; no route was permitted to continue to a more expensive tier without first clearing this check. Track E additionally carried its own, pre-registered numerical gates, frozen before training (Appendix D). Appendix E's follow-up phase used the same confirm-before-reporting discipline as a working practice (no encouraging small-sample result was reported before a larger, confirmatory run) but applied no frozen stopping rule, because it was not pre-registered.
+
+@tab gates | Where a decision gate was applied, by route
+| Route | Gate type | Condition to continue or to declare a positive result | Consequence if not met |
+| Baseline ablation (IV) | Shared decision bands (planned) | Survive BH correction; no PoseBusters/LE degradation | Verdict recorded as no signal; no further tier |
+| Track A (V) | Shared decision bands (planned) | Exploratory tier's cost of the full tier was justified by its yellow-flag result; full tier itself gated by the same bands | Full tier was run; its own null stopped the route |
+| Track B (V) | Shared decision bands (planned) | Same as above, applied per variant (B1–B3) | Each variant's null closed that variant; no further variants of the same kind were run |
+| Track C (VI) | Shared decision bands (planned) + negative control | Scrambled-filter control must agree with the random-subset control | Disagreement would have been read as an implementation bug, not a result; it did not occur |
+| Track D (VII) | Shared decision bands (planned) | Divergence at the exploratory scale must be resolved before the multi-pocket confirmation (step D.4) was run | Divergence persisted only partially; D.4 was explicitly skipped by this pre-declared rule |
+| Track E (VIII) | Pre-registered numerical gate (C1a, then C4) | Point estimate and interval of the primary comparison must clear a stated margin; the gradient-distance gate C4 applies only if C1a passes | C1a's upper bounds excluded the required margin; E1 declared falsified at this scale; C4 and E2 were not run |
+| Appendix E (post-synthesis) | Working discipline, not a frozen gate | Exploratory tier (n≈8) must be confirmed at larger n before being reported as a finding | Applied uniformly (e.g. the ESM2 and PLIP exploratory signals); no frozen pass/fail threshold existed to stop the phase itself |
+@endtab
+
+{tab:mastersum} summarises every route at a glance, including the follow-up investigation of Appendix E, with the predictor used, what was intervened on, the scale of evidence, the primary outcome metric, the correction applied, and the verdict. It is a map for the chapters that follow, not a substitute for them.
+
+@tab mastersum | Master summary of every experimental route, including the Appendix E follow-up
+| Route | Predictor | Intervention | Pockets / targets | Units per condition | Primary metric | Correction | Verdict |
+| Baseline (IV) | Stage 0 EGNN | Guidance strength λ | 20 pockets; 8 pockets × 3 λ | 20–30 molecules | Vina Dock (KS) | BH within checkpoint | No effect at any tested λ |
+| Track A (V) | GIGN + PIGNet2 | Predictor architecture | 8 pockets (full tier) | 29–30 molecules | Vina Dock (KS) | BH, 24 tests | 0/24 significant |
+| Track B (V) | Stage 0 EGNN | Gradient scale (B1), objective (B2), timing (B3) | 2–3 pockets | 20 molecules | Vina Dock (KS) | BH, 23 tests | 0/23 significant |
+| Diagnostic (V.4) | Stage 0 EGNN | None (read-only probe) | 3 pockets, 144 states | n/a | Gradient–distance correlation | Bootstrap CI only; no gate | +0.240, wrong direction |
+| Track C (VI) | Stage 0 EGNN (as ranker) | Post-hoc top-10% selection | 15 pockets | ~590 molecules/pocket pool | Vina Dock, LE, PoseBusters (KS) | BH, 15 tests | Raw gain confounded by size |
+| Track D (VII) | SynthPredNet | Synthesizability guidance | 1 pocket (powered tier) | 30 molecules | Real RAscore (KS) | BH, 5 tests | 0/5 significant |
+| Track E (VIII) | GIGN delta head | Training target (residual vs. Vina) | 127 test targets | n/a (predictor comparison) | Target-clustered R² | Pre-registered gate (bootstrap CI) | Falsified at this scale |
+| Follow-up (App. E) | 8 further checkpoints (EGNN / GIGN variants) | 4 mechanism-level fixes, alone and combined, plus validation and a mechanistic trace | 1 fixed pocket + CDK6 (unseen family) + 835 (AlphaFold side-check) | 8–30 molecules per λ | Vina Dock, PLIP interactions, R² | Pooled BH, 48 tests | 0/48 significant |
+@note "n/a" marks routes that compare trained predictors on a held-out test set rather than generated molecules under guidance. The diagnostic of row 4 is not a guidance checkpoint and carried no pass/fail gate (Section V.4).
+@endtab
+
 @sec Data
 
 @sub CrossDocked2020 and the pocket representation
@@ -96,6 +128,10 @@ The primary test of a guidance effect was the two-sample Kolmogorov–Smirnov (K
 Each comparison was assigned one of five verdicts by pre-declared rules ({fig:verdict}): *no signal* (fails BH correction); *signal, wrong direction*; *signal but confounded by size* (ligand-efficiency degradation surviving BH correction, or a significant heavy-atom shift); *signal but quality degraded* (PoseBusters validity dropping by more than 10 percentage points); and *clear signal*. A verdict of *suspect implementation bug* was assigned if a scrambled-filter negative control disagreed with a random-subset control (Track C). Because a scrambled top-k selection is mathematically equivalent to a random subset, this control is an implementation sanity check and not an independent hypothesis test.
 
 @fig verdict | guidance/thesis/figures/fig_verdict_flow.png | 5.6 | Decision logic applied to each comparison. The null-consistency check guards against implementation errors; the ligand-efficiency, heavy-atom and PoseBusters checks are applied to every apparent positive before it may be called a clear signal.
+
+@sub A note on the wording of null results
+
+This thesis uses five distinct phrases for a comparison that did not support a positive claim, and they are not interchangeable. *No significant effect* is the narrowest and most frequent: a specific test did not survive the stated correction at the stated sample size, and nothing is implied about effects of a different size or at a different scale. *No evidence of an effect* is used when several such tests are taken together (for example, across an entire checkpoint or phase) and none of them individually or in combination supports a positive claim. *No effect of practical size* is reserved for cases in which a power calculation (Section V.1, {fig:power}) bounds the effect that could have been missed, so the claim is about magnitude and not only about significance. *Failed criterion* or *failed its pre-declared criterion* is used for a route governed by explicit decision bands (Section III.1.1) that did not clear them, independently of whether a numerical test was involved. *Falsified at this scale* is reserved for Track E, the one route with a pre-registered numerical margin (Appendix D): it means the pre-declared rule was applied exactly as written and returned a negative verdict, not merely that a result failed to reach significance. None of these phrases is used to claim that no effect exists under conditions that were not tested; that distinction is kept explicit throughout and restated in Chapter X.
 
 @sub Target-clustered statistics for predictor comparisons
 

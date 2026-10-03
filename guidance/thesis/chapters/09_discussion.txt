@@ -4,7 +4,7 @@ This chapter draws the experiments of Chapters IV to VIII together. It states wh
 
 @sec Summary of the Evidence
 
-{tab:grand} summarises the routes. Each row states what was changed relative to the previous routes, the outcome on the pre-declared criteria, and the main limitation of that route. No route produced a defensible improvement in an independently measured outcome.
+{tab:grand} summarises the routes. Each row states what was changed relative to the previous routes, the outcome on the pre-declared criteria, and the main limitation of that route. Every route either failed its pre-declared correction (Tracks A, B and D; the baseline ablation) or produced an apparent gain that a size- or validity-normalised re-analysis invalidated (Track C) or a result significantly worse than a simple baseline (Track E).
 
 @tab grand | Summary of the experimental routes
 | Route | What was varied | Outcome | Main limitation |
@@ -26,6 +26,10 @@ This chapter draws the experiments of Chapters IV to VIII together. It states wh
 @sub Main finding
 
 Under the conditions tested (a frozen TargetDiff model, position-only guidance on the clean-data estimate, predictors trained on clean docked poses, evaluation with Vina docking, PoseBusters, ligand efficiency and the RAscore, and pocket sets of 1 to 20 targets) neither the gradient of a learned affinity predictor, nor its use as a ranker, nor the gradient of a learned synthesizability predictor produced a defensible improvement. The result was reproduced for predictors of different quality (Pearson correlation 0.58 to 0.65 on leakage-safe test sets), architecture and target, and it was not explained by low predictor accuracy or by a bad choice of strength, since the strength was varied over three orders of magnitude and the structural integrity of the molecules limited it from above.
+
+@sub Predictor quality is not guidance usefulness
+
+A conceptual point runs through every route of this thesis and is stated here explicitly because it is easy to miss when each result is read on its own: a predictor that is accurate on a held-out test set does not thereby imply that its gradient, or its score, is useful for steering a generator. The two quantities were measured separately throughout, and they dissociate. The clearest demonstration is post-synthesis: of the eight further checkpoints of Appendix E, the one with the best predictive quality of any variant tried (ESM2-augmented EGNN, Pearson 0.731, Appendix E.2.3) and the one trained with the entire target protein family held out of training (R² = 0.507 on that unseen family, Appendix E.3.2) both still show a null real-docking effect under the same correction as every other checkpoint. Within the main thesis, the same dissociation is visible in the other direction: the two-feature linear baseline and the repaired EGNN were statistically indistinguishable on the LP test set (Chapter IV), yet neither produced a detectable gradient effect, and the ranker of Chapter VI produced its one large, statistically decisive effect precisely because its moderately accurate predictor's score was dominated by a ligand-side property (size) that a generator can trivially exploit, which is a case of a predictor being *too* usable for the wrong reason. Accuracy on the held-out prediction task and usefulness as a steering signal are different properties, tested by different protocols (Section III.6.1 and III.6.3), and this thesis finds them uncorrelated across every architecture, training recipe and representation tried.
 
 @sub Grading the explanations
 

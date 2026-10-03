@@ -95,7 +95,9 @@ The pre-registration document of Track E was frozen in version control before an
 | A11 | Two further details of that paper confirmed: chemistry-level correlates of Vina score, and the definition of the delta score as target versus a random off-target pocket |
 @endtab
 
-@appendix E | THE FOLLOW-UP INVESTIGATION: TESTING THE DIAGNOSED MECHANISM DIRECTLY
+@appendix E | POST-SYNTHESIS FOLLOW-UP: TESTING THE DIAGNOSED MECHANISM DIRECTLY
+
+This appendix is, in the terms of Section III.1.1, an *Appendix E follow-up*: every analysis below was conducted after Chapter IX's synthesis had already been written and frozen, and none of it was pre-registered. It is not part of the decision sequence of Tracks A to E (Chapters IV to VIII), it was not subject to the standing two-independent-routes rule or to any frozen stopping rule, and no verdict here revises a verdict already reached in Chapters IV to X. It follows this project's general exploratory-then-confirmatory working discipline (Section III.6.1) and the same corrected-statistics standard as the rest of the thesis, but its status is additional evidence for the main synthesis, not a continuation of the main synthesis's own pre-declared design.
 
 @sec Scope and Relation to the Main Synthesis
 
