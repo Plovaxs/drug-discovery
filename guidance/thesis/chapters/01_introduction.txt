@@ -41,7 +41,7 @@ The problem statement of Section I.2 is one question; {tab:objmap} unpacks it in
 | Does a residual (delta) training target improve the predictor? | Track E (VIII) | Target-clustered R² | R² = 0.117, worse than a linear baseline (0.362) and an EGNN (0.34–0.41) | Falsified at this scale; the auxiliary arm (E2) was not run |
 | Does directly repairing the diagnosed gradient mechanism produce an effect? | Appendix E, Phase 1 | Vina Dock (Wilcoxon); DIAG1 correlation | Strongest diagnostic fix of any checkpoint (−0.78); still 0/35 pooled tests significant | Repairing the diagnosed mechanism does not, by itself, produce an effect |
 | Does the null survive independent, non-docking validation and the hardest generalisation split available? | Appendix E, Phase 2 | PLIP interaction counts; R² on an unseen protein family | Interaction-count signal reverses sign on confirmation; predictive quality holds (R² = 0.507) on an unseen kinase family, docking effect still null | The null is not an artefact of a docking-only metric or of family-level leakage |
-| What happens, mechanistically, to a single molecule when the gradient is applied? | Appendix E, Section E.5 | Per-step, per-atom position gap | Gap ≈ 0.05 Å mean after 1,000 steps, ≈1% of the raw cumulative nudge | The nudge is mostly drowned out by the sampler's own step noise, not actively cancelled |
+| What happens, mechanistically, to a single molecule when the gradient is applied? | Appendix E, Section E.5 | Per-step, per-atom position gap | Gap ≈ 0.05 Å mean after 1,000 steps, ≈1% of the raw cumulative nudge | Consistent with the nudge being overwhelmed by the sampler's own step noise for most of the trajectory, rather than actively cancelled |
 @endtab
 
 @sec Organization of the Thesis
