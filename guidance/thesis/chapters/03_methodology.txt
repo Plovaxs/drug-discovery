@@ -18,7 +18,7 @@ Not every route in this thesis carries the same evidentiary status, and the dist
 
 @tab gates | Where a decision gate was applied, by route
 | Route | Gate type | Condition to continue or to declare a positive result | Consequence if not met |
-| Baseline ablation (IV) | Shared decision bands (planned) | Survive BH correction; no PoseBusters/LE degradation | Verdict recorded as no signal; no further tier |
+| Baseline ablation (IV) | Shared decision bands (planned) | No significant Mann–Whitney/Wilcoxon shift; no PoseBusters/LE degradation | Verdict recorded as no signal; motivated Tracks A–D |
 | Track A (V) | Shared decision bands (planned) | Exploratory tier's cost of the full tier was justified by its yellow-flag result; full tier itself gated by the same bands | Full tier was run; its own null stopped the route |
 | Track B (V) | Shared decision bands (planned) | Same as above, applied per variant (B1–B3) | Each variant's null closed that variant; no further variants of the same kind were run |
 | Track C (VI) | Shared decision bands (planned) + negative control | Scrambled-filter control must agree with the random-subset control | Disagreement would have been read as an implementation bug, not a result; it did not occur |
@@ -31,14 +31,14 @@ Not every route in this thesis carries the same evidentiary status, and the dist
 
 @tab mastersum | Master summary of every experimental route, including the Appendix E follow-up
 | Route | Predictor | Intervention | Pockets / targets | Units per condition | Primary metric | Correction | Verdict |
-| Baseline (IV) | Stage 0 EGNN | Guidance strength λ | 20 pockets; 8 pockets × 3 λ | 20–30 molecules | Vina Dock (KS) | BH within checkpoint | No effect at any tested λ |
+| Baseline (IV) | Stage 0 EGNN | Guidance strength λ | 20 pockets; 8 pockets × 3 λ | 8–10 molecules | Vina Dock (Mann–Whitney, Wilcoxon) | Not explicitly corrected (pre-dates the KS/BH protocol below) | No effect at any tested λ |
 | Track A (V) | GIGN + PIGNet2 | Predictor architecture | 8 pockets (full tier) | 29–30 molecules | Vina Dock (KS) | BH, 24 tests | 0/24 significant |
 | Track B (V) | Stage 0 EGNN | Gradient scale (B1), objective (B2), timing (B3) | 2–3 pockets | 20 molecules | Vina Dock (KS) | BH, 23 tests | 0/23 significant |
 | Diagnostic (V.4) | Stage 0 EGNN | None (read-only probe) | 3 pockets, 144 states | n/a | Gradient–distance correlation | Bootstrap CI only; no gate | +0.240, wrong direction |
 | Track C (VI) | Stage 0 EGNN (as ranker) | Post-hoc top-10% selection | 15 pockets | ~590 molecules/pocket pool | Vina Dock, LE, PoseBusters (KS) | BH, 15 tests | Raw gain confounded by size |
 | Track D (VII) | SynthPredNet | Synthesizability guidance | 1 pocket (powered tier) | 30 molecules | Real RAscore (KS) | BH, 5 tests | 0/5 significant |
 | Track E (VIII) | GIGN delta head | Training target (residual vs. Vina) | 127 test targets | n/a (predictor comparison) | Target-clustered R² | Pre-registered gate (bootstrap CI) | Falsified at this scale |
-| Follow-up (App. E) | 8 further checkpoints (EGNN / GIGN variants) | 4 mechanism-level fixes, alone and combined, plus validation and a mechanistic trace | 1 fixed pocket + CDK6 (unseen family) + 835 (AlphaFold side-check) | 8–30 molecules per λ | Vina Dock, PLIP interactions, R² | Pooled BH, 48 tests | 0/48 significant |
+| Follow-up (App. E) | 8 further checkpoints (EGNN / GIGN variants) | 4 mechanism-level fixes, alone and combined, plus validation and a mechanistic trace | 1 fixed pocket + CDK6 (unseen family) + 835 (AlphaFold side-check) | 8–24 molecules per λ | Vina Dock, PLIP interactions, R² | Pooled BH, 48 tests | 0/48 significant |
 @note "n/a" marks routes that compare trained predictors on a held-out test set rather than generated molecules under guidance. The diagnostic of row 4 is not a guidance checkpoint and carried no pass/fail gate (Section V.4).
 @endtab
 

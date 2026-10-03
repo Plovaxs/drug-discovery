@@ -32,7 +32,7 @@ The problem statement of Section I.2 is one question; {tab:objmap} unpacks it in
 
 @tab objmap | Research objective, experiment, metric, result and conclusion
 | Research objective | Experiment / Track | Primary metric | Result | Conclusion |
-| Does gradient guidance with the original predictor affect real docking? | Baseline ablation (IV) | Vina Dock (KS, BH) | No effect at any of 3 orders of magnitude of λ | Predictor repair alone does not produce an effect |
+| Does gradient guidance with the original predictor affect real docking? | Baseline ablation (IV) | Vina Dock (Mann–Whitney, Wilcoxon) | No effect at any of 3 orders of magnitude of λ | Predictor repair alone does not produce an effect |
 | Does the predictor's architecture limit gradient guidance? | Track A (V) | Vina Dock (KS, BH) | 0/24 significant; direction consistency weakened with more data | Architecture is not the limiting factor at the scale tested |
 | Does the guidance mechanism (scale, objective, timing) limit it? | Track B (V) | Vina Dock (KS, BH) | 0/23 significant; one variant worse by median in 6/6 | Mechanism variants do not rescue guidance on a fixed representation |
 | What does the affinity gradient actually encode? | Diagnostic (V.4) | Gradient-magnitude/distance correlation | +0.240 (wrong direction), not explained by atom heaviness | Strongest pull acts on atoms farthest from the pocket |
