@@ -2,7 +2,58 @@
 
 @sec Hardware and Software
 
-All experiments ran on one laptop with an NVIDIA GeForce RTX 3050 (4,096 MiB), a 20-thread CPU and 31 GB of RAM, under Linux. The guidance experiments were run in a separate conda environment (`drugdisc`, Python 3.10.21) that used PyTorch 2.5.1 (CUDA 12.1), PyTorch Geometric 2.8.0, RDKit 2026.03.5, NumPy 2.2.6, SciPy 1.15.3, scikit-learn 1.7.2, pandas 2.3.3, LMDB 2.3.0, PoseBusters 0.6.5, Meeko and AutoDock Vina 1.2.6 (the installed distribution is 1.2.6, although the module attribute of the Python package reports 1.2.5). This environment has no tracked specification file in the repository and is disclosed here as the closest available record of it; the `environment.yaml` file that is tracked documents the original TargetDiff repository's own setup (Python 3.8, PyTorch 1.13.1), which was superseded for the reasons above and does not reproduce the environment the guidance code actually ran in. The interaction profiler PLIP was used in the Track E feasibility checks and label extraction. Random generators were seeded for every sampling and training run; the seeds used are recorded in the run logs and result files listed below.
+All experiments ran on one laptop with an NVIDIA GeForce RTX 3050 Laptop GPU (4,096 MiB; driver 595.91.07), a 20-thread CPU and 31 GB of RAM, under Linux. The guidance experiments were run in a separate conda environment (`drugdisc`), pinned in {tab:env}. This environment has no tracked specification file in the repository and is disclosed here as the closest available record of it, read directly from the running environment rather than from memory; the `environment.yaml` file that is tracked documents the original TargetDiff repository's own setup (Python 3.8, PyTorch 1.13.1), which was superseded for the reasons above and does not reproduce the environment the guidance code actually ran in. The interaction profiler PLIP was used in the Track E feasibility checks and label extraction. Random generators were seeded for every sampling and training run; the seeds used are recorded in the run logs and result files listed below.
+
+@tab env | Exact package versions of the `drugdisc` environment, as actually installed
+| Package | Version |
+| Python | 3.10.21 |
+| PyTorch | 2.5.1 (CUDA 12.1) |
+| PyTorch Geometric | 2.8.0.post1 |
+| RDKit | 2026.03.5 |
+| NumPy | 2.2.6 |
+| SciPy | 1.15.3 |
+| scikit-learn | 1.7.2 |
+| pandas | 2.3.3 |
+| LMDB | 2.3.0 |
+| PoseBusters | 0.6.5 |
+| AutoDock Vina | 1.2.6 (binary reports "7ac2999-mod"; the Python module attribute reports 1.2.5) |
+| Meeko | 0.1.dev3 |
+| PLIP | 3.0.1 |
+@note Captured by directly querying the installed packages (`import x; x.__version__`) in the running environment at the time of this audit, not transcribed from documentation or memory.
+@endtab
+
+@sec Exact Identifiers for Reproduction
+
+{tab:ids} records the identifiers needed to recover the exact code, data and frozen model used, as SHA-256 checksums computed directly from the files on disk. The checkpoint-selection timestamps embedded in each training run's directory name (for example `crossdocked_affinity_egnn_2026_10_01__23_54_19_vinatarget`) serve as the identifier for the 8 further checkpoints of Appendix E and are not repeated individually here; they are listed in full in each checkpoint's own finding document (Appendix E's artefact lists).
+
+@tab ids | Checksums and identifiers of the principal frozen artefacts
+| Artefact | Identifier |
+| Repository commit | `455bbc08f27a0252b03703f4672c41fa5367b525` |
+| Frozen TargetDiff diffusion checkpoint (`pretrained_models/pretrained_diffusion.pt`) | SHA-256 `8977821339ba31b7103b46835ef4ddbf7f15f3f2efc5cb1f2a405e7905b09db6` |
+| Reference EGNN checkpoint, PDBBind v2016 (`pretrained_models/egnn_pdbbind_v2016.pt`) | SHA-256 `1cd74eb55043bf788ac29186e56905b6a645a9d4722b03b97482ffb6f36970df` |
+| Stage 0 EGNN, original split (`guidance_models/affinity_egnn.pt`) | SHA-256 `006808e6461f72156e2021cbbe034ac1cb9568942b857d8e9d1c414530753447` |
+| Stage 0 EGNN, leakage-safe split (`guidance_models/affinity_egnn_lpsplit.pt`) | SHA-256 `a76d254a921c9e00d0a6409cad5006952e2308059ce3a0a602bd86ec1bb297a7` |
+| Classifier head, B2 (`guidance_models/classifier_head.pt`) | SHA-256 `46caa0d864b99e8e7968baec50293638ee447d69e9279c5b6d31502b26aa9fd9` |
+| SynthPredNet (`guidance_models/synth_ra_score.pt`) | SHA-256 `e79c12fa2696a5e99df835e35f11ab59407338ef2d94f521ecddb591f7fa844a` |
+| Pocket-cropped CrossDocked2020 LMDB (`data/crossdocked_v1.1_rmsd1.0_pocket10_processed_final.lmdb`, 3.8 GB) | SHA-256 `376679dd1516e855f1cdd89bef2e25995958b77695cd63a88a26ec02a1d3b591` |
+| Affinity annotation file (`data/affinity_info.pkl`) | SHA-256 `2f99f361f77f41a6e0252aa2692470a4d433eeef169aac5ff129caf79e050cf9` |
+@note All checksums were computed directly from the files on disk at the time of this audit (`sha256sum`), not copied from an external record.
+@endtab
+
+@sec Reproducibility Checklist
+
+{tab:repchecklist} is a status checklist, not a promise: an item is marked verified only where this project actually checked it, in the sense stated in its own row, and unverified items are disclosed rather than assumed.
+
+@tab repchecklist | Reproducibility checklist, marked only where actually verified
+| Item | Status |
+| Package versions pinned and recorded ({tab:env}) | Verified: read directly from the running environment |
+| Git commit of the code that produced the results in this document | Verified: `455bbc08f27a0252b03703f4672c41fa5367b525` |
+| Dataset and checkpoint identifiers ({tab:ids}) | Verified: SHA-256 of the files actually used |
+| Random seeds recorded per run | Verified for sampling/docking jobs (one result directory per condition/pocket/seed) and per-seed training runs (Appendix D, Section VIII.7); not every exploratory-tier ablation logged its seed individually |
+| Headline numbers re-derivable from raw result files by a saved analysis script | Verified for the checkpoints and results re-derived during this thesis-revision audit (Section A.5); not independently re-run for every number in Chapters IV to VIII |
+| Full pipeline (data preparation → training → sampling → docking → statistics) re-executable from a clean checkout | Not verified in this pass: this would require re-running multi-hour training and sampling jobs on the project's single 4 GB GPU, which was not repeated for this audit. The code paths and commands are documented ({tab:repo}, Section A.5) but an independent clean-room run was not performed |
+| University-mandated environment specification file matching the guidance environment | Not present: the tracked `environment.yaml` documents the original TargetDiff setup only ({tab:env}'s note); this checklist and {tab:env} are the closest available substitute |
+@endtab
 
 @sec Repository Layout
 
@@ -101,7 +152,7 @@ This appendix is, in the terms of Section III.1.1, an *Appendix E follow-up*: ev
 
 @sec Scope and Relation to the Main Synthesis
 
-Chapter IX's "Grading the explanations" (Section IX.3.2) listed four hypotheses that were consistent with the measured evidence but not tested: (a) that the mismatch between clean training poses and noisy intermediate diffusion states makes the gradient unreliable; (b) that the evaluation target (Vina) and the training target (experimental affinity) ask different questions; (c) that position-only guidance, with the atom-type gradient set to zero and no gradient path through the denoiser, is too weak or too blunt an intervention; and (d) that a smooth 3D gradient is a poor way to steer a fingerprint-based synthesizability target. After that synthesis was written, 8 further checkpoints were independently trained and tested to address hypotheses (a) and (c) directly, together with two closely related questions raised by the main result: whether the null pattern survives independent, chemistry-level validation (not just a docking score) and the hardest train/test separation this project can construct, and what happens, mechanistically, to a single molecule's atoms when the gradient is actually applied step by step. This appendix reports that work in full. It changes none of Chapter IX's conclusions; it deepens the evidence for them and resolves, where possible, which of the untested hypotheses the new evidence favours.
+Chapter IX's "Grading the explanations" (Section IX.2.3) listed four hypotheses that were consistent with the measured evidence but not tested: (a) that the mismatch between clean training poses and noisy intermediate diffusion states makes the gradient unreliable; (b) that the evaluation target (Vina) and the training target (experimental affinity) ask different questions; (c) that position-only guidance, with the atom-type gradient set to zero and no gradient path through the denoiser, is too weak or too blunt an intervention; and (d) that a smooth 3D gradient is a poor way to steer a fingerprint-based synthesizability target. After that synthesis was written, 8 further checkpoints were independently trained and tested to address hypotheses (a) and (c) directly, together with two closely related questions raised by the main result: whether the null pattern survives independent, chemistry-level validation (not just a docking score) and the hardest train/test separation this project can construct, and what happens, mechanistically, to a single molecule's atoms when the gradient is actually applied step by step. This appendix reports that work in full. It changes none of Chapter IX's conclusions; it deepens the evidence for them and resolves, where possible, which of the untested hypotheses the new evidence favours.
 
 The 8 checkpoints are organised in three phases, following the order in which they were run. Phase 1 (E.2) varies the predictor's training recipe and representation directly, taking the diagnostic in Section V.4 as a training target or adding a genuinely new information source. Phase 2 (E.3) tests the resulting null pattern under independent, non-docking validation and under the strictest generalisation split available. Phase 3 (E.4) sharpens one of Phase 1's representations and independently cross-checks the project's affinity labels. Section E.5 reports the mechanistic trace that answers hypothesis (c) directly, at the level of one molecule's atoms, step by step. Section E.6 pools every real-docking comparison of this appendix with the pool of Chapter IX into a single correction. All checkpoints were trained on the same leakage-safe split as Chapter IV (Section III.3), and every real-docking test reuses the KS-test and Wilcoxon-signed-rank protocols of Section III.6.1 unless stated otherwise.
 
@@ -241,7 +292,7 @@ Three of four targets show plausible-to-good agreement ({tab:fuchembl}, {fig:fuc
 
 @sec Direct Mechanistic Trace of the Guidance Nudge
 
-Sections E.2 to E.4 establish, over 8 checkpoints and every mechanism-level intervention this project could construct, that the real-docking null is not explained by predictor quality, training recipe, representation, or the difficulty of the generalisation test. This section asks the question the earlier sections cannot: what actually happens, step by step, to one molecule's atoms when the gradient is applied? If hypothesis (c) of Section IX.3.2 is correct — that position-only guidance is too weak or too blunt an intervention on a denoiser that was never trained to expect it — a direct trace of the sampling trajectory should show the mechanism by which the nudge fails to matter, not merely confirm, again, that it does not.
+Sections E.2 to E.4 establish, over 8 checkpoints and every mechanism-level intervention this project could construct, that the real-docking null is not explained by predictor quality, training recipe, representation, or the difficulty of the generalisation test. This section asks the question the earlier sections cannot: what actually happens, step by step, to one molecule's atoms when the gradient is applied? If hypothesis (c) of Section IX.2.3 is correct — that position-only guidance is too weak or too blunt an intervention on a denoiser that was never trained to expect it — a direct trace of the sampling trajectory should show the mechanism by which the nudge fails to matter, not merely confirm, again, that it does not.
 
 @sub Method
 
@@ -264,7 +315,7 @@ The gap starts at exactly zero, grows smoothly rather than flat or oscillating, 
 
 @fig futracegap | guidance/example_render/trace_gap_plot.png | 5.6 | Mean all-atom position gap between the guided (λ=1.0) and unguided (λ=0) trajectory, by reverse-diffusion step, for the paired deterministic trace of Section E.5. The gap is exactly zero until guidance is first applied, grows smoothly, and only accelerates in the final third of sampling.
 
-This is a specific, falsifiable mechanistic account, not merely "the effect is small". At each reverse-diffusion step, the posterior sampling step adds its own intrinsic stochastic noise, scaled by the DDPM schedule's posterior variance, which is large early in sampling (high raw timestep) and shrinks toward the end. Early in sampling, this intrinsic noise is large relative to the fixed-size deterministic guidance nudge, so the nudge is statistically buried in noise the model would have injected regardless of guidance — consistent with the near-zero gap through roughly the first 80% of sampling in {tab:futrace}. Only as the schedule's posterior variance shrinks toward the end does the same-sized nudge's relative contribution grow enough to produce a measurable, compounding effect — consistent with the late-trajectory acceleration observed. The nudge is not actively cancelled by a corrective force at each step; it is mostly drowned out by noise the model would add regardless of guidance, with only a small residual surviving to compound. This directly supports hypothesis (c) of Section IX.3.2 in a specific form: position-only guidance is weak not because its direction is wrong, but because its magnitude is small relative to the sampler's own injected noise for most of the trajectory.
+This is a specific, falsifiable mechanistic account, not merely "the effect is small". At each reverse-diffusion step, the posterior sampling step adds its own intrinsic stochastic noise, scaled by the DDPM schedule's posterior variance, which is large early in sampling (high raw timestep) and shrinks toward the end. Early in sampling, this intrinsic noise is large relative to the fixed-size deterministic guidance nudge, so the nudge is statistically buried in noise the model would have injected regardless of guidance — consistent with the near-zero gap through roughly the first 80% of sampling in {tab:futrace}. Only as the schedule's posterior variance shrinks toward the end does the same-sized nudge's relative contribution grow enough to produce a measurable, compounding effect — consistent with the late-trajectory acceleration observed. The nudge is not actively cancelled by a corrective force at each step; it is mostly drowned out by noise the model would add regardless of guidance, with only a small residual surviving to compound. This directly supports hypothesis (c) of Section IX.2.3 in a specific form: position-only guidance is weak not because its direction is wrong, but because its magnitude is small relative to the sampler's own injected noise for most of the trajectory.
 
 @sub A puzzle checked, not glossed over
 

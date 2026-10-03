@@ -53,13 +53,13 @@ Interaction supervision requires a source of interaction labels. PLIP detects se
 {tab:lit} summarises how the closest bodies of work relate to the experiments of this thesis. Interaction information has been used to *condition* or *co-generate* with 3D generators [@zhung2024; @lee2025bind; @huang2026], and, in one case, as an auxiliary classification loss inside the generator's own denoiser [@wu2024]. Residual learning has been applied to scoring with tree ensembles [@wang2017; @yang2022]. Multi-objective affinity networks with structural auxiliary targets exist [@zhang2024planet]. What was not found, within the limits of the searches described in Appendix B, is a study that (i) evaluates learned affinity or synthesizability guidance for a frozen 3D diffusion generator against independently computed outcomes under a leakage-safe, statistically corrected protocol with negative controls, or (ii) combines a residual target against a docking score with typed interaction supervision on a separate guidance predictor whose gradient steers the generator. The first gap motivates Chapters IV to VII; the second motivates the design of Chapter VIII, in which only the residual-target component was ultimately tested.
 
 @tab lit | Relation of the closest prior work to the experiments of this thesis
-| Work | Interaction information | Residual (delta) target | Role in a 3D diffusion generator |
-| DeepICL [@zhung2024] | PLIP labels as conditioning | No | Autoregressive generator (not diffusion) |
-| InterDiff [@wu2024] | BINANA types; classification loss in denoiser | No | Diffusion; cross-attention conditioning |
-| BInD [@lee2025bind] | PLIP interactions co-generated | No | Diffusion; joint generation |
-| DPDiff [@huang2026] | Latent priors from affinity networks | No | Diffusion; priors from intermediate predictions |
-| PLANET [@zhang2024planet] | Contact map (not typed) | No | None (scoring model) |
-| ΔVinaRF20 [@wang2017]; Δ-XGBoost [@yang2022] | No | Yes (tree ensembles) | None (scoring functions) |
-| This thesis | PLIP labels (designed, not tested) | Yes (graph network) | Guidance predictor for a frozen diffusion model |
-@note The table lists what each source reports; it does not claim that no other work exists (see Appendix B for the limits of the search).
+| Work | 3D diffusion SBDD | Learned guidance predictor (separate from the generator) | Interaction information | Residual (delta) target | Target-disjoint, leakage-safe evaluation | Evaluation independent of the model, with negative controls |
+| DeepICL [@zhung2024] | No (autoregressive) | No (conditioning, not guidance) | PLIP labels as conditioning | No | Not the focus of that study, as reviewed | Not the focus of that study, as reviewed |
+| InterDiff [@wu2024] | Yes | No (in-denoiser conditioning) | BINANA types; classification loss in denoiser | No | Not the focus of that study, as reviewed | Not the focus of that study, as reviewed |
+| BInD [@lee2025bind] | Yes | No (co-generated, not a separate predictor) | PLIP interactions co-generated | No | Not the focus of that study, as reviewed | Not the focus of that study, as reviewed |
+| DPDiff [@huang2026] | Yes | Yes (affinity-network priors) | Latent priors from affinity networks | No | Not the focus of that study, as reviewed | Not the focus of that study, as reviewed |
+| PLANET [@zhang2024planet] | No (scoring model only) | n/a | Contact map (not typed) | No | Not the focus of that study, as reviewed | Not the focus of that study, as reviewed |
+| ΔVinaRF20 [@wang2017]; Δ-XGBoost [@yang2022] | No (scoring functions) | n/a | No | Yes (tree ensembles) | No (CASF core set; Section II.3.3) | Not the focus of that study, as reviewed |
+| This thesis | Yes (frozen TargetDiff) | Yes (EGNN / GIGN+PIGNet2 / SynthPredNet) | PLIP labels (designed, not tested; Appendix D) | Yes (graph network; falsified at this scale) | Yes (LP-split adaptation; Section III.2) | Yes (KS/Wilcoxon + BH, bootstrap CIs, negative controls; Section III.6) |
+@note The table lists what each source reports, as read during the search of Appendix B; "not the focus of that study, as reviewed" means the question this thesis asks was not what that work set out to answer, not that the work is deficient. It does not claim that no other work anywhere addresses these questions (see Appendix B for the limits of the search).
 @endtab
