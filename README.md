@@ -14,17 +14,41 @@ frozen, pretrained diffusion model:
 > Molecular Diffusion in Structure-Based Drug Design**
 
 Full thesis document: `guidance/thesis/Thesis_Coupled_Guidance_SBDD.pdf`
-(176 pages, 10 chapters + 5 appendices, 33 figures, built via
-`guidance/thesis/build_thesis.py`). Appendix E documents the full
-follow-up investigation below (8 further independently-trained
-checkpoints, three phases, and a direct mechanistic trace) in the same
-statistical rigor as the core thesis.
+(196 pages, 10 chapters + 5 appendices, 59 references, 41 tables, 33
+figures, built via `guidance/thesis/build_thesis.py`). Appendix E
+documents the full follow-up investigation below (8 further
+independently-trained checkpoints, three phases, and a direct
+mechanistic trace) in the same statistical rigor as the core thesis.
 
-### Core thesis: four independent falsifications
+**Status: research complete.** All five falsification routes (Tracks
+A-E, Chapters IV-VIII) and the three-phase Appendix E follow-up are
+finished, cross-checked against ground-truth data files, and pooled —
+48 independent statistical tests across the follow-up phase alone, 0
+significant after Benjamini-Hochberg correction. Every figure below is
+reproduced directly from the thesis build. What remains before
+submission is administrative only (student/advisor front-matter details,
+defense scheduling), not further experiments.
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_pipeline.png" width="620" alt="Overall guidance pipeline"><br>
+  <img src="guidance/thesis/figures/fig_verdict_flow.png" width="620" alt="Decision logic for every comparison">
+</p>
+
+*Top: the pipeline used by every track below — a frozen TargetDiff
+denoiser proposes a clean-data estimate at each reverse step, a guidance
+predictor's gradient (w.r.t. atom positions) nudges that estimate, and
+the finished molecules are scored by tools fully independent of the
+guidance predictor. Bottom: the decision logic applied to every single
+comparison — a null-consistency check guards against implementation
+bugs, and ligand-efficiency / heavy-atom / PoseBusters checks are applied
+to any apparent positive before it is allowed to be called a real
+signal.*
+
+### Core thesis: five independent falsifications
 
 The thesis investigates whether generation can be steered toward
 molecules with better predicted binding affinity and synthesizability,
-using four independent, statistically rigorous tracks — each governed by
+using five independent, statistically rigorous tracks — each governed by
 pre-registered dual-criterion checkpoints (KS tests with
 Benjamini-Hochberg correction across all comparisons, bootstrap 95% CIs,
 and mandatory negative controls, never a bare mean-difference claim):
@@ -35,13 +59,123 @@ and mandatory negative controls, never a bare mean-difference claim):
 | **B** | 3 gradient-guidance variants (norm normalization, classifier-head reformulation, timestep-windowing) | Falsified — 3/3 null |
 | **C** | Non-gradient rejection sampling (post-hoc top-k filtering by a frozen affinity ranker) | Falsified — apparent raw-score gain is a molecule-size artifact; ligand efficiency gets significantly *worse* in 14/15 pockets |
 | **D** | Synthesizability guidance re-investigation (leakage-safe retrain, λ re-sweep, direction diagnostics) | Mechanism unresolved after ruling out the obvious confounds |
+| **E** | Redesign of the predictor's training target as a residual against the docking score (delta-learning) | Falsified at this scale — target-clustered R² = 0.117, worse than a plain linear baseline (0.362) and the EGNN (0.34–0.46); the auxiliary PLIP-interaction arm (E2) was designed but not run |
 
-All four tracks converge on the same root cause (diagnosed in
+<p align="center">
+  <img src="guidance/thesis/figures/fig_split_artifact.png" width="440" alt="Predictor R-squared collapses on the leakage-safe split">
+  <img src="guidance/thesis/figures/fig_predictive_quality.png" width="440" alt="Predictive quality of every guidance predictor trained">
+</p>
+
+*Why guidance was even attempted: on the old, leaky split the affinity
+predictor looked good; re-evaluated on the leakage-safe, target-level
+split its R² collapses toward a ligand-only random-forest baseline
+(left) — the project's first and most consequential finding. Right: the
+test-set correlation of every predictor trained across the whole thesis,
+all on leakage-safe splits.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_trackA_full.png" width="440" alt="Track A: no significant Vina Dock shift at any guidance strength">
+  <img src="guidance/thesis/figures/fig_trackB.png" width="440" alt="Track B: three guidance-mechanism variants, all null">
+</p>
+
+*Track A (left) and Track B (right): across every pocket, guidance
+strength and mechanism variant tried, no shift in the independently
+computed Vina Dock score survives multiple-comparison correction.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_diag1.png" width="520" alt="Gradient magnitude increases with distance from the pocket, not with proximity to contacts">
+</p>
+
+*The root-cause diagnostic (`guidance/DIAG1_SIZE_CONFOUND_FINDING.md`):
+the affinity predictor's per-atom gradient magnitude correlates
+**positively** with an atom's distance from the pocket (+0.240) — the
+opposite of what a chemically meaningful gradient should do. All five
+tracks trace back to this: the trained model's signal is dominated by
+molecular size and a misdirected gradient, not target-specific binding
+chemistry.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_trackC.png" width="440" alt="Track C: raw docking gain confounded by molecule size">
+  <img src="guidance/example_render/composite_binding_poses.png" width="440" alt="Three top-ranked Track C molecules, rendered with their hydrogen-bond partners">
+</p>
+
+*Track C (rejection sampling / ranking): a raw Vina Dock improvement in
+12/15 pockets (left, panel A) disappears once ligand efficiency and
+PoseBusters validity are checked (panels B-C) — the ranker is simply
+promoting bigger molecules. Right: three of the molecules it actually
+promotes, re-docked and rendered.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_trackD.png" width="520" alt="Track D: synthesizability guidance, own-score vs independent RA-score">
+</p>
+
+*Track D (synthesizability guidance): the predictor's own score rises
+with guidance strength while the independently computed RA-score moves
+the other way; after a leakage-safe retrain with bond-aware features the
+divergence persists in sign (right panel, with bootstrap intervals) but
+is not statistically confirmed at the powered sample size — an
+unresolved mechanism rather than a demonstrated gain.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_trackE_design.png" width="440" alt="Track E design: delta-learning head on a shared GIGN encoder">
+  <img src="guidance/thesis/figures/fig_trackE_r2.png" width="440" alt="Track E: R-squared of the delta target vs reference predictors">
+</p>
+
+*Track E (Chapter VIII, delta-learning): instead of the absolute pK, the
+network is trained to predict the residual against the Vina docking
+score, on the premise that this removes the size shortcut (left). It
+does not help — the residual target is statistically indistinguishable
+from, or worse than, a two-feature linear baseline (right).*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_trackE_learnability.png" width="300" alt="Track E: the delta target is not learnt better than a constant">
+  <img src="guidance/thesis/figures/fig_trackE_within_target.png" width="300" alt="Track E: within-target ranking does not improve either">
+  <img src="guidance/thesis/figures/fig_vina_semantics.png" width="300" alt="Semantics of the stored Vina anchor score">
+</p>
+
+*Left: the delta target is not learnt better than by a constant
+predictor, while the absolute target is — the core negative result of
+Track E. Middle: within-target ranking (where guidance actually acts)
+doesn't improve either. Right: a sanity check on the Vina anchor score
+itself used to build the residual target.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_plip_jitter.png" width="400" alt="PLIP interaction-label stability under coordinate jitter">
+</p>
+
+*Track E's designed-but-not-run auxiliary head would have used PLIP
+interaction labels; this stability check (0.2 Å coordinate jitter) is
+why pi-stacking labels had to be dropped before that head could even be
+trained.*
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_overview_significance.png" width="420" alt="Fraction of comparisons significant after correction, all checkpoints">
+  <img src="guidance/thesis/figures/fig_power_curve.png" width="420" alt="Statistical power curve for the sample sizes actually used">
+</p>
+
+*Closing the core thesis: the fraction of comparisons that survive
+Benjamini-Hochberg correction across every checkpoint (left) — the one
+large surviving slice is the Track C ranker, whose raw gain did not
+survive size-normalised evaluation, not a success. Right: the minimum
+Vina Dock shift this project's sample sizes could actually detect at 80%
+power, showing the nulls above are not simply underpowered.*
+
+All five tracks converge on the same root cause (diagnosed in
 `guidance/DIAG1_SIZE_CONFOUND_FINDING.md`): the trained affinity model's
 signal is dominated by molecular size, not target-specific binding
 chemistry.
 
 ### Follow-up investigation: does fixing the diagnosed mechanism help? (8 checkpoints, three phases, still no)
+
+<p align="center">
+  <img src="guidance/followup_figures/meta_summary_all_routes.png" width="680" alt="Direction consistency across all thesis tracks and all follow-up checkpoints">
+</p>
+
+*The one-figure summary of everything below: direction consistency
+(fraction of comparisons favouring guidance) for all five core-thesis
+tracks and all seven post-thesis follow-up branches. The single open
+marker is Track C, independently shown to be a size artifact — not a
+route this appendix falls short of.*
 
 A second phase, reported in full as Appendix E of the thesis, tested
 whether directly repairing DIAG1's diagnosed mechanism — rather than
@@ -63,6 +197,27 @@ GIGN+PIGNet2 backbones:
 | Track A follow-up (GIGN+PIGNet2 + 2 fixes) | Noise-matching + Vina-target combined | Null — 87.5% direction-consistency (best of this architecture) still 0/16 significant |
 | **Kitchen-sink** (all 4 combined) | Every intervention above, stacked | Null — closes the ablation space; no emergent synergy, worst size-confound of any checkpoint |
 
+<p align="center">
+  <img src="guidance/followup_figures/fig1_predictive_quality.png" width="420" alt="Predictive quality of every Phase 1-3 checkpoint">
+  <img src="guidance/followup_figures/fig2_diag1_dissociation.png" width="420" alt="Diagnostic quality dissociates from docking outcome">
+</p>
+
+*Left: predictive quality (R², Pearson, Spearman) of every checkpoint in
+the follow-up investigation. Right: the diagnostic fix and the
+independently computed docking outcome dissociate across the full range
+tested — the checkpoint with the single best diagnostic fix
+(gradient-alignment) has the flattest docking result of all.*
+
+<p align="center">
+  <img src="guidance/followup_figures/fig4_dose_response.png" width="520" alt="ESM2 checkpoint dose-response: effect shrinks and a validity cost appears at larger n">
+</p>
+
+*The ESM2 checkpoint's closest near-miss, re-examined: going from the
+exploratory n=8 (dashed) to the confirmatory n=24 (solid) the effect
+size shrinks and a validity cost (lost single-fragment rate) appears
+that was invisible at the smaller sample — the same small-n optimism
+pattern seen elsewhere in this thesis.*
+
 **Phase 2 — independent validation and the hardest generalization test (1
 new checkpoint + 2 analyses on existing checkpoints).** `guidance/PLIP_INTERACTION_VALIDATION_FINDING.md`
 asks a sharper question than "did the Vina score improve": does guidance
@@ -82,6 +237,29 @@ across 835 LP-split targets: median pocket RMSD 0.47 Å, pLDDT-RMSD
 correlation r=−0.63 (p≈1e-92), but 13/835 (1.6%) targets are "confidently
 wrong" (pLDDT>80 yet RMSD>5 Å) — a failure mode pLDDT alone cannot flag.
 
+<p align="center">
+  <img src="guidance/followup_figures/fig9_plip_signal_reversal.png" width="420" alt="PLIP interaction-count effect reverses sign on confirmation">
+  <img src="guidance/followup_figures/fig7_family_holdout_quality.png" width="420" alt="Predictive quality holds on an entire held-out kinase family">
+</p>
+
+*Left: the PLIP interaction-count signal at n=8 (exploratory) against
+n=16 (confirmatory, new seed) — the sign reverses, not just weakens.
+Right: holding out an entire protein family (kinases) and testing on
+CDK6 — predictive quality does not collapse, so the null above is not
+an artifact of family-level data leakage.*
+
+<p align="center">
+  <img src="guidance/followup_figures/fig5_alphafold_plddt_rmsd.png" width="420" alt="AlphaFold pocket RMSD vs pLDDT confidence, 835 targets">
+  <img src="guidance/followup_figures/fig6_pocket_vs_global_plddt.png" width="420" alt="Pocket-local pLDDT exceeds whole-protein pLDDT by 7.4 points">
+</p>
+
+*Side analysis on whether AlphaFold models could substitute for crystal
+pockets: RMSD falls as pLDDT rises (left), but a confidently-wrong
+minority remains (lower right) that pLDDT alone cannot flag. Right:
+pocket-local confidence exceeds whole-protein confidence by 7.4 points
+on average, consistent with binding pockets lying in well-ordered
+regions — but that gap does not eliminate the overconfident minority.*
+
 **Phase 3 — sharpen the signal and check the labels (1 new checkpoint + 1
 label-verification analysis).** `guidance/ESM2POCKET_GUIDANCE_FINDING.md` restricts the ESM2 feature to
 only the binding-pocket residues instead of the whole protein: predictive
@@ -93,6 +271,15 @@ of 4 agree, but CD38's labels disagree completely (this project: pK
 3.6–4.3; ChEMBL: pChEMBL 7.9–9.5) — a genuine discrepancy reported as
 such, with a plausible but unverified explanation (PDBBind vs. ChEMBL
 literature-selection bias).
+
+<p align="center">
+  <img src="guidance/followup_figures/fig8_chembl_crossvalidation.png" width="480" alt="This project's affinity labels against ChEMBL, 4 targets">
+</p>
+
+*Independent label cross-check against ChEMBL: 3 of 4 recurring targets
+agree; CD38 does not (this project's pK range sits roughly 4 units below
+ChEMBL's pChEMBL range) — reported as a genuine, unresolved discrepancy
+rather than smoothed over.*
 
 **Direct mechanistic trace.** `guidance/GUIDANCE_MECHANISM_TRACE_FINDING.md`
 answers the question directly: one molecule, sampled twice from
@@ -108,20 +295,60 @@ guidance is too weak to matter. (The two molecules' discrete atom types
 still end up completely different — a separate, flagged-as-open "butterfly
 effect" in the categorical sampling channel.)
 
+<p align="center">
+  <img src="guidance/example_render/trace_gap_plot.png" width="440" alt="Position gap between guided and unguided trajectory, by diffusion step">
+  <img src="guidance/example_render/trace_molecules_2d.png" width="440" alt="2D structures of the two molecules from identical starting noise">
+</p>
+
+*Left: the all-atom position gap between the guided and unguided
+trajectory, step by step — zero until guidance starts, then growing and
+only accelerating near the end. Right: despite a geometric divergence of
+at most 0.13 Å per atom, the two molecules' discrete atom types end up
+chemically distinct — a separate puzzle the positional trace alone
+doesn't explain.*
+
+<p align="center">
+  <img src="guidance/example_render/trace_unguided.png" width="420" alt="Unguided molecule docked into pocket 1h36, with hydrogen-bond partners">
+  <img src="guidance/example_render/trace_guided.png" width="420" alt="Guided molecule, from bit-identical starting noise, docked into the same pocket">
+</p>
+
+*The two molecules of the paired trace, rendered in their 3D binding
+context (pocket PDB 1h36): unguided (left) and guided from the same
+starting noise (right) — the sub-Ångström positional nudge visualised
+alongside the discrete identity change it does not, by itself, explain.*
+
 **Pooled result across the entire follow-up phase: 48 independent
 statistical tests, 0 significant after Benjamini-Hochberg correction**
-(`guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md`). The central finding:
-every mechanism-level fix improves its own diagnostic or predictive
-target, independent chemistry-level validation and the hardest
-generalization split both agree with the raw-score result, and the
-mechanistic trace shows specifically why — the guidance mechanism itself,
-not any single diagnosed confound, is the bottleneck.
+(`guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md`).
+
+<p align="center">
+  <img src="guidance/followup_figures/fig3_pooled_forest.png" width="620" alt="Forest plot: effect size and 95% CI of all 48 pooled comparisons">
+</p>
+
+*Every one of the 48 pooled comparisons, as a forest plot. No interval
+is both significant after correction and in the beneficial direction —
+the single-figure version of the pooled verdict above.*
+
+The central finding: every mechanism-level fix improves its own
+diagnostic or predictive target, independent chemistry-level validation
+and the hardest generalization split both agree with the raw-score
+result, and the mechanistic trace shows specifically why — the guidance
+mechanism itself, not any single diagnosed confound, is the bottleneck.
+
+<p align="center">
+  <img src="guidance/thesis/figures/fig_scale_by_track.png" width="520" alt="Pockets/targets vs molecules/complexes evaluated, every checkpoint">
+</p>
+
+*For scale: pockets or targets against molecules or complexes evaluated
+per condition, for every checkpoint across Chapters IV-VIII — the scope
+of evidence behind every null result above.*
 
 **Start here:**
 - `guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md` — the single pooled statistical verdict across the whole follow-up phase
 - `guidance/GUIDANCE_MECHANISM_TRACE_FINDING.md` — the direct, step-by-step trace of what guidance does to one molecule
 - `guidance/STAGE2_PLUS_EXPERIMENT_LOG.md` — single source of truth, every core-thesis experiment logged
 - `guidance/DUAL_FALSIFICATION_CONCLUSION.md`, `guidance/TRACK_C_REJECTION_SAMPLING_REPORT.md` — core-thesis full write-ups
+- `guidance/thesis/chapters/08_track_e.txt` (Track E, Chapter VIII) — the delta-learning redesign: pre-registration, infrastructure and the falsified result
 - `guidance/GRADALIGN_GUIDANCE_FINDING.md`, `guidance/ESM2_GUIDANCE_FINDING.md`, `guidance/ESM2POCKET_GUIDANCE_FINDING.md`, `guidance/KITCHENSINK_GUIDANCE_FINDING.md`, `guidance/TRACK_A_FOLLOWUP_FULL_TIER_FINDING.md` — Phase 1 per-checkpoint write-ups
 - `guidance/PLIP_INTERACTION_VALIDATION_FINDING.md`, `guidance/FAMILY_HOLDOUT_GENERALIZATION_FINDING.md`, `guidance/CHEMBL_CROSSVALIDATION_FINDING.md` — Phase 2/3 write-ups
 - `guidance/thesis/chapters/11_appendices.txt` (Appendix E) — all of the above assembled into the thesis document itself, with 14 figures and 7 tables
