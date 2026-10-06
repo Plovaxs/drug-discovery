@@ -14,7 +14,7 @@ frozen, pretrained diffusion model:
 > Molecular Diffusion in Structure-Based Drug Design**
 
 Full thesis document: `guidance/thesis/Thesis_Coupled_Guidance_SBDD.pdf`
-(196 pages, 10 chapters + 5 appendices, 59 references, 41 tables, 33
+(198 pages, 10 chapters + 5 appendices, 59 references, 41 tables, 33
 figures, built via `guidance/thesis/build_thesis.py`). Appendix E
 documents the full follow-up investigation below (8 further
 independently-trained checkpoints, three phases, and a direct
@@ -342,6 +342,15 @@ mechanism itself, not any single diagnosed confound, is the bottleneck.
 *For scale: pockets or targets against molecules or complexes evaluated
 per condition, for every checkpoint across Chapters IV-VIII — the scope
 of evidence behind every null result above.*
+
+**Proposed next step (not yet implemented or tested).** Chapter X of the thesis sketches an extension that has not been run, and no result is claimed for it:
+- A surrogate with Monte Carlo dropout giving a mean μ and an uncertainty σ. The first check is whether σ correlates with the error on leakage-safe held-out targets.
+- Upper-confidence-bound or expected-improvement acquisition applied to the guidance gradient, with a time-dependent weight λ_t (not β_t, which is the DDPM noise schedule).
+- PCGrad between the affinity and RA-score gradients, targeting the divergence seen in Track D.
+- Evaluation under the same gates as the thesis: BH-corrected KS tests, target-clustered bootstrap, negative controls, and ligand efficiency, heavy-atom count and PoseBusters validity.
+- A virtual closed loop with docking scores as feedback is a simulation only. It carries the same size-confound risk as Track C.
+
+Work on DNA-sequence design and laboratory automation is outside this project's scope.
 
 **Start here:**
 - `guidance/FOLLOWUP_PHASE_POOLED_CORRECTION.md` — the single pooled statistical verdict across the whole follow-up phase

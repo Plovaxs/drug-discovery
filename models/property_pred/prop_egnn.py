@@ -7,7 +7,7 @@ from models.common import GaussianSmearing, MLP
 
 
 class EnBaseLayer(nn.Module):
-    def __init__(self, hidden_dim, edge_feat_dim, num_r_gaussian, update_x=True, act_fn='relu', norm=False):
+    def __init__(self, hidden_dim, edge_feat_dim, num_r_gaussian, update_x=True, act_fn='relu', norm=False, dropout=0.0):
         super().__init__()
         self.r_min = 0.
         self.r_max = 10. ** 2
@@ -25,6 +25,9 @@ class EnBaseLayer(nn.Module):
         if self.update_x:
             self.x_mlp = MLP(hidden_dim, 1, hidden_dim, num_layer=2, norm=norm, act_fn=act_fn)
         self.node_mlp = MLP(2 * hidden_dim, hidden_dim, hidden_dim, num_layer=2, norm=norm, act_fn=act_fn)
+        # Identity when dropout=0.0 (no parameters, so existing checkpoints load unchanged).
+        # Used by A1b, MC Dropout on the node update.
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, h, edge_index, edge_attr):
         dst, src = edge_index
@@ -36,7 +39,7 @@ class EnBaseLayer(nn.Module):
 
         # h update in Eq(6)
         # h = h + self.node_mlp(torch.cat([mi, h], -1))
-        output = self.node_mlp(torch.cat([mi, h], -1))
+        output = self.dropout(self.node_mlp(torch.cat([mi, h], -1)))
         # if self.update_x:
         #     # x update in Eq(4)
         #     xi, xj = x[dst], x[src]
@@ -48,10 +51,11 @@ class EnBaseLayer(nn.Module):
 
 class EnEquiEncoder(nn.Module):
     def __init__(self, num_layers, hidden_dim, edge_feat_dim, num_r_gaussian, k=32, cutoff=10.0,
-                 update_x=True, act_fn='relu', norm=False):
+                 update_x=True, act_fn='relu', norm=False, dropout=0.0):
         super().__init__()
         # Build the network
         self.num_layers = num_layers
+        self.dropout = dropout
         self.hidden_dim = hidden_dim
         self.edge_feat_dim = edge_feat_dim
         self.num_r_gaussian = num_r_gaussian
@@ -68,7 +72,7 @@ class EnEquiEncoder(nn.Module):
         layers = []
         for l_idx in range(self.num_layers):
             layer = EnBaseLayer(self.hidden_dim, self.edge_feat_dim, self.num_r_gaussian,
-                                update_x=self.update_x, act_fn=self.act_fn, norm=self.norm)
+                                update_x=self.update_x, act_fn=self.act_fn, norm=self.norm, dropout=self.dropout)
             layers.append(layer)
         return nn.ModuleList(layers)
 

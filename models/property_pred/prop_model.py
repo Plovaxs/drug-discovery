@@ -19,6 +19,7 @@ def get_encoder(config):
             update_x=False,
             k=config.knn,
             cutoff=config.cutoff,
+            dropout=config.get('dropout', 0.0),
         )
     else:
         raise ValueError(config.name)

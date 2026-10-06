@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--logdir', type=str, default='./logs_lp_split_stage0')
     parser.add_argument('--tag', type=str, default='')
+    parser.add_argument('--skip_test_logging', action='store_true',
+                        help='do not evaluate the test set during training (A1b: keeps test unseen until the final analysis)')
     args = parser.parse_args()
 
     config = misc.load_config(args.config)
@@ -161,7 +163,8 @@ def main():
                     best_val_epoch = epoch
                     patience_count = 0
                     logger.info(f'Best val achieved at epoch {epoch}, val loss: {best_val_loss:.3f}')
-                    validate(epoch, test_loader, prefix='Test')
+                    if not args.skip_test_logging:
+                        validate(epoch, test_loader, prefix='Test')
                     ckpt_path = os.path.join(ckpt_dir, 'best.pt')
                     torch.save({
                         'config': config, 'model': model.state_dict(),
