@@ -147,6 +147,16 @@ outputs_smoketest/
 outputs_validate/
 guidance/track_c_pools/*/*/sdf/
 guidance/generated_candidates/*/sdf/
+
+# Generated BindingDB index/pairing dumps (2026-10): full-size derived data,
+# regeneratable from guidance/surrogate_data/build_bindingdb_index.py and
+# bindingdb_train_overlap.py -- bindingdb_index.csv alone is 1.2GB, over
+# GitHub's 100MB per-file limit, and bindingdb_index_filtered.csv is a byte-
+# identical duplicate of it (a redundancy in the generating script, not two
+# distinct datasets). Smaller BindingNet CSVs (all <50MB) are left tracked.
+guidance/surrogate_data/bindingdb_index.csv
+guidance/surrogate_data/bindingdb_index_filtered.csv
+guidance/surrogate_data/bindingdb_train_reusable.csv
 sampling_results/
 __pycache__/
 

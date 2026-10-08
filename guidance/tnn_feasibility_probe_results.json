@@ -1,0 +1,292 @@
+{
+  "checkpoint": "./logs_lp_split_stage0/crossdocked_affinity_egnn_2026_09_08__16_12_40/checkpoints/best.pt",
+  "n_linear_layers": 34,
+  "mean_sparsity": 0.3719390437883489,
+  "per_layer": {
+    "protein_atom_emb": {
+      "alpha": 0.13056941330432892,
+      "sparsity": 0.35098379850387573,
+      "shape": [
+        256,
+        27
+      ]
+    },
+    "ligand_atom_emb": {
+      "alpha": 0.12307989597320557,
+      "sparsity": 0.3534526228904724,
+      "shape": [
+        256,
+        31
+      ]
+    },
+    "encoder.net.0.edge_mlp.net.0": {
+      "alpha": 0.030199609696865082,
+      "sparsity": 0.3682522177696228,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.0.edge_mlp.net.2": {
+      "alpha": 0.043243408203125,
+      "sparsity": 0.3584747314453125,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.0.edge_inf.0": {
+      "alpha": 0.08458960056304932,
+      "sparsity": 0.39453125,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.0.node_mlp.net.0": {
+      "alpha": 0.030930863693356514,
+      "sparsity": 0.36353302001953125,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.0.node_mlp.net.2": {
+      "alpha": 0.04238259047269821,
+      "sparsity": 0.353302001953125,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.1.edge_mlp.net.0": {
+      "alpha": 0.032027386128902435,
+      "sparsity": 0.3804863691329956,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.1.edge_mlp.net.2": {
+      "alpha": 0.04428846016526222,
+      "sparsity": 0.3631744384765625,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.1.edge_inf.0": {
+      "alpha": 0.06909357756376266,
+      "sparsity": 0.39453125,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.1.node_mlp.net.0": {
+      "alpha": 0.031358279287815094,
+      "sparsity": 0.36419677734375,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.1.node_mlp.net.2": {
+      "alpha": 0.042732808738946915,
+      "sparsity": 0.3547515869140625,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.2.edge_mlp.net.0": {
+      "alpha": 0.030883772298693657,
+      "sparsity": 0.3744032382965088,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.2.edge_mlp.net.2": {
+      "alpha": 0.043399784713983536,
+      "sparsity": 0.3576507568359375,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.2.edge_inf.0": {
+      "alpha": 0.08045901358127594,
+      "sparsity": 0.453125,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.2.node_mlp.net.0": {
+      "alpha": 0.030490107834339142,
+      "sparsity": 0.3566741943359375,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.2.node_mlp.net.2": {
+      "alpha": 0.0420609787106514,
+      "sparsity": 0.346954345703125,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.3.edge_mlp.net.0": {
+      "alpha": 0.030769916251301765,
+      "sparsity": 0.3738810420036316,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.3.edge_mlp.net.2": {
+      "alpha": 0.04345310479402542,
+      "sparsity": 0.3587493896484375,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.3.edge_inf.0": {
+      "alpha": 0.07082786411046982,
+      "sparsity": 0.42578125,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.3.node_mlp.net.0": {
+      "alpha": 0.030701158568263054,
+      "sparsity": 0.36067962646484375,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.3.node_mlp.net.2": {
+      "alpha": 0.04220866784453392,
+      "sparsity": 0.3541107177734375,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.4.edge_mlp.net.0": {
+      "alpha": 0.030805349349975586,
+      "sparsity": 0.37371826171875,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.4.edge_mlp.net.2": {
+      "alpha": 0.0434042289853096,
+      "sparsity": 0.3594818115234375,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.4.edge_inf.0": {
+      "alpha": 0.07970602065324783,
+      "sparsity": 0.3828125,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.4.node_mlp.net.0": {
+      "alpha": 0.030552798882126808,
+      "sparsity": 0.35881805419921875,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.4.node_mlp.net.2": {
+      "alpha": 0.042345061898231506,
+      "sparsity": 0.3520965576171875,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.5.edge_mlp.net.0": {
+      "alpha": 0.03102925606071949,
+      "sparsity": 0.3770548701286316,
+      "shape": [
+        256,
+        576
+      ]
+    },
+    "encoder.net.5.edge_mlp.net.2": {
+      "alpha": 0.04377938061952591,
+      "sparsity": 0.3609619140625,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "encoder.net.5.edge_inf.0": {
+      "alpha": 0.06850207597017288,
+      "sparsity": 0.390625,
+      "shape": [
+        1,
+        256
+      ]
+    },
+    "encoder.net.5.node_mlp.net.0": {
+      "alpha": 0.030820773914456367,
+      "sparsity": 0.36176300048828125,
+      "shape": [
+        256,
+        512
+      ]
+    },
+    "encoder.net.5.node_mlp.net.2": {
+      "alpha": 0.04249860346317291,
+      "sparsity": 0.35418701171875,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "out_block.0": {
+      "alpha": 0.042824886739254,
+      "sparsity": 0.3596038818359375,
+      "shape": [
+        256,
+        256
+      ]
+    },
+    "out_block.2": {
+      "alpha": 0.03797680884599686,
+      "sparsity": 0.453125,
+      "shape": [
+        1,
+        256
+      ]
+    }
+  },
+  "fp32": {
+    "n": 1500,
+    "r2": 0.411329026512411,
+    "pearson": 0.649642660661963,
+    "rmse": 1.3183970708443824
+  },
+  "ternary_posthoc": {
+    "n": 1500,
+    "r2": -1.4967075088489308,
+    "pearson": 0.5633036646219312,
+    "rmse": 2.715149529706161
+  },
+  "r2_retained_pct": -363.871113482863
+}

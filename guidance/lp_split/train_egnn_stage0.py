@@ -55,20 +55,32 @@ def main():
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--skip_test_logging', action='store_true',
                         help='do not evaluate the test set during training (A1b: keeps test unseen until the final analysis)')
+    parser.add_argument('--seed', type=int, default=None,
+                        help='override config.train.seed (A1c: independent seeds for the deep ensemble)')
+    parser.add_argument('--resume', type=str, default=None,
+                        help='path to a last.pt checkpoint to resume from (e.g. after stopping for thermal '
+                             'throttling) -- reloads model/optimizer/scheduler/epoch/patience exactly')
     args = parser.parse_args()
 
     config = misc.load_config(args.config)
     config_name = os.path.basename(args.config)[:os.path.basename(args.config).rfind('.')]
+    if args.seed is not None:
+        config.train.seed = args.seed
     misc.seed_all(config.train.seed)
 
-    log_dir = misc.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)
-    ckpt_dir = os.path.join(log_dir, 'checkpoints')
-    os.makedirs(ckpt_dir, exist_ok=True)
+    if args.resume:
+        log_dir = os.path.dirname(os.path.dirname(args.resume))
+        ckpt_dir = os.path.join(log_dir, 'checkpoints')
+    else:
+        log_dir = misc.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)
+        ckpt_dir = os.path.join(log_dir, 'checkpoints')
+        os.makedirs(ckpt_dir, exist_ok=True)
     logger = misc.get_logger('train_egnn_stage0', log_dir)
     writer = torch.utils.tensorboard.SummaryWriter(log_dir)
     logger.info(args)
     logger.info(config)
-    shutil.copyfile(args.config, os.path.join(log_dir, os.path.basename(args.config)))
+    if not args.resume:
+        shutil.copyfile(args.config, os.path.join(log_dir, os.path.basename(args.config)))
 
     protein_featurizer = utils_trans.FeaturizeProteinAtom()
     ligand_featurizer = utils_trans.FeaturizeLigandAtom()
@@ -101,7 +113,23 @@ def main():
     optimizer = get_optimizer(config.train.optimizer, model)
     scheduler = get_scheduler(config.train.scheduler, optimizer)
 
+    start_epoch = 1
+    best_val_loss = float('inf')
+    best_val_epoch = 0
+    patience_count = 0
     global_it = 0
+    if args.resume:
+        ckpt = torch.load(args.resume, map_location=args.device, weights_only=False)
+        model.load_state_dict(ckpt['model'])
+        optimizer.load_state_dict(ckpt['optimizer'])
+        scheduler.load_state_dict(ckpt['scheduler'])
+        start_epoch = ckpt['epoch'] + 1
+        best_val_loss = ckpt['best_val_loss']
+        best_val_epoch = ckpt['best_val_epoch']
+        patience_count = ckpt['patience_count']
+        global_it = ckpt['global_it']
+        logger.info(f'Resumed from {args.resume}: starting at epoch {start_epoch}, '
+                    f'best_val_loss={best_val_loss:.4f} at epoch {best_val_epoch}, patience_count={patience_count}')
 
     def train(epoch):
         nonlocal global_it
@@ -143,12 +171,10 @@ def main():
         get_eval_scores(ypred_arr, ytrue_arr, logger, prefix=prefix)
         return avg_loss
 
-    best_val_loss = float('inf')
-    best_val_epoch = 0
-    patience_count = 0
+    last_path = os.path.join(ckpt_dir, 'last.pt')
     early_stop_patience = config.train.get('early_stop_patience', None)
     try:
-        for epoch in range(1, config.train.max_epochs + 1):
+        for epoch in range(start_epoch, config.train.max_epochs + 1):
             train(epoch)
             if epoch % config.train.val_freq == 0 or epoch == config.train.max_epochs:
                 val_loss = validate(epoch, val_loader, prefix='Validate')
@@ -170,7 +196,7 @@ def main():
                         'config': config, 'model': model.state_dict(),
                         'protein_atom_feature_dim': protein_featurizer.feature_dim,
                         'ligand_atom_feature_dim': ligand_featurizer.feature_dim,
-                        'epoch': epoch, 'val_loss': best_val_loss,
+                        'epoch': epoch, 'val_loss': best_val_loss, 'seed': config.train.seed,
                     }, ckpt_path)
                     logger.info(f'Model saved to {ckpt_path}')
                 else:
@@ -178,11 +204,22 @@ def main():
                     logger.info(f'Val loss did not improve (patience {patience_count}'
                                 f'{"/" + str(early_stop_patience) if early_stop_patience else ""}), '
                                 f'best so far: {best_val_loss:.3f} at epoch {best_val_epoch}')
-                    if early_stop_patience is not None and patience_count >= early_stop_patience:
-                        logger.info(f'Early stopping: no val improvement for {patience_count} epochs.')
-                        break
+
+                # Saved every val epoch regardless of improvement, so a kill (e.g. for thermal
+                # throttling) resumes exactly via --resume <this path> from the last completed epoch.
+                torch.save({
+                    'model': model.state_dict(), 'optimizer': optimizer.state_dict(),
+                    'scheduler': scheduler.state_dict(), 'epoch': epoch, 'global_it': global_it,
+                    'best_val_loss': best_val_loss, 'best_val_epoch': best_val_epoch,
+                    'patience_count': patience_count, 'seed': config.train.seed,
+                }, last_path)
+
+                if early_stop_patience is not None and patience_count >= early_stop_patience:
+                    logger.info(f'Early stopping: no val improvement for {patience_count} epochs.')
+                    break
     except KeyboardInterrupt:
-        logger.info('Terminating...')
+        logger.info('Terminating... (last.pt is up to date through the last completed epoch; '
+                    'rerun with --resume to continue)')
 
     logger.info(f'Best val loss: {best_val_loss:.3f} at epoch {best_val_epoch}')
 

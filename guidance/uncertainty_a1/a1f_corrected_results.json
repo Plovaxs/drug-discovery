@@ -1,0 +1,35 @@
+{
+  "correction_factor_from_val": 0.03360183460592193,
+  "test_calibration_ratio_corrected": {
+    "point": 1.1783180412514278,
+    "ci95": [
+      1.020617433078341,
+      1.4203892524862738
+    ],
+    "p_raw": 0.029,
+    "b": 2000,
+    "boot_seed": 20260925,
+    "gate_pass": false
+  },
+  "spearman_unchanged": {
+    "point": 0.11622520900740899,
+    "ci95": [
+      0.002448981418214854,
+      0.21488680207820524
+    ],
+    "null": 0.0,
+    "p_raw": 0.042,
+    "p_bh": 0.042
+  },
+  "partial_spearman_unchanged": {
+    "point": 0.1460103197295446,
+    "ci95": [
+      0.03211288857404288,
+      0.2374666364051557
+    ],
+    "null": 0.0,
+    "p_raw": 0.008,
+    "p_bh": 0.012
+  },
+  "note": "BH correction across all 3 tests was defined on the RAW (uncorrected) calibration ratio in a1f_results.json; this corrected re-test is a follow-up diagnostic motivated by that raw result, not a blind re-registration, so its p-value is reported raw/unadjusted here rather than re-run through BH against the other two (already-reported) tests."
+}
