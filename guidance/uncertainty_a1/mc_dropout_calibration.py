@@ -23,7 +23,7 @@ import time
 
 import numpy as np
 import torch
-from scipy.stats import rankdata, spearmanr
+from scipy.stats import spearmanr
 from torch_geometric.transforms import Compose
 
 import utils.transforms_prop as ut
@@ -31,8 +31,8 @@ from datasets.crossdocked_affinity import CrossDockedAffinityDataset
 from guidance.lp_split.lp_split_loader import build_lp_splits
 from guidance.track_a.model import GIGNPignetAffinity
 from guidance.track_a.train_gign_pignet_stage2 import prepare_sample
-from guidance.track_e.analyze_track_e import bh
 from guidance.track_e.core import build_anchor_table, split_arrays
+from guidance.uncertainty_a1.stats_common import bh, boot_p as _boot_p, partial_spearman
 
 CKPT = './logs_track_a_full/gign_pignet_2026_09_11__18_31_46_full/checkpoints/best.pt'
 REF = './guidance/track_e/cache/trackA_test_preds.npz'
@@ -73,15 +73,6 @@ def enable_mc_dropout(model):
     return len(drops)
 
 
-def partial_spearman(x, y, z):
-    """Spearman of x and y after linearly removing the rank of z from both ranks."""
-    rx, ry, rz = rankdata(x), rankdata(y), rankdata(z)
-    Z = np.column_stack([np.ones_like(rz), rz])
-    res_x = rx - Z @ np.linalg.lstsq(Z, rx, rcond=None)[0]
-    res_y = ry - Z @ np.linalg.lstsq(Z, ry, rcond=None)[0]
-    return float(np.corrcoef(res_x, res_y)[0, 1])
-
-
 def metrics(idx, sd, err, nlig):
     s, e = sd[idx], err[idx]
     rho = spearmanr(s, e).correlation
@@ -90,8 +81,7 @@ def metrics(idx, sd, err, nlig):
 
 
 def boot_p(samples, null):
-    lo, hi = np.mean(samples <= null), np.mean(samples >= null)
-    return max(min(1.0, 2 * min(lo, hi)), 1 / B)
+    return _boot_p(samples, null, b=B)
 
 
 def run_scoring(model, ds, n, start, partial_ok, mu, sd):

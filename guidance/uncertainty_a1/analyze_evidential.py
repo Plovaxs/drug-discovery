@@ -6,6 +6,7 @@ Inverse-Gamma predictive variance (Amini et al. 2020's convention), evaluated on
 Usage:
   python guidance/uncertainty_a1/analyze_evidential.py
 """
+import argparse
 import glob
 import json
 import os
@@ -29,9 +30,13 @@ PER_COMPLEX = os.path.join(OUT_DIR, 'a1f_per_complex.npz')
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-def find_ckpt():
+def find_ckpt(seed=None):
     paths = sorted(glob.glob(RUN_GLOB))
-    assert len(paths) == 1, f'expected one A1f run folder with best.pt, found {paths}'
+    if seed is not None:
+        paths = [p for p in paths if f'_a1f_s{seed}' in p]
+        assert len(paths) == 1, f'expected one A1f run folder for seed {seed}, found {paths}'
+        return paths[0]
+    assert len(paths) == 1, f'expected exactly one A1f run folder (pass --seed to disambiguate), found {paths}'
     return paths[0]
 
 
@@ -67,8 +72,13 @@ def forward(model, data):
 
 
 def main():
-    ckpt = find_ckpt()
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--seed', type=int, default=None, help='disambiguate which A1f seed run to analyze')
+    args = ap.parse_args()
+    ckpt = find_ckpt(args.seed)
     print('checkpoint:', ckpt, flush=True)
+    results_path = RESULTS if args.seed is None else RESULTS.replace('.json', f'_s{args.seed}.json')
+    per_complex_path = PER_COMPLEX if args.seed is None else PER_COMPLEX.replace('.npz', f'_s{args.seed}.npz')
     model, blob = load_model(ckpt)
     A, ds = load_test()
     print(f'test complexes: {len(ds)}  (checkpoint epoch {blob["epoch"]}, val loss {blob["val_loss"]:.4f})', flush=True)
@@ -84,16 +94,17 @@ def main():
     print(f'sigma stats: mean={sd.mean():.3f} std={sd.std():.3f} median={np.median(sd):.3f} '
           f'min={sd.min():.3f} max={sd.max():.3f}', flush=True)
 
-    a1.CKPT, a1.RESULTS, a1.PER_COMPLEX = ckpt, RESULTS, PER_COMPLEX
+    a1.CKPT, a1.RESULTS, a1.PER_COMPLEX = ckpt, results_path, per_complex_path
     out = a1.analyse(A, mu, sd)
     y = A['pk']
     out['descriptive_test'] = dict(
         r2_of_mu=float(1 - ((y - mu) ** 2).sum() / ((y - y.mean()) ** 2).sum()),
         pearson_of_mu=float(np.corrcoef(y, mu)[0, 1]),
         sigma_mean=float(sd.mean()), sigma_std=float(sd.std()), sigma_median=float(np.median(sd)))
-    with open(RESULTS, 'w') as f:
+    with open(results_path, 'w') as f:
         json.dump(out, f, indent=2)
     print(json.dumps({'tests': out['tests'], 'descriptive_test': out['descriptive_test']}, indent=2), flush=True)
+    print(f'Saved to {results_path}')
 
 
 if __name__ == '__main__':
