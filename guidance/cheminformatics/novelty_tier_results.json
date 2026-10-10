@@ -1,0 +1,98 @@
+{
+  "bootstrap": {
+    "b": 2000,
+    "seed": 20260925
+  },
+  "tier_bounds": [
+    [
+      0.0,
+      0.35,
+      "novel (<0.35)"
+    ],
+    [
+      0.35,
+      0.5,
+      "distant (0.35-0.50)"
+    ],
+    [
+      0.5,
+      0.7,
+      "related (0.50-0.70)"
+    ],
+    [
+      0.7,
+      1.01,
+      "same series (>=0.70)"
+    ]
+  ],
+  "structure_model": "egnn_a1c_ensemble",
+  "ligand_champion": "desc_ridge",
+  "similarity_percentiles": {
+    "p0": 0.18644067645072937,
+    "p10": 0.24137930572032928,
+    "p25": 0.27142858505249023,
+    "p50": 0.31578946113586426,
+    "p75": 0.40740740299224854,
+    "p90": 0.5609756112098694,
+    "p100": 1.0
+  },
+  "tiers": {
+    "novel (<0.35)": {
+      "n": 7577,
+      "n_target_clusters": 79,
+      "median_sim": 0.28169015049934387,
+      "structure_r2": 0.3499958205577852,
+      "ligand_r2": 0.31322514301316373,
+      "d_r2": 0.03677067754462149,
+      "ci95": [
+        -0.09932274055371751,
+        0.16826549540281266
+      ],
+      "boot_p": 0.572,
+      "boot_p_bh": 0.748
+    },
+    "distant (0.35-0.50)": {
+      "n": 2319,
+      "n_target_clusters": 67,
+      "median_sim": 0.4035087823867798,
+      "structure_r2": 0.29982775013571283,
+      "ligand_r2": 0.27558010349504836,
+      "d_r2": 0.024247646640664478,
+      "ci95": [
+        -0.17497984280631648,
+        0.18417337257491928
+      ],
+      "boot_p": 0.748,
+      "boot_p_bh": 0.748
+    },
+    "related (0.50-0.70)": {
+      "n": 1526,
+      "n_target_clusters": 51,
+      "median_sim": 0.5609756112098694,
+      "structure_r2": 0.3547967803887868,
+      "ligand_r2": 0.2066484143446995,
+      "d_r2": 0.14814836604408732,
+      "ci95": [
+        0.0011502319794844788,
+        0.31174293362266686
+      ],
+      "boot_p": 0.049,
+      "boot_p_bh": 0.196
+    },
+    "same series (>=0.70)": {
+      "n": 433,
+      "n_target_clusters": 41,
+      "median_sim": 0.8088235259056091,
+      "structure_r2": 0.1991233228022291,
+      "ligand_r2": -0.021090409577517066,
+      "d_r2": 0.22021373237974617,
+      "ci95": [
+        -0.06682984101256866,
+        0.5587268067552728
+      ],
+      "boot_p": 0.128,
+      "boot_p_bh": 0.256
+    }
+  },
+  "note": "Novelty = max ECFP4 Tanimoto from each test ligand to any training ligand. Tier boundary 0.35 is taken from Mattsson et al. 2026 rather than tuned, since choosing a threshold after seeing which one separates the models would be selecting the result."
+}

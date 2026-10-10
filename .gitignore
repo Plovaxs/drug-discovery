@@ -166,3 +166,16 @@ guidance/track_e/__pycache__/
 
 runs_track_e*/
 guidance/track_e/cache/
+
+# BindingNet row indices: 41-49MB each, five stages of the same pipeline (~230MB total). Each is fully
+# regeneratable -- build_bindingnet_index.py -> pair_bindingnet_structures.py ->
+# apply_sequence_leakage_filter.py -> apply_compound_leakage_filter.py. Under GitHub's 100MB per-file
+# cap individually, but committing a quarter-gigabyte of derived CSV is how the earlier push failure
+# started. The small JSON summaries and the per-sequence audit CSV ARE tracked: those are the records
+# the thesis cites, and they are too small to matter.
+guidance/surrogate_data/bindingnet_v1_index.csv
+guidance/surrogate_data/bindingnet_v1_index_filtered.csv
+guidance/surrogate_data/bindingnet_v1_index_filtered2.csv
+guidance/surrogate_data/bindingnet_v1_paired.csv
+guidance/surrogate_data/bindingnet_v1_final.csv
+guidance/surrogate_data/bindingnet_v1_clean.csv

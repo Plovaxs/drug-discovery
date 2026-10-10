@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# A1e-beta: tests whether A1e's negative heteroscedastic result survives the loss the literature
+# prescribes (beta-NLL, Seitzer et al. 2022) instead of the plain Gaussian NLL it is known to fail with.
+#
+# Design note on the run ORDER, which is not arbitrary. A1e as it stands is ONE seed (2021). Comparing
+# three beta runs against one plain run is the n=3-vs-n=1 situation guidance/aggregate_results.py
+# explicitly refuses to give a verdict on -- and rightly, since this project has twice drawn a wrong
+# conclusion from too few seeds. So the chain ALTERNATES: it tops A1e up to three seeds while building
+# A1e-beta to three, taking the plain and beta arm for a given seed close together. The consequence is
+# that the comparison is balanced at every point where the chain could be interrupted -- after step 1
+# it is 1v1, after step 3 it is 2v2, after step 5 it is 3v3. Stopping early costs power, never validity.
+#
+# Each step goes through scripts/queued_run.sh, so every step waits for the GPU to be free AND to have
+# cooled below 55C for 5 minutes before starting. The 4GB card cannot hold two of these jobs, and
+# back-to-back thermal load is against this machine's established practice.
+#
+# Exit codes are checked per step and the chain STOPS on the first failure. A previous chain here used
+# `set -e`, which did not abort it: three seeds ran, all three failed, and it reported success.
+
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+
+PY="$HOME/miniconda3/envs/drugdisc/bin/python"
+CFG=configs/prop/crossdocked_affinity_egnn.yml
+WAIT=(--wait-for "train_surrogate_arm[.]py" --wait-for "train_egnn_heteroscedastic[.]py")
+GATE=(--cool-to 55 --cool-for 300 --poll 60 --max-wait 0)
+
+run_step() {
+  local label="$1"; shift
+  echo ""
+  echo "######## $label  ($(date '+%F %T')) ########"
+  bash scripts/queued_run.sh "${WAIT[@]}" "${GATE[@]}" -- "$@"
+  local rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo "!!!! $label FAILED (exit $rc) -- chain stopped, remaining steps NOT run"
+    exit $rc
+  fi
+  echo "######## $label done ($(date '+%F %T')) ########"
+}
+
+plain() {  # top up A1e to three seeds; beta_nll 0.0 reproduces the original loss bit-for-bit
+  run_step "A1e plain seed $1" env PYTHONPATH=. "$PY" guidance/uncertainty_a1/train_egnn_heteroscedastic.py \
+    "$CFG" --skip_test_logging --beta_nll 0.0 --logdir ./logs_a1e_heteroscedastic --tag "a1e_s$1" --seed "$1"
+}
+
+beta() {
+  run_step "A1e-beta seed $1" env PYTHONPATH=. "$PY" guidance/uncertainty_a1/train_egnn_heteroscedastic.py \
+    "$CFG" --skip_test_logging --beta_nll 0.5 --logdir ./logs_a1e_beta_heteroscedastic --tag "a1eb_s$1" --seed "$1"
+}
+
+echo "A1e-beta chain queued at $(date '+%F %T')"
+echo "existing on record: A1e plain seed 2021 (2026-10-08). This chain adds plain 2022/2023 and beta 2021/2022/2023."
+
+beta  2021     # step 1 -> 1 plain vs 1 beta
+plain 2022     # step 2
+beta  2022     # step 3 -> 2 v 2
+plain 2023     # step 4
+beta  2023     # step 5 -> 3 v 3
+
+echo ""
+echo "CHAIN COMPLETE $(date '+%F %T'). Next:"
+echo "  PYTHONPATH=. $PY guidance/aggregate_results.py logs_a1e_heteroscedastic logs_a1e_beta_heteroscedastic --metric R2 --compare a1e_beta a1e_hetero"
+echo "  PYTHONPATH=. $PY guidance/uncertainty_a1/analyze_heteroscedastic.py   # the three pre-registered tests"

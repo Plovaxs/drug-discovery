@@ -1,0 +1,426 @@
+{
+  "bootstrap": {
+    "b": 2000,
+    "seed": 20260925,
+    "n_target_clusters": 127
+  },
+  "marginal_test_r2": {
+    "egnn_stage0": 0.34153972795011456,
+    "egnn_a1c_ensemble": 0.4071791626892439,
+    "egnn_qat_s2021": 0.32391822276090376,
+    "egnn_qat_s2022": 0.3200739037725837,
+    "egnn_qat_s2023": 0.3871905552535958,
+    "global_mean": -4.261289991336348e-05,
+    "heavy_atoms": 0.30689006434188904,
+    "vina": 0.26014571237034245,
+    "desc_ridge": 0.3530988567500075,
+    "desc_hgb": 0.2904243779776281,
+    "ecfp_ridge": 0.3092194377012729,
+    "ecfp_desc_hgb": 0.32110888570341,
+    "tanimoto_1nn": -0.9243313902674677,
+    "tanimoto_5nn": -0.8517860286934433
+  },
+  "paired": {
+    "egnn_stage0__vs__heavy_atoms": {
+      "d_r2": 0.03464966360822552,
+      "ci95": [
+        -0.06964447381891904,
+        0.14329935741314725
+      ],
+      "boot_p": 0.53,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.7571428571428572
+    },
+    "egnn_stage0__vs__vina": {
+      "d_r2": 0.0813940155797721,
+      "ci95": [
+        -0.007803867688924845,
+        0.16556817184564457
+      ],
+      "boot_p": 0.067,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.15764705882352942
+    },
+    "egnn_stage0__vs__desc_ridge": {
+      "d_r2": -0.01155912879989296,
+      "ci95": [
+        -0.11451679163589605,
+        0.08682268900178279
+      ],
+      "boot_p": 0.854,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.9021052631578947
+    },
+    "egnn_stage0__vs__desc_hgb": {
+      "d_r2": 0.05111534997248646,
+      "ci95": [
+        -0.07246809006446185,
+        0.17450482440260787
+      ],
+      "boot_p": 0.419,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.6325925925925925
+    },
+    "egnn_stage0__vs__ecfp_ridge": {
+      "d_r2": 0.03232029024884164,
+      "ci95": [
+        -0.050689140329189246,
+        0.11038346605597932
+      ],
+      "boot_p": 0.427,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.6325925925925925
+    },
+    "egnn_stage0__vs__ecfp_desc_hgb": {
+      "d_r2": 0.02043084224670455,
+      "ci95": [
+        -0.05935663990986308,
+        0.10010652448376517
+      ],
+      "boot_p": 0.606,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8358620689655172
+    },
+    "egnn_stage0__vs__tanimoto_1nn": {
+      "d_r2": 1.2658711182175821,
+      "ci95": [
+        0.8040635660210976,
+        1.8920025940650342
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_stage0__vs__tanimoto_5nn": {
+      "d_r2": 1.1933257566435578,
+      "ci95": [
+        0.7961596389747847,
+        1.7345896529955318
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_a1c_ensemble__vs__heavy_atoms": {
+      "d_r2": 0.10028909834735489,
+      "ci95": [
+        0.002431479595529074,
+        0.20651660097367114
+      ],
+      "boot_p": 0.044,
+      "verdict": "INDISTINGUISHABLE (BH)",
+      "boot_p_bh": 0.1257142857142857
+    },
+    "egnn_a1c_ensemble__vs__vina": {
+      "d_r2": 0.14703345031890147,
+      "ci95": [
+        0.07908919843716343,
+        0.20999021809023233
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_a1c_ensemble__vs__desc_ridge": {
+      "d_r2": 0.054080305939236406,
+      "ci95": [
+        -0.03590672684533658,
+        0.14007025354302294
+      ],
+      "boot_p": 0.238,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.4327272727272727
+    },
+    "egnn_a1c_ensemble__vs__desc_hgb": {
+      "d_r2": 0.11675478471161582,
+      "ci95": [
+        -0.00018528459057934866,
+        0.23212231660226043
+      ],
+      "boot_p": 0.052,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.13
+    },
+    "egnn_a1c_ensemble__vs__ecfp_ridge": {
+      "d_r2": 0.09795972498797101,
+      "ci95": [
+        0.004493811008609426,
+        0.19066870075626263
+      ],
+      "boot_p": 0.039,
+      "verdict": "INDISTINGUISHABLE (BH)",
+      "boot_p_bh": 0.12000000000000001
+    },
+    "egnn_a1c_ensemble__vs__ecfp_desc_hgb": {
+      "d_r2": 0.08607027698583392,
+      "ci95": [
+        0.0004003492727225503,
+        0.17507679545417168
+      ],
+      "boot_p": 0.049,
+      "verdict": "INDISTINGUISHABLE (BH)",
+      "boot_p_bh": 0.13
+    },
+    "egnn_a1c_ensemble__vs__tanimoto_1nn": {
+      "d_r2": 1.3315105529567117,
+      "ci95": [
+        0.8510694667994773,
+        1.9651374510581896
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_a1c_ensemble__vs__tanimoto_5nn": {
+      "d_r2": 1.2589651913826874,
+      "ci95": [
+        0.8514611670081063,
+        1.7998952653970244
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2021__vs__heavy_atoms": {
+      "d_r2": 0.017028158419014727,
+      "ci95": [
+        -0.12794412868753086,
+        0.1447685783761864
+      ],
+      "boot_p": 0.764,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8742857142857143
+    },
+    "egnn_qat_s2021__vs__vina": {
+      "d_r2": 0.06377251039056131,
+      "ci95": [
+        -0.05402258987302789,
+        0.1680340261471063
+      ],
+      "boot_p": 0.29,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.5043478260869565
+    },
+    "egnn_qat_s2021__vs__desc_ridge": {
+      "d_r2": -0.029180633989103755,
+      "ci95": [
+        -0.17764823435097288,
+        0.09320459689555814
+      ],
+      "boot_p": 0.731,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8742857142857143
+    },
+    "egnn_qat_s2021__vs__desc_hgb": {
+      "d_r2": 0.03349384478327566,
+      "ci95": [
+        -0.13323856130683187,
+        0.1757083761229319
+      ],
+      "boot_p": 0.636,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8438709677419355
+    },
+    "egnn_qat_s2021__vs__ecfp_ridge": {
+      "d_r2": 0.014698785059630848,
+      "ci95": [
+        -0.11013312747453051,
+        0.11740424863114757
+      ],
+      "boot_p": 0.765,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8742857142857143
+    },
+    "egnn_qat_s2021__vs__ecfp_desc_hgb": {
+      "d_r2": 0.002809337057493755,
+      "ci95": [
+        -0.10776939026760378,
+        0.09780427615928335
+      ],
+      "boot_p": 0.887,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.9097435897435898
+    },
+    "egnn_qat_s2021__vs__tanimoto_1nn": {
+      "d_r2": 1.2482496130283716,
+      "ci95": [
+        0.7790636016571618,
+        1.8863718537233933
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2021__vs__tanimoto_5nn": {
+      "d_r2": 1.1757042514543472,
+      "ci95": [
+        0.7730579649681264,
+        1.7310350231808922
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2022__vs__heavy_atoms": {
+      "d_r2": 0.013183839430694677,
+      "ci95": [
+        -0.12938251794763184,
+        0.15692117185016727
+      ],
+      "boot_p": 0.857,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.9021052631578947
+    },
+    "egnn_qat_s2022__vs__vina": {
+      "d_r2": 0.05992819140224126,
+      "ci95": [
+        -0.06621836450962561,
+        0.15934992621190439
+      ],
+      "boot_p": 0.322,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.5366666666666667
+    },
+    "egnn_qat_s2022__vs__desc_ridge": {
+      "d_r2": -0.033024952977423805,
+      "ci95": [
+        -0.16999400645079463,
+        0.09253655468372905
+      ],
+      "boot_p": 0.654,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8438709677419355
+    },
+    "egnn_qat_s2022__vs__desc_hgb": {
+      "d_r2": 0.02964952579495561,
+      "ci95": [
+        -0.1336325617396902,
+        0.17781737504432413
+      ],
+      "boot_p": 0.712,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.8742857142857143
+    },
+    "egnn_qat_s2022__vs__ecfp_ridge": {
+      "d_r2": 0.010854466071310798,
+      "ci95": [
+        -0.14060272841798913,
+        0.1474260316863098
+      ],
+      "boot_p": 0.849,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.9021052631578947
+    },
+    "egnn_qat_s2022__vs__ecfp_desc_hgb": {
+      "d_r2": -0.0010349819308262953,
+      "ci95": [
+        -0.13468756820545627,
+        0.12877975931061444
+      ],
+      "boot_p": 0.989,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.9890000000000001
+    },
+    "egnn_qat_s2022__vs__tanimoto_1nn": {
+      "d_r2": 1.2444052940400514,
+      "ci95": [
+        0.7701198351001981,
+        1.857021506372618
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2022__vs__tanimoto_5nn": {
+      "d_r2": 1.171859932466027,
+      "ci95": [
+        0.7624805036183228,
+        1.7012869985804924
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2023__vs__heavy_atoms": {
+      "d_r2": 0.08030049091170677,
+      "ci95": [
+        -0.011694817052038594,
+        0.1810941930898245
+      ],
+      "boot_p": 0.091,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.19157894736842104
+    },
+    "egnn_qat_s2023__vs__vina": {
+      "d_r2": 0.12704484288325335,
+      "ci95": [
+        0.05754350741600818,
+        0.18238850047661587
+      ],
+      "boot_p": 0.002,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.006666666666666667
+    },
+    "egnn_qat_s2023__vs__desc_ridge": {
+      "d_r2": 0.034091698503588286,
+      "ci95": [
+        -0.04657334485176385,
+        0.11403831569634897
+      ],
+      "boot_p": 0.41,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.6325925925925925
+    },
+    "egnn_qat_s2023__vs__desc_hgb": {
+      "d_r2": 0.0967661772759677,
+      "ci95": [
+        -0.011959447911363903,
+        0.19515457107873782
+      ],
+      "boot_p": 0.073,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.1622222222222222
+    },
+    "egnn_qat_s2023__vs__ecfp_ridge": {
+      "d_r2": 0.07797111755232289,
+      "ci95": [
+        -0.017561970575771933,
+        0.171245291660599
+      ],
+      "boot_p": 0.117,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.2228571428571429
+    },
+    "egnn_qat_s2023__vs__ecfp_desc_hgb": {
+      "d_r2": 0.0660816695501858,
+      "ci95": [
+        -0.013908973592737104,
+        0.15082587656360755
+      ],
+      "boot_p": 0.106,
+      "verdict": "INDISTINGUISHABLE",
+      "boot_p_bh": 0.21200000000000002
+    },
+    "egnn_qat_s2023__vs__tanimoto_1nn": {
+      "d_r2": 1.3115219455210636,
+      "ci95": [
+        0.8283216956878842,
+        1.9422104955186226
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    },
+    "egnn_qat_s2023__vs__tanimoto_5nn": {
+      "d_r2": 1.2389765839470392,
+      "ci95": [
+        0.8229919276849125,
+        1.7750816204274127
+      ],
+      "boot_p": 0.0004997501249375312,
+      "verdict": "structure WINS",
+      "boot_p_bh": 0.0018172731815910225
+    }
+  },
+  "note": "dR2 > 0 means the structure-based model explains more variance. Intervals are paired: both models are scored on the same resampled target clusters, which preserves their error correlation and gives far more power than comparing two marginal CIs."
+}

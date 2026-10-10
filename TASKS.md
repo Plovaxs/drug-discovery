@@ -1,5 +1,452 @@
 # To-do
 
+## URUTAN KERJA (ditulis 2026-10-10, SATU-SATU, dari atas)
+
+Dasar pemeringkatan ada di `guidance/RESEARCH_PROGRAM.md`. Aturan: satu item sekali jalan, jangan mulai
+item GPU berikutnya sebelum yang sekarang selesai + GPU dingin (`scripts/queued_run.sh` menangani itu).
+
+### CARA PAKAI QUEUE (dibangun 2026-10-10)
+
+Satu job sekali jalan, istirahat wajib 20 menit setelah tiap job, lalu gerbang termal (<55C selama 300
+detik berturut-turut) sebelum job berikutnya. Resumable: nama step yang selesai dicatat, jadi shutdown
+paling buruk cuma kehilangan step yang sedang jalan -- dan step itu sendiri punya `last.pt` per epoch.
+
+```
+bash scripts/master_queue.sh status          # apa yang sudah/belum, suhu GPU sekarang
+bash scripts/master_queue.sh start           # jalankan, detached, aman kalau terminal ditutup
+bash scripts/master_queue.sh stop            # berhenti SETELAH step sekarang beres
+bash scripts/master_queue.sh reset <nama>    # lupakan satu step supaya jalan ulang
+ONLY=2 bash scripts/master_queue.sh run      # kerjakan maksimal 2 step sesi ini, lalu keluar
+REST=2400 bash scripts/master_queue.sh run   # istirahat 40 menit antar step
+CPU_PARALLEL=1 ...                           # step CPU tak menunggu GPU (gerbang suhu TETAP berlaku)
+CPU_COOL_TO=80 ...                           # ambang suhu CPU; 0 mematikan gerbang CPU (tidak disarankan)
+```
+
+### MODE OTONOM — AKTIF SEJAK 2026-10-10 04:59 (atas izin eksplisit)
+
+Queue jalan penuh tanpa pengawasan: 11 step, satu per satu, istirahat 20 menit setelah tiap step, lalu
+gerbang termal (GPU <55 C DAN CPU <80 C, keduanya bertahan 300 detik) sebelum step berikutnya. Berhenti
+sendiri pada kegagalan pertama. Resumable. Aman kalau terminal ditutup atau laptop dimatikan.
+
+Satu perintah untuk melihat semuanya:
+```
+bash scripts/master_queue.sh status
+```
+Menampilkan: step mana sudah/belum, suhu CPU dan GPU sekarang beserta ambangnya, apakah queue hidup, dan
+apakah run terakhir GAGAL atau TIMEOUT DI GERBANG (dua hal berbeda, ditandai terpisah).
+
+**Pengaman yang ditambahkan khusus untuk mode tanpa pengawasan:** gerbang termal dulu menunggu TANPA
+BATAS. Itu benar saat ada yang mengawasi, tapi tanpa pengawasan ia bisa deadlock -- suhu idle CPU laptop
+ini belum pernah terukur, dan kalau ternyata menetap di atas 80 C, gerbangnya tidak akan pernah terbuka
+dan tidak ada yang memberi tahu kenapa. Sekarang `GATE_MAX_WAIT=14400` (4 jam): kalau gerbang tidak
+terbuka dalam 4 jam, queue berhenti dengan exit 75, menulis penanda `master_queue.gate_timeout`, dan
+`status` menyatakannya sebagai "nothing ran and nothing broke" -- bukan sebagai kegagalan. Jalur ini
+sudah diuji. Kalau itu terjadi, ukur suhu idle sebenarnya lalu naikkan ambangnya sekali:
+`CPU_COOL_TO=85 bash scripts/master_queue.sh start`.
+
+**Batas yang jujur tentang "monitoring":** queue-lah yang memantau dirinya sendiri. Saya tidak bisa
+mengawasinya selama ~22 jam di dalam satu percakapan. Yang bisa saya lakukan: melaporkan kapan pun
+ditanya, dan membaca `status` + log untuk tahu persis apa yang terjadi -- termasuk kalau ia berhenti.
+Jangan andalkan ingatan saya soal apa yang hidup; `status` membacanya dari keadaan nyata.
+
+### PROTOKOL COOL-DOWN — STATUS PER 2026-10-10 04:50
+
+**Tidak ada apa pun yang akan start sendiri.** Queue sudah DIHENTIKAN dengan sengaja (bukan crash), dan
+chain Arm B lama sudah dimatikan parent-nya. Yang masih jalan hanya Arm B seed 2021 (pid 42264, sudah
+reparented ke init), yang akan selesai sendiri lalu mesin jadi idle.
+
+Kenapa queue dihentikan padahal sudah diset: kalau dibiarkan hidup, setelah rest 20 menit ia akan
+OTOMATIS memulai seed 2022. Itu bukan cool-down. Jadi queue ditaruh dalam keadaan siap-tapi-diam, dan
+baru dijalankan lagi atas perintah.
+
+Chain Arm B lama (`for s in 2021 2022 2023`) juga dimatikan parent-nya: ia dibuat SEBELUM gerbang termal
+ada, jadi akan menjalankan tiga seed berturut-turut tanpa gate dan tanpa jeda -- terukur ~8 jam terus
+menerus di CPU 92 C. Seed 2022 dan 2023 sekarang jadi step queue (urutan 1 dan 2), lengkap dengan gate
+dan rest. Keduanya pakai `--no_compound_filter` dan itu WAJIB, bukan pilihan: seed 2021 dilatih sebelum
+filter senyawa ada, jadi kalau 2022/2023 memakai filter, tiga seed satu arm akan dilatih di data berbeda
+dan sebarannya berhenti menaksir varians seed.
+
+**Melanjutkan setelah dingin** -- cek suhu dulu, lalu pilih satu:
+```
+bash scripts/master_queue.sh status              # lihat suhu CPU/GPU dan sisa step
+ONLY=1 bash scripts/master_queue.sh start        # SATU step saja lalu berhenti  <-- disarankan
+bash scripts/master_queue.sh start               # kerjakan semuanya, rest 20 menit antar step
+```
+`ONLY=1` itu yang paling sesuai pola "cicil satu-satu lalu istirahat": queue mengerjakan satu step,
+mencatatnya selesai, lalu keluar. Jalankan lagi kapan pun mau lanjut.
+
+**Aman mematikan laptop kapan saja.** Kalau dimatikan saat seed 2021 masih jalan, run itu resumable:
+`--resume logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_10__00_32_42_armBmatch_cd6000_bn14000_bs1_s2021/checkpoints/last.pt`
+(`last.pt` ditulis setiap epoch validasi; `best.pt` juga sudah ada). Setelah seed 2021 selesai, tidak
+ada state apa pun yang perlu dijaga -- queue melacak kemajuan lewat nama step di
+`logs_queue/master_queue.done`.
+
+### TEMUAN TERMAL YANG MENGUBAH DESAIN QUEUE (2026-10-10)
+
+Diukur saat HANYA Arm B jalan, load average 1,3 dari 20 thread:
+
+| sensor | suhu |
+|---|---|
+| GPU | 72 C |
+| x86_pkg_temp (paket CPU) | **87-94 C** |
+| TCPU / acpitz | 92 C |
+
+**CPU adalah bottleneck termal laptop ini, bukan GPU.** i7-12700H Tjmax 100 C, jadi mesin ini duduk ~8 C
+dari throttling dengan satu thread dataloader sibuk. GPU-nya justru santai.
+
+Konsekuensi: gerbang termal versi pertama hanya memantau GPU, yaitu **sensor yang salah** -- ia akan
+dengan senang hati memulai pekerjaan baru saat komponen yang panas hampir habis. Bukti yang sempat saya
+pakai ("suhu GPU tetap 73 C saat beban CPU jalan") ternyata mengukur hal yang keliru: GPU memang aman
+sementara CPU-nya mendidih.
+
+Sudah diperbaiki: `queued_run.sh` sekarang punya `--cpu-cool-to` (default 80 C) dan membaca MAKSIMUM
+dari zone x86_pkg_temp / TCPU / acpitz / coretemp (mereka beda sampai 7 C; yang konservatif yang dipakai;
+pembacaan <10 C atau >130 C ditolak supaya zone rusak tidak memblokir queue selamanya). Step gpu DAN cpu
+dua-duanya lewat gerbang CPU, karena analisis "CPU-only" justru membebani komponen yang sudah panas.
+
+`CPU_PARALLEL=1` hanya menghapus WAIT terhadap trainer lain, **tidak pernah** menghapus gerbang suhu.
+Jadi meminta eksekusi paralel tidak mengalahkan pengukuran: step cpu mulai begitu CPU punya headroom,
+dan sensornya yang memutuskan kapan. Saat ini (CPU 92 C) itu berarti ia tetap menunggu -- tapi karena
+alasan terukur, bukan karena pilihan konfigurasi saya.
+
+Menambah pekerjaan: tambahkan satu baris `nama|gpu-atau-cpu|perintah` di `scripts/queue_steps.sh`.
+Runner melewati yang sudah tercatat selesai, jadi menambah ke queue yang sudah jalan separuh itu aman.
+JANGAN mengganti nama step yang sudah selesai -- state dicatat per NAMA, jadi ganti nama = jalan ulang.
+
+Verifikasi yang sudah dilakukan (7 jalur diuji, bukan diasumsikan): step gagal MENGHENTIKAN queue dan
+melaporkannya (chain lama pakai `set -e` dan TIDAK berhenti -- 3 run gagal, lapor sukses); resume
+melewati yang selesai dan mengulang yang gagal; `stop` dihormati di tengah jalan; stopfile basi TIDAK
+memblokir sesi baru; step GPU benar-benar menunggu trainer yang jalan; `ONLY=N` membatasi.
+
+Log: `logs_queue/master_queue.log` (queue), `logs_queue/step_<nama>.log` (per step).
+
+### SEDANG JALAN — tidak perlu tindakan
+| # | item | di mana | status |
+|---|---|---|---|
+| 0a | Arm B-matched, 3 seed (6k CD + 14k BN stratified) | GPU | epoch 6, seed 2021/3 |
+| 0b | pose sensitivity n=300 (eksperimen kunci) | CPU | **SELESAI** -- hasil di bawah |
+| 0c | queue master: 5 run A1e-beta + 3 analisis | GPU/CPU, antre | menunggu 0a |
+
+Hasil 0b (n=300, CI target-clustered): faktorial strip -- antarmuka UTUH 1.2451 pK [1.1021, 1.3694],
+antarmuka HANCUR 1.0576 [0.8953, 1.2259], separuh acak 1.2686 [1.1575, 1.3811]. CI tumpang tindih, jadi
+isi antarmuka TIDAK berpengaruh; yang berpengaruh jumlah atomnya. Menghancurkan pose (geser 8 A keluar
+pocket) hanya 0.2782 pK, dose-response monoton 0.021/0.042/0.086/0.160/0.278 untuk 0.5/1/2/4/8 A.
+**Model 4,5x lebih sensitif ke BERAPA BANYAK atom protein daripada ke DI MANA ligannya.** Pilot n=10
+terkonfirmasi di n=300.
+
+Pantau: `bash scripts/master_queue.sh status`
+
+---
+
+### 1. KONTROL POSITIF (RQ2) — PRIORITAS TERTINGGI
+**Apa:** ulangi ablasi guidance dengan **Vina atau skor PLIP** sebagai pemandu, pada generator dan pocket
+yang SAMA. Bukan surrogate terlatih.
+**Mengapa ini nomor satu:** tesis belum punya kontrol positif. Semua rute yang diuji gagal, jadi penguji
+bisa bertanya "memangnya harness-mu bisa mendeteksi keberhasilan?" dan jawabannya belum ada. Thomas et
+al. 2021 menunjukkan guidance docking BERHASIL untuk REINVENT, jadi ada alasan kuat berharap positif.
+**Hasil apa pun menentukan:** membaik -> harness valid + M1 (surrogate tidak baca antarmuka) terkonfirmasi
+sebagai sebab. Gagal juga -> penjelasan pindah ke M2/M3, sama berharganya.
+**Biaya:** GPU, sampling generatif. Perlu di-scope dulu (berapa pocket, berapa molekul) sebelum dilepas.
+**Prasyarat:** 0a selesai. Mulai dengan menulis rencana pra-registrasi, BUKAN langsung lari.
+
+### 2. PLIP typed interactions sebagai blok ke-8 tangga representasi
+**Apa:** hbond / hidrofobik / pi-stacking / jembatan garam / halogen sebagai fitur, masuk
+`representation_ladder.py`. Infrastruktur sudah ada: `guidance/track_e/core.py` `PlipLabelStore`.
+**Mengapa:** ECIF (pasangan elemen x shell jarak) itu notasi interaksi yang kasar. Kalau interaksi
+BERTIPE pun tidak menambah apa-apa di atas marginal, klaim redundansi jadi sangat kuat. Kalau menambah,
+itu hasil POSITIF dan ia menamai perbaikannya.
+**Biaya:** CPU saja, bisa paralel dengan GPU. Setengah hari.
+
+### 3. Coverage KONDISIONAL conformal per novelty tier + famili protein
+**Apa:** A1d membuktikan conformal satu-satunya UQ yang valid — tapi itu coverage MARGINAL. Uji apakah
+coverage tetap valid per tier Tanimoto (tier sudah ada) dan per famili protein.
+**Mengapa:** Jeliazkova et al. 2026 memprediksi coverage TURUN di kimia novel; Gibbs et al. 2023 memberi
+kerangkanya. Interval yang valid secara marginal tapi diam-diam under-cover justru pada senyawa novel
+yang dipedulikan praktisi adalah temuan yang layak dilaporkan. Ini perpanjangan paling menjanjikan dari
+satu hasil positif kita.
+**Biaya:** CPU saja. Setengah hari.
+
+### 4. y-randomisasi DALAM-TARGET untuk EGNN
+**Apa:** permutasi label dalam target, latih ulang EGNN, ukur R2.
+**Mengapa:** prior kelas 0.2468 saat ini hanya di-fit untuk pipeline DESKRIPTOR. Supaya jadi kontrol
+per-arsitektur (bukan taksiran kanal chemotype), EGNN-nya harus dilatih ulang di label terpermutasi.
+Tanpa ini, tabel "di luar prior kelas" punya caveat yang harus selalu dinyatakan.
+**Biaya:** GPU, 1 run (~2.5 jam). Murah, dan menutup caveat di temuan terkuat kita.
+
+### 5. Metrik activity-cliff gaya MoleculeACE
+**Apa:** identifikasi pasangan activity cliff di test set, ukur performa khusus di sana.
+**Mengapa:** pola sudah terlihat di novelty tier (ligand-only kolaps di similarity tinggi) tapi belum
+diukur sebagai metrik. van Tilborg et al. 2022 (314 sitasi) menyediakan definisi dan platformnya, dan
+temuan mereka (deskriptor > deep learning pada cliff) persis pola kita.
+**Biaya:** CPU saja. Setengah hari.
+
+### 6. Analisis matched molecular pair (MMP)
+**Apa:** pasangan yang beda satu substituen; apakah model menangkap arah perubahan afinitasnya.
+**Mengapa:** cara paling ketat menguji SAR LOKAL, dan pelengkap langsung dekomposisi prior kelas: prior
+kelas menangkap antar-seri, MMP menguji dalam-seri. Kwapien et al. 2022 menunjukkan data aditif paling
+mudah dan deep learning bukan pengecualian.
+**Biaya:** CPU saja. Sehari.
+
+### 7. Stratifikasi error per famili protein / kelas target
+**Apa:** kinase vs protease vs nuclear receptor, dsb. Nama entry UniProt sudah ada di anchor table.
+**Mengapa:** mengubah satu angka gabungan jadi angka yang bisa dipakai; menunjukkan DI MANA gagalnya.
+**Biaya:** CPU saja. Beberapa jam.
+
+### 8. Arm A + Arm C (produksi)
+**Apa:** Arm A (20.000 CD, 3 seed). Arm C produksi, WAJIB pakai `bindingnet_v1_clean.csv`.
+**Catatan:** pertanyaannya sudah diperbaiki — bukan "apakah R2 naik" tapi "apakah data BN menutup jarak
+ke model ligand-only, dan apakah ia melampaui prior kelas 0.2468". Baseline ligand-only jadi komparator
+WAJIB tiap arm.
+**Prasyarat:** aturan pra-registrasi Arm B (lihat bagian kebocoran senyawa) sudah dievaluasi dulu.
+**Biaya:** GPU, ~16 jam per arm.
+
+### 9. Penulisan tesis (satu rebuild di akhir, jangan tiap perubahan)
+Urutan: (a) Bab IV seksi baru: audit sumber informasi + noise ceiling + dekomposisi prior kelas;
+(b) Bab X revisi kesimpulan (1) — argumen "kegagalan bukan karena akurasi rendah: Pearson 0.58-0.65"
+sekarang BOCOR, karena model tanpa input protein mencapai korelasi yang sama; (c) abstrak satu kalimat;
+(d) limitasi: gray zone 50-90% identitas (Mattsson et al. bilang identitas sekuens tidak cukup sampai
+0.2), split per-target lebih mudah dari leave-superfamily-out, overlap scaffold 40,1%, label campuran
+Kd/Ki/IC50 yang komposisinya bergeser antar split; (e) sitasi wajib yang hilang: Volkov 2022, Mattsson
+2026, Graber 2025, Bret 2026, van Tilborg 2022, Deng 2023, Hernandez-Garrido 2023, Landrum 2024,
+Rucker 2007, Seitzer 2022, Wallace 2023, Gao 2022, Thomas 2021, PLIP; LALU rebuild PDF/DOCX SEKALI.
+
+### 10. RQ4 — conformal-gated guidance (prediksi pra-registrasi)
+**Apa:** terapkan gradien guidance / terima kandidat rejection-sampling HANYA di tempat interval conformal
+surrogate cukup sempit.
+**Mengapa menarik:** kombinasinya untuk SBDD tampak kosong (komponennya ada terpisah: conformal untuk
+afinitas, AD-gating anti reward-hacking Yoshizawa 2025, guidance-strength bergantung confidence Azangulov
+2025). **Tulis prediksinya DULU:** M3 memprediksi membantu rute rejection; M1 memprediksi TIDAK membantu
+rute gradien. Satu eksperimen yang mengkonfirmasi satu dan membantah satunya = bukti kuat untuk seluruh
+dekomposisi.
+**Biaya:** GPU. Scope dulu.
+
+### 11. RQ3 — DOODL / SVDD (prediksi paling tajam)
+**Apa:** gradien lewat denoiser (DOODL, Wallace et al. 2023) atau guidance tanpa turunan (SVDD, Li et al.
+2024) dengan surrogate yang ADA.
+**Mengapa terakhir:** paling mahal, dan **M1 memprediksi TIDAK akan membantu** padahal literatur
+mengharapkan sebaliknya. Nilainya justru dari prediksi itu — jadi pra-registrasikan sebelum jalan.
+**Biaya:** GPU, implementasi besar.
+
+---
+
+### TERBLOKIR / RENDAH
+* konservasi sekuens & fitur MSA residu pocket
+* deskriptor druggability pocket (butuh fpocket/CASTp)
+* kurasi "maximal curation" Landrum untuk label BindingNet Arm B/C
+* struktur LP-PDBBind (lisensi), Binding MOAD (unduh manual)
+
+### INFRASTRUKTUR — SELESAI, tidak perlu disentuh
+7 suite / 91 tes (`python guidance/run_tests.py`), pre-commit hook terpasang, agregator multi-seed dengan
+guard daya, runner antrean ber-guard termal, 4 filter kebocoran + guard test-nya.
+
+
+## KONSOLIDASI: SEMUA TEMUAN, NOVELTY, DAN KESALAHAN (per 2026-10-10)
+
+Daftar lengkap dalam satu tempat. Setiap angka punya skrip dan file hasil di repo ini. Detail dan
+sitasi lengkap ada di `guidance/RESEARCH_PROGRAM.md` (1.241 baris, Part I-VIII).
+
+---
+
+### A. TEMUAN EMPIRIS — pengukuran kita sendiri
+
+**A1. Ketidakpastian (A1-A1g)**
+1. **5 dari 6 metode sigma point-wise GAGAL** ketiga uji pra-registrasi: MC dropout, deep ensemble,
+   heteroscedastic Gaussian NLL, deep evidential, evidential terkoreksi. Hanya **split-conformal** yang
+   punya coverage valid.
+2. **Kegagalan replikasi evidential**: p=0.042 di satu seed, hilang di tiga seed. sd antar-seed R²
+   0.0377 melebihi efek yang diklaim. Ini kandidat kontribusi metodologis.
+3. **Ternary QAT (1.58-bit, TWN+STE) tak terbedakan dari FP32**: test R² 0.3437 (sd 0.0377, n=3) vs
+   0.3420. Model yang bobotnya bisa direduksi ke tiga nilai tanpa kerugian terukur bukan
+   dibatasi kapasitas.
+
+**A2. Audit sumber informasi (tangga representasi)**
+4. **desc_ridge (14 deskriptor RDKit, TANPA protein) = 0.3531**, vs EGNN Stage 0 0.3420 / 3-seed 0.3437.
+5. **heavy_atoms (SATU fitur, jumlah atom berat) = 0.3069** — 90% performa model struktur.
+6. **pocket-only (38 deskriptor, TANPA ligan, target tak terlihat) = 0.2889.**
+7. **ligand+pocket vs ligand: SERI.** vs pocket: seri (setelah BH). Kedua sumber **saling redundan**.
+8. **ecif_raw 0.3701 vs ecif_norm 0.2077, dR² +0.1625, q=0.013 SIGNIFIKAN** — hitungan kontak mentah
+   bekerja terutama dengan menyandikan ulang ukuran ligan. Kontrol konfound yang literatur lewatkan.
+9. **Klaim CORDIAL (Brown 2025, PNAS) TIDAK terdukung di split kita**: ecif_norm seri dengan kedua
+   marginal.
+10. **Uji berpasangan + BH atas 40 pasangan: 12 menang struktur, 28 seri, 0 menang ligand-only.**
+    Tiga "kemenangan" marginal (p=0.039/0.044/0.049) **ditarik BH** (q=0.12-0.13).
+
+**A3. Eksperimen kunci: sensitivitas pose (n=300, CI klaster-target)**
+11. **Desain faktorial** — ketiganya menghapus TEPAT 50% atom protein:
+    | manipulasi | antarmuka | \|Δpred\| |
+    |---|---|---|
+    | simpan separuh terdekat | **utuh** | 1.2451 [1.1021, 1.3694] |
+    | simpan separuh terjauh | **hancur** | 1.0576 [0.8953, 1.2259] |
+    | simpan separuh acak | sebagian | 1.2686 [1.1575, 1.3811] |
+    | tukar protein lain | diganti | 0.947 |
+    | geser ligan 8 A keluar pocket | hancur | **0.2782** |
+    **Menghancurkan kontak asli LEBIH MURAH (-15%) daripada menghapus atom yang tak menyentuh apa pun.**
+    CI tumpang tindih -> isi antarmuka tidak berpengaruh. **Model ~4,5x lebih sensitif ke BERAPA BANYAK
+    atom protein daripada ke DI MANA ligannya.**
+12. Dose-response translasi monoton: 0.021/0.042/0.086/0.160/0.278 pK untuk 0.5/1/2/4/8 A.
+    Hanya 0.28x RMSE model sendiri.
+
+**A4. Kualitas split (semuanya positif untuk kita)**
+13. **Tanimoto 1-NN GAGAL berat** (R² -0.9243); struktur mengalahkannya q=0.002 di SEMUA pasangan.
+    Split kita **tidak memberi hadiah untuk menghafal** ligan training terdekat.
+14. **64% ligan test di bawah Tanimoto 0.35** ke training (median 0.316, p0 0.186, p90 0.561).
+15. **40,1% molekul test di scaffold generik yang muncul di training** (hanya 1.779 scaffold generik di
+    46.964 ligan) -- "held-out target" BUKAN "held-out scaffold". Harus didisklos.
+16. **Familiaritas scaffold TIDAK membeli akurasi**: diukur RMSE, **0 dari 13 model lebih buruk** di
+    scaffold tak-terlihat, 3 justru lebih baik.
+17. y-randomisasi global R² +0.0037 (max +0.0141) -> desc_ridge 0.3531 **LOLOS** kontrol
+    chance-correlation dengan selisih +0.3390.
+
+**A5. Plafon, dekomposisi, dan daya**
+18. **Plafon derau label R² ~0.55-0.60** (dari Pearson 0.76 pengukuran-ulang). Model terbaik kita
+    (ensemble 0.4072) = **70,5% dari yang dapat dicapai**, RMSE 1.22x lantai derau.
+19. **PRIOR TINGKAT KELAS = R² 0.2468** (sd 0.0019) dari permutasi dalam-target. **70% performa model
+    buta-protein terbaik tidak butuh SAR dalam-target sama sekali.** Titik nol yang benar 0.247, bukan 0.
+20. Di luar prior kelas: ensemble +0.1604 (48,5% headroom) vs desc_ridge +0.1063 (32,1%) vs vina
+    +0.0133 (4,0%). **Diukur dari titik nol yang benar, model struktur terpisah lebih jelas.**
+21. **ANALISIS DAYA: jendela 0.2245 R² (lantai 0.3531 -> plafon 0.5776) vs lebar CI rata-rata 0.3871.
+    Rasio 0.58 -- lebih sempit dari SATU interval kepercayaan.** Desain ini tidak bisa menentukan posisi
+    model di dalamnya, dan begitu juga paper yang melaporkan gain 0.02-0.05 R² di data sejenis.
+22. Label campuran **Kd 37% / IC50 37% / Ki 26%**, dan komposisinya **BERGESER** antar split (train Kd
+    41%/IC50 33%; test IC50 46%/Kd 26%). IC50 paling bergantung assay dan over-represented di test.
+
+**A6. Kebocoran yang ditemukan**
+23. **Kebocoran sekuens**: template `1fm9` 100% identik dengan P19793 (RXRA_HUMAN, target test) --
+    lolos dua filter berbasis ID. 19 sekuens / 28 template / 265 baris dibuang.
+24. **Kebocoran tingkat senyawa** (sisi ligan, tiga filter sebelumnya semua sisi-protein):
+    **0,34% baris training (423/124.973) TAPI 10,12% record evaluasi (1.814/17.924)**, 8,6% ligan
+    val/test distinct. Kebocoran sama, diukur dua arah, **selisih 30x**.
+25. Eksposur AKTUAL Arm B per seed (replikasi sampling bit-per-bit): 43/58/54 baris = **3,06% / 4,02% /
+    4,65% record evaluasi**.
+26. Filter senyawa diterapkan: 124.973 -> **124.550 baris** (buang 423, 123 senyawa).
+
+**A7. Temuan operasional**
+27. **Arm 0 (AMP bf16 + bs=4) GAGAL gate**: R² 0.299/0.079 vs baseline 0.394. Diagnosis: presisi bf16 +
+    4x lebih sedikit step optimizer per epoch sementara patience menghitung epoch.
+28. **Hipotesis batch-size saya dibantah pengukuran**: throughput datar, OOM di bs=8.
+29. **CPU adalah bottleneck termal, bukan GPU**: 87-94°C vs GPU 72°C, dengan load average 1,3 dari 20
+    thread. Tjmax i7-12700H 100°C. Idle CPU terukur 45-73°C (jadi ambang 80°C realistis).
+30. Arm B seed 2021: 13 epoch, best val 2.0637 @ epoch 8 (patience reset karena epoch 8 membaik).
+
+---
+
+### B. NOVELTY -- BERJENJANG, JUJUR, setelah 8 ronde pencarian
+
+**TIER 1 -- bisa dipertahankan sebagai BARU (5 item)**
+1. **Ablasi faktorial antarmuka-vs-bulk.** Tiga penghapusan 50% atom protein, setara jumlah, beda hanya
+   isi antarmuka. Metode atribusi (PointVS, SME, Shapley) bilang atom MANA yang penting; baseline
+   bias-only (Durant 2023) bilang model tidak lebih baik dari bias; **tidak satu pun memisahkan JUMLAH
+   dari IDENTITAS.** Tidak ditemukan di delapan ronde pencarian.
+2. **Dekomposisi prior kelas** via y-randomisasi dalam-target. Titik nol yang benar 0.247, bukan 0.
+3. **Analisis daya level-tugas.** Jendela lebih sempit dari satu CI; dikorroborasi ABFEP R²=0.55 dan
+   punya mekanisme fisik (kompensasi entalpi-entropi).
+4. **Sambungan dari audit informasi ke kegagalan gradien guidance** -- subjek tesis sebenarnya, dan
+   tidak satu pun paper yang men-scoop bagian lain membahasnya.
+5. **Ternary (1.58-bit) QAT pada GNN afinitas 3D.**
+
+**TIER 2 -- replikasi + rigor. Berharga, JANGAN sebut baru.**
+Temuan Volkov di split leakage-controlled target-disjoint, diperluas dengan kedua marginal dan
+redundansinya; deskriptor menyamai deep learning; model afinitas tak peduli identitas protein.
+
+**TIER 3 -- BUKAN novel. Sitasi lalu lanjut.**
+Perbandingan metode UQ (Rayka 2025, lima metode di LP-PDBBind). Conformal untuk afinitas (Parks 2020;
+Rayka 2024). **Baseline ligand-only/bias-only menyamai MLSF berbasis struktur** (Volkov 2022;
+**Durant 2023 + ToolBoxSF**; Boyles 2021; Scantlebury 2023; Sieg 2019 -- LIMA demonstrasi independen).
+Conditioning pada interaction profile alih-alih guidance (ShEPhERD-2; FLOWR.MULTI). Bias benchmark dan
+overfitting (Wallach 2017; Chen 2019; Kapoor 2023).
+
+---
+
+### C. SCOPING YANG DIPAKSA LITERATUR -- masuk ABSTRAK, bukan lampiran
+
+1. **Pose kita DOCKED, bukan kristal** (terverifikasi: `_lig_tt_min_0.sdf`). Boyles et al. 2021
+   mengukur efeknya dan **memprediksi temuan utama kita**: pada pose docked kanal struktural melemah
+   dan fitur ligan mengambil alih. Ablasi faktorial tetap berdiri; klaim perbandingannya harus di-scope.
+2. **Ligand efficiency diperdebatkan secara matematis** (Kenny 2018: "tidak bermakna secara fisis").
+   Track C bersandar padanya. **Rumuskan ulang pada atom berat (+12) dan PoseBusters (-29 pp)** yang
+   tanpa normalisasi dan tetap memberatkan.
+3. **Plafon adalah RENTANG, bukan angka tunggal.** Landrum 2024 (pesimis) vs Kalliokoski 2013 (311
+   sitasi, lebih ringan: mixing "hanya menambah derau moderat"). **Saya menyitir selektif.**
+4. **Split per-target lebih mudah** dari leave-superfamily-out (standar CORDIAL) dan dari split
+   kemiripan-pocket (EPoCS).
+5. **Afinitas kesetimbangan mungkin objektif yang SALAH.** Residence time / koff berkorelasi dengan
+   efikasi lebih baik (Wang 2022; Bernetti 2019, 159 sitasi; Liu 2026).
+6. Eksponen scaling kimia 0.17-0.26 -> pertumbuhan data tidak bisa menutup jarak.
+7. Objektif terskalarisasi menyembunyikan trade-off; Pareto alternatif bernama.
+8. Harness kita bespoke; CBGBench/MolScore standar komparabilitas bidangnya.
+
+---
+
+### D. KESALAHAN SAYA SENDIRI DALAM SESI INI -- dicatat supaya tidak terulang
+
+1. **QAT: salah dua kali pada pelajaran yang sama.** n=1 -> "menyamai FP32"; n=2 -> "biaya sistematis
+   ~0.02". Keduanya dibantah seed 2023 (0.3872). n=2 tidak cukup ketika sd antar-seed 0.0377.
+2. **Audit scaffold: draf pertama menyimpulkan KEBALIKANNYA.** "Familiaritas scaffold menggelembungkan
+   performa" -- artefak range restriction (varians label 1,77x). Yang membongkarnya: **baseline Vina**
+   (tak terlatih) menunjukkan kolaps yang sama.
+3. **Menyitir selektif pada derau label** -- hanya Landrum (pesimis), bukan Kalliokoski (311 sitasi,
+   lebih ringan), karena yang pertama mendukung argumen saya.
+4. **Tiga kali mematikan shell sendiri** dengan `pkill`/`pgrep -f` yang polanya ada di command line
+   shell itu sendiri (exit 144). Kerusakan nol tiap kali, tapi dua patch hilang.
+5. **Satu proses orphan lolos** dari pembersihan -- gerbang termal sisa yang akan menjalankan step di
+   luar urutan tanpa dicatat queue. Ketangkap saat verifikasi, bukan saat pembersihan.
+6. **Fixture PDB saya sendiri salah kolom** (lupa field altLoc di indeks 16) -- tes yang saya tulis
+   untuk menjaga keselarasan kolom gagal karena alat ukurnya tidak selaras.
+7. **Toleransi tes salah** (1e-9 untuk matmul float32) -- kodenya benar, tesnya salah.
+8. **Hipotesis batch-size 6x dibantah pengukuran sendiri.**
+9. **Terlalu cepat meremehkan MLflow** -- Anda mendorong balik dan Anda benar.
+
+**Pelajaran operasional:** jangan percaya ingatan saya soal apa yang hidup;
+`bash scripts/master_queue.sh status` membacanya dari keadaan nyata.
+
+---
+
+### E. INFRASTRUKTUR YANG DIBANGUN -- selesai, jangan disentuh
+
+* **7 suite, 91 tes** (`python guidance/run_tests.py`), pre-commit hook terpasang, jalur FAIL/SKIP diuji
+* **4 filter kebocoran** (PDB ID -> UniProt -> identitas sekuens 90% -> skeleton InChIKey ligan) + guard
+  test yang menghitung ULANG set eksklusi dari audit, bukan mempercayai summary
+* **Queue master ber-gerbang termal** (GPU <55°C DAN CPU <80°C bertahan 300s, istirahat 20 menit,
+  resumable, berhenti di kegagalan, timeout gerbang 4 jam) -- 7 jalur kontrol diuji
+* **Agregator multi-seed** dengan minimum detectable difference; menolak memberi verdict kalau
+  underpowered; sd di n=1 dilaporkan `undefined` bukan 0.0000
+* **Modul cheminformatics**: chem_data, ligand_only_baseline, compare_vs_structure, novelty_tiers,
+  scaffold_audit, pocket_features, representation_ladder, noise_ceiling
+* **pose_sensitivity.py** -- eksperimen kunci, desain faktorial
+* **beta-NLL** (`--beta_nll`) + 14 tes yang memverifikasi hukum skala lewat autograd dan detachment
+  yang gagal ke DUA arah kesalahan
+* `guidance/RESEARCH_PROGRAM.md` -- 1.241 baris, Part I-VIII
+
+---
+
+### F. ENAM ITEM MURAH BERNILAI TINGGI dari rabbit hole (tambahan di luar 11 item utama)
+
+| # | item | biaya | mengapa |
+|---|---|---|---|
+| F1 | Rumuskan ulang Track C pada atom berat + PoseBusters, turunkan LE | teks saja | menutup kerentanan nyata (Kenny 2018) |
+| F2 | Hitung **AVE bias** pada split LP | CPU, jam | klaim POSITIF pertama tentang kualitas split |
+| F3 | Terapkan offset Ki->IC50 Kalliokoski (faktor 2) | satu baris | 311 sitasi; plafon naik |
+| F4 | Laporkan plafon sebagai rentang dengan kedua sumber | teks saja | memperbaiki sitiran selektif saya |
+| F5 | Isi model info sheet Kapoor + checklist Artrith sebagai lampiran | jam | rigor kita jadi bisa DIVERIFIKASI pembaca |
+| F6 | Jalankan **ToolBoxSF** (Durant 2023) di data kita | CPU, hari | replikasi pakai tool bidangnya sendiri |
+
+#### STATUS F1-F6 per 2026-10-10 (dikerjakan)
+
+| # | status | hasil |
+|---|---|---|
+| **F1** | **draf siap** | `guidance/thesis/TRACKC_REFRAMING_DRAFT.md` -- teks pengganti untuk abstrak, bab, dan limitasi. Belum diterapkan ke bab karena rebuild dilakukan sekali di akhir. Kesimpulan Track C BERTAHAN setelah dirumuskan ulang pada +12 atom berat dan -29 pp PoseBusters. |
+| **F2** | **SELESAI (pilot) + run penuh di-queue** | `guidance/cheminformatics/ave_bias.py`. **AVE split kita +0.046** (mean 4 ambang pK, CI mengecualikan nol) vs **random ligand split +1.044** -- **23x lebih sedikit redundansi**. Mean NN similarity ke kelas sendiri 0.29-0.31 vs **0.934** di random split. Redundansi ringan SISA, bukan nol; dilaporkan apa adanya. Klaim POSITIF pertama kita tentang kualitas split. |
+| **F3** | **SELESAI** | `guidance/cheminformatics/label_harmonisation.py`. Tipe pengukuran direcover per kompleks lewat PDB-id sumber ligan (**coverage 99,7%**), lalu IC50/EC50 dinaikkan log10(2)=0.301 ke sumbu ekuivalen Ki/Kd (Kalliokoski 2013, 311 sitasi; cocok dengan Cheng-Prusoff IC50=2Ki di [S]=Km). **Hasil: kesimpulan BERTAHAN** -- 0 dari 5 model struktur mengalahkan desc_ridge dengan CI berpasangan mengecualikan nol (terdekat ensemble p=0.075, s2023 p=0.091). Urutan sort bergeser di 6 dari 13 posisi tapi semua pergeseran JAUH lebih kecil dari satu CI, jadi itu reorder di antara model yang sudah seri -- bukan temuan. Arah pergeserannya justru **menguntungkan kita** (ligan turun -0.0101, ensemble naik +0.0085), yang berarti campuran tak terkoreksi tadinya **menyanjung model ligand-only**. |
+| **F4** | **SELESAI** | `noise_ceiling.py` sekarang melaporkan plafon sebagai **RENTANG R² ~0.55-0.65** dengan KEDUA sisi literatur disebut (Landrum pesimis vs Kalliokoski lebih ringan) plus jangkar fisika ABFEP R²=0.55. Memperbaiki sitiran selektif saya. |
+| **F5** | **SELESAI** | `guidance/thesis/REPORTING_CHECKLIST.md` -- model info sheet + checklist 10 bagian, setiap "ya" menyebut skrip yang mengimplementasikannya sehingga tiap baris bisa disalahkan. Mengikuti Kapoor & Narayanan 2023 (1.201 sitasi), Artrith 2021 (419 sitasi), temuan Lu 2022 (model terpasang mendokumentasikan median 39% item). |
+| **F6** | **belum** | ToolBoxSF (Durant 2023) butuh instalasi paket eksternal; belum dicoba supaya tidak mengubah env `drugdisc` saat training jalan. Perintahnya dicatat untuk nanti. |
+
+**Juga di-queue:** `ave_bias` (skala penuh, 46.964 fingerprint training, B=2000) dan
+`noise_ceiling_refresh`. Keduanya CPU; diantrikan bukan dijalankan inline karena CPU adalah bottleneck
+termal mesin ini (92 C saat training jalan) dan disiplin queue-nya harus dipatuhi juga oleh saya.
+
+---
+
 ## CARA LANJUT SETELAH LAPTOP DI-SHUTDOWN (ditulis 2026-10-09 06:47, untuk sesi berikutnya)
 Semua training di project ini resumable: `last.pt` disimpan SETIAP epoch validasi, jadi shutdown paling buruk cuma kehilangan epoch yang sedang berjalan. Semua perintah dijalankan dari `~/research/drug-discovery/targetdiff`, pakai `PYTHONPATH=.` dan python env `~/miniconda3/envs/drugdisc/bin/python`.
 
@@ -116,6 +563,49 @@ PYTHONPATH=. ~/miniconda3/envs/drugdisc/bin/python guidance/surrogate_data/train
 - Estimasi total: **~31 jam kalau batch_size=8 muat, ~189 jam kalau tetap batch_size=1.** Selisih 6x itu
   sebabnya tes batch size didahulukan.
 
+## CONFOUND PERGESERAN DISTRIBUSI LABEL BN (2026-10-10 dini hari) — DITEMUKAN SEBELUM MERUSAK ARM B
+Audit kualitas data BN sebelum menafsirkan Arm B. **Label BN bergeser sistematis dari CrossDocked:**
+
+| | n | mean | sd | p1 | p99 |
+|---|---|---|---|---|---|
+| CD train | 46.964 | 6,80 | 1,80 | 2,47 | 10,64 |
+| CD test | 11.855 | 6,79 | 1,65 | 2,30 | 10,15 |
+| BN final | 122.721 | **7,12** | **1,37** | **3,62** | 10,00 |
+
+Bergeser **+0,32 pK**, sebaran **lebih sempit**, dan **ekor binder-lemah terpotong** (p1 3,62 vs 2,30). KS D=0,099 (p=7e-93) — sekitar **2,2x** variasi alami CD-train vs CD-test (D=0,045). Penyebab: bias publikasi ChEMBL (senyawa aktif dilaporkan, yang lemah tidak).
+
+**Kenapa ini membatalkan tafsiran Arm B:** R2 itu variance-explained. Kalau 14.000 dari 20.000 baris training sebarannya sempit dan tanpa ekor bawah, model tidak pernah belajar memprediksi pK rendah yang ADA di test set.
+
+**Dan Arm B versi random SUDAH membuktikan itu dalam 2 epoch** (sebelum saya hentikan): val R2 0,230 / 0,226, tapi yang menentukan — **std prediksi cuma 0,531 lalu 0,411**, padahal sd label test 1,65. Model memprediksi nyaris konstan ~7,0 (mean BN). Itu variance collapse, bukan "data BN jelek". Run itu diarsipkan sebagai `*_RANDOM_aborted` — dihentikan di 1 jam 15 menit, bukan setelah 16 jam.
+
+**Mitigasi: stratified sampling** (`--bn_match_pk`). Sampel BN per-bin pK supaya histogramnya cocok dengan CD. Feasible dengan longgar — bin tersempit (pK 0-4) punya 2.032 baris untuk kebutuhan 780; maksimum subsample yang bisa match persis = 36.443 baris. Hasil: BN jadi **mean 6,82 / sd 1,76** (acuan CD 6,80/1,80).
+
+**Arm B yang berlaku sekarang adalah versi matched** (`armBmatch`), karena dia menguji kualitas data BN di pijakan yang adil. Versi random menjawab pertanyaan praktis berbeda ("kalau asal dituang, membantu?") — jawabannya sudah diketahui kualitatif (variance collapse), tidak perlu 16 jam untuk mengukurnya lagi.
+
+## AUDIT LEAKAGE BERBASIS SEQUENCE IDENTITY (2026-10-09 malam) — MENEMUKAN LEAKAGE NYATA
+`guidance/surrogate_data/leakage_audit.py`. Dibangun karena **semua filter leakage kita sebelumnya berbasis ID** (PDB ID reseptor, lalu ChEMBL target -> UniProt accession), dan itu punya lubang: dua UniProt entry yang BERBEDA bisa protein yang nyaris identik. Standar bidang ini justru sequence identity — persis kriteria "LeakProof" milik LP-PDBBind sendiri (`data/lp_pdbbind/LP_PDBBind.csv` punya kolom `seq` dan `new_split`).
+
+Metode: sekuens UniProt penuh untuk 176 accession target val+test (di-fetch + cache) vs SEQRES semua chain dari 5.786 template BindingNet yang benar-benar dipakai (4.123 sekuens unik). Aligner match/mismatch (match=1, mismatch=0, affine gap, mode local) sehingga SKOR = jumlah residu identik; identity = skor / min(len). Normalisasi min-length dipilih karena konservatif: chain training pendek yang jadi subsekuens sempurna dari protein test tetap terhitung 100%. Biaya: 0,3 ms/pasangan, ~4 menit total.
+
+**HASIL — filter ID memang meloloskan leakage nyata:**
+
+| | unique seq | template | baris training |
+|---|---|---|---|
+| **>=90% identitas (LEAKAGE)** | 19 | 28 | **265** |
+| 50-90% (satu famili, zona abu) | 287 | 383 | 10.435 |
+
+Distribusi: median 20,8%, p90 47,3%, max 100,0%.
+
+**Kasus paling telak: `1fm9` chain A = 100,0% identik dengan P19793 (RXRA_HUMAN), salah satu dari 127 target test kita.** 1FM9 adalah kristal heterodimer PPAR-gamma/RXR-alpha, jadi dia membawa protein test — tapi PDB ID-nya bukan `1rdt` maupun `3a9e` (dua yang ditangkap filter ID), jadi **lolos begitu saja**. Ternyata ada satu keluarga struktur heterodimer nuclear-receptor (1rdt, 3a9e, 1fm9, 3h0a, ...) dan ID-matching cuma menangkap dua. Pelanggar lain: `1iep:A` 98,2% ke P00519 (ABL1), `3uqf/3svv/2qq7/2hwo` 92-96% ke P12931 (SRC), `2ya6:A` 98,9% ke P62576.
+Diverifikasi bukan artefak normalisasi: `1fm9:A` 232 residu vs P19793 462 residu -> 232 residu cocok 100% memang subsekuens sempurna (konstruk sebagian dari protein yang sama).
+
+**Kebijakan yang diterapkan** (`apply_sequence_leakage_filter.py`, dan di-enforce ulang di dalam `train_surrogate_arm.py` supaya training tidak bisa memakai index yang belum difilter):
+- **>=90% -> HARD EXCLUDE.** 125.238 -> 124.973 baris (-265, 0,21%), template 5.786 -> 5.758.
+- **50-90% -> DIPERTAHANKAN tapi WAJIB DIUNGKAP di thesis sebagai limitasi.** Ini homolog satu famili (mis. kinase lain terhadap target test kinase), bukan protein yang sama; generalisasi antar famili justru premis normal model seperti ini, dan membuang 10.435 baris (8,3%) tanpa argumen leakage yang jelas melemahkan data. Dilaporkan, bukan disembunyikan.
+- Pool training BN final setelah leakage + censored: **122.721 baris**.
+
+Hasil: `leakage_audit_report.json`, `leakage_audit_report_per_sequence.csv`, `bindingnet_v1_final.csv`, `bindingnet_v1_final_summary.json`.
+
 ## Ekstraksi pocket10 BindingNet (2026-10-09 sore)
 `guidance/surrogate_data/extract_bindingnet_pockets.py` — menghasilkan layout on-disk yang SAMA dengan pocket10 CrossDocked (dir pocket PDB + ligand SDF + `index.pkl`), supaya `PocketLigandPairDataset` bisa memprosesnya ke LMDB tanpa loader baru dan featurization yang sudah tervalidasi dipakai apa adanya. Output: `data/bindingnet_pocket10/` + `labels.csv` (idx -> pk).
 
@@ -155,6 +645,26 @@ Throughput **datar** terhadap batch size sementara VRAM naik linear sampai OOM d
 **Konfigurasi arm: `--batch_size 4 --amp`.** Biaya di 16,0 rows/sec (3 seed, ~10 epoch): Arm 0 = **4,1 jam**; Arm A/B @46.964 = **25,5 jam masing-masing**; @20.000 = 11,4 jam; Arm C = 30 jam (1 seed). Total 0+A+B = **55 jam** (27 jam kalau A/B dikecilkan) — bukan 31 jam seperti estimasi optimistis saya.
 
 **AMP mengubah numerik**, jadi **Arm 0 merangkap cek bahwa optimasi ini tidak merusak akurasi** — kalau Arm 0 gagal mereproduksi R2~0,34, masalahnya di AMP/batch bukan di data, dan semua arm sesudahnya tidak bisa dipercaya.
+
+### HASIL: Arm 0 MENGGAGALKAN GERBANG — regime bs=4+AMP DITOLAK (2026-10-09 malam)
+Dua seed, keduanya jauh di bawah baseline dan tidak stabil (vs run Stage 0 asli bs=1/no-AMP: best val R2 **0,394** di epoch 4, test 0,342, jalan 9 epoch):
+
+| seed | best val R2 | best di epoch | pola |
+|---|---|---|---|
+| 2021 | 0,299 | 1 | osilasi 0,299 / -0,656 / 0,295 / -0,459 / 0,213 / -0,085, early-stop epoch 6 |
+| 2022 | 0,079 | 3 | osilasi -0,337 / -0,813 / 0,079 / -0,008 |
+
+Seed 2023 dihentikan manual — dua seed sudah cukup, tidak perlu memanaskan laptop untuk konfigurasi yang sudah ditolak.
+
+**Dua sebab yang menumpuk:**
+1. **Presisi bf16.** EGNN menjumlahkan ~23.000 edge per kompleks; bf16 cuma 8 bit mantissa, reduksi ribuan suku kehilangan akurasi.
+2. **4x lebih sedikit langkah optimizer per epoch** di bs=4 (1.500 vs 6.000), sementara `patience`/`max_epochs` dihitung dalam EPOCH -> early-stop jauh sebelum konvergen. "Epoch" tidak sebanding antar-regime. **Ini yang saya lalai pikirkan saat mengusulkan batching.**
+
+**KEPUTUSAN: kembali ke bs=1 + no-AMP** (regime known-good). Konsekuensi yang justru menguntungkan: **Arm 0 jadi tidak perlu dijalankan** — run Stage 0 yang sudah ada (test R2=0,342) ADALAH anchor di regime itu, jadi perbandingan langsung ke angka yang sudah masuk thesis. Biaya Arm 0 terhapus.
+
+**Anggaran revisi (bs=1, no-AMP, 11,6 rows/sec):** Arm 0 = tidak perlu; Arm A/B @46.964 = 35,5 jam masing-masing (71 jam total); **Arm A/B @20.000 = 16 jam masing-masing (32 jam total)** <- rekomendasi, 20.000 masih 3,3x budget Stage 0 jadi pertanyaan kontrol-jumlah tetap teruji.
+
+Opsi yang tidak diambil (dicatat supaya tidak dibahas ulang): bs=4 + lr dinaikkan 4x + patience disesuaikan bisa menghemat ~22 jam, tapi menambah confound lr yang beda dari baseline dan butuh validasi sendiri. Ditolak karena kita baru saja kena akibat "optimasi" yang belum divalidasi.
 - [x] **Overengineering (sesuai permintaan 2026-10-08, "remember to overengineer")**: `guidance/uncertainty_a1/stats_common.py` — modul statistik bersama (bh, boot_p, partial_spearman, cluster_bootstrap_ci), `mc_dropout_calibration.py` di-refactor untuk pakai ini (diverifikasi byte-identical terhadap hasil A1 yang sudah dilaporkan). Unit test dengan nilai referensi independen (bukan cuma re-run kode sendiri): `guidance/uncertainty_a1/tests/test_stats_common.py`, 11 test lolos — termasuk cross-check partial Spearman terhadap formula closed-form textbook, invariant exact untuk cluster bootstrap dengan grup berukuran sama, dan contoh BH yang dihitung tangan dengan ties.
 
 ## Cabang ketidakpastian (dibuka 2026-10-07, lanjut setelah A1c gagal)
@@ -230,3 +740,650 @@ Tunggu training A1c selesai dulu sebelum rebuild, supaya tidak rebuild dua kali.
 ## Di luar cakupan komputasi
 - [ ] [nanti, S3] Cari lab partner biotech untuk validasi eksperimental.
 - [ ] Jalur virus-host (VirHostNet 3.0, HPIDB, Viruses.STRING) dan jalur desain agen biologis: tidak dikerjakan.
+
+---
+
+## AUDIT PRIOR ART (2026-10-10) — WAJIB DIBACA SEBELUM MENULIS BAB UQ
+
+Pencarian literatur sistematis (Consensus + web, 8 query) atas dua klaim novelty kita.
+Hasilnya mengubah posisi klaim, jadi dicatat di sini supaya tidak terlewat saat menulis.
+
+### Klaim (a) "perbandingan metode UQ untuk afinitas ikatan" -> SUDAH ADA PENDAHULUNYA
+
+* **Rayka et al. 2025, Scientific Reports** -- membandingkan LIMA metode UQ (Deep Ensemble,
+  MC Dropout, Laplace, Bayes-by-Backprop, Evidential) untuk afinitas protein-ligan, **di atas
+  Leak-Proof PDBBind**. Dataset, pertanyaan, dan 3 metode tumpang-tindih dengan A1-A1f kita.
+* **Parks et al. 2020, Frontiers in Molecular Biosciences** -- conformal prediction untuk
+  afinitas protein-ligan; melaporkan interval yang terkalibrasi baik. Ini mendahului temuan
+  POSITIF kita (A1d).
+* **Rayka et al. 2024, Molecular Informatics (ENS-Score)** -- conformal untuk afinitas, CASF-2016.
+
+KONSEKUENSI: klaim "hanya conformal yang terkalibrasi" tidak boleh ditulis sebagai temuan baru.
+Ketiga paper di atas WAJIB disitasi di bab related work; tanpa itu bab UQ punya lubang yang
+akan dilihat penguji.
+
+Yang MASIH milik kita dari A1-A1f (klaim yang lebih sempit tapi dapat dipertahankan):
+1. Kelas model berbeda: Rayka et al. pakai FFNN atas deskriptor ECIF (feature-vector).
+   Kita GNN 3D ekuivarian (EGNN/GIGN). "Apakah temuan UQ itu berlaku pada GNN geometrik" terbuka.
+2. Kerangka inferensi berbeda: target-clustered bootstrap + BH + pra-registrasi + replikasi
+   lintas seed, bukan metrik kalibrasi deskriptif.
+3. **KANDIDAT KONTRIBUSI TERKUAT**: kegagalan replikasi evidential. p=0.042 pada satu seed,
+   hilang pada 3 seed; sd antar-seed R² = 0.0377 melebihi efek yang diklaim. Ini temuan
+   metodologis yang berlaku atas literatur UQ single-seed di domain ini, termasuk paper di atas.
+
+### Klaim (b) "ternary QAT untuk GNN afinitas" -> MASIH KOSONG, tapi sempit
+
+Tidak ada hit untuk ternary/1-bit/low-bit + afinitas ikatan protein-ligan. Prior art terdekat
+yang WAJIB disitasi supaya posisi kita jujur:
+* **Degree-Quant, Tailor et al. ICLR 2021** -- QAT arsitektur-agnostik untuk GNN, INT8/INT4,
+  dievaluasi termasuk pada regresi molekuler (ZINC). Ini prior art terdekat untuk "QAT di GNN
+  molekuler". BUKAN ternary, BUKAN afinitas protein-ligan.
+* **Zhou et al. 2026, Quantized SO(3)-Equivariant GNN** -- 8-bit, QM9/rMD17, bukan afinitas.
+* **Rasool et al. 2025** -- 2-bit, properti molekuler.
+* **BitNet b1.58** -- ternary tapi LLM.
+
+Posisi novelty A1g yang bisa dipertahankan, dinyatakan persis sesempit ini:
+  "bobot ternary (1.58-bit, TWN+STE, QAT) pada GNN 3D untuk regresi afinitas protein-ligan,
+   R² test 0.3437 (sd 0.0377, n=3) vs FP32 0.3420 -- tak terbedakan secara statistik"
+Ukuran kontribusi: setara paper workshop. Jangan dibesar-besarkan.
+
+### TEMUAN YANG MENGUBAH PEKERJAAN: A1e memakai loss yang sudah diketahui gagal
+
+**Seitzer et al. 2022, "On the Pitfalls of Heteroscedastic Uncertainty Estimation with
+Probabilistic Neural Networks"** (163 sitasi) menunjukkan Gaussian NLL + optimizer berbasis
+gradien menghasilkan "estimasi parameter sangat buruk tapi stabil", karena gradien mean
+diskalakan oleh variance prediktif. Itu PERSIS variance-collapse yang kita lihat di A1e
+cold-start (log_var menabrak clamp dalam 3 step). Mereka mengusulkan **beta-NLL**: kontribusi
+tiap titik ke loss dibobot variance^beta. Lihat juga Stirn et al. 2023 (Faithful Heteroscedastic
+Regression) dan Immer et al. 2023 (parametrisasi natural + Laplace).
+
+KONSEKUENSI: kesimpulan "heteroscedastic gagal" saat ini TIDAK AMAN -- kita memakai varian loss
+yang literatur sudah tahu patologis, dan perbaikan yang dipublikasikan belum diuji.
+Dua jalan jujur:
+  (i) jalankan A1e-beta (beta-NLL, beta=0.5), warm-start sudah ada, biaya ~1 run x 3 seed; ATAU
+  (ii) nyatakan eksplisit di limitasi bahwa yang diuji adalah NLL vanilla dan beta-NLL/natural
+       parametrization belum diuji, dengan sitasi Seitzer et al.
+REKOMENDASI: (i). Murah, dan menutup pertanyaan penguji yang hampir pasti muncul.
+Kalau (i) tetap gagal, temuan kita justru jauh lebih kuat: gagal bahkan dengan perbaikan resmi.
+
+---
+
+## INFRASTRUKTUR TEST & AGREGASI (2026-10-10) — SELESAI
+
+Tiga utang engineering yang saya janjikan sambil Arm B jalan, semuanya CPU-only.
+
+### 1. `guidance/run_tests.py` + `scripts/hooks/pre-commit`
+Runner tunggal untuk semua suite (repo ini tidak punya pytest di env `drugdisc`; konvensinya plain
+`test_*` function + runner `__main__`, dan runner baru ini menjalankan setiap suite sebagai subprocess).
+Status saat ini: **5 suite, 54 tes, semua lolos, ~9 detik.**
+
+Kontrak exit code (penting, jangan diubah tanpa alasan):
+  0 = lolos | 1 = gagal | 2 = TIDAK BISA JALAN karena artefak data (CSV multi-MB, gitignored) tidak ada
+Exit 2 dilaporkan sebagai SKIP yang TERLIHAT, bukan pass, dan tidak memblokir commit. Guard leakage yang
+diam-diam no-op lebih buruk daripada tidak ada guard.
+
+Install hook: `bash scripts/hooks/install.sh`   Bypass satu commit: `git commit --no-verify`
+Jalur FAIL dan SKIP sudah diuji dengan suite sementara: FAIL -> hook exit 1 + pesan blokir, SKIP -> exit 0.
+
+### 2. `guidance/surrogate_data/tests/test_leakage_guard.py` (9 tes)
+Menegaskan invariant pemisahan train/val/test pada ARTEFAK di disk, setiap kali suite jalan:
+  * tidak ada template >=90% identik dengan target val/test yang lolos ke pool training (kelas bug `1fm9`)
+  * set eksklusi dihitung ULANG dari audit per-sequence, bukan dipercaya dari summary JSON
+  * threshold 90% dipin -- perubahan silent akan melemahkan klaim leakage di tesis
+  * filter ID-level lama masih berlaku (menangani target ChEMBL multi-aksesi via irisan himpunan)
+  * gray zone 50-90% MASIH ADA -- menegaskan KEPUTUSAN, supaya split yang diam-diam lebih ketat pun
+    memicu kegagalan dan mengingatkan untuk memperbarui bagian limitasi
+Sengaja TIDAK menjalankan ulang alignment: itu akan menguji kode audit terhadap dirinya sendiri.
+
+### 3. `guidance/surrogate_data/tests/test_pocket_extraction.py` (19 tes)
+Proteksi regresi untuk dua hal yang sudah pernah rusak: varian residu AMBER (`KeyError: 'HID'`) dan
+H-stripping. Termasuk tes konsekuensi end-to-end: hidrogen yang ditaruh 50 A dari pusat TIDAK boleh
+menggeser center_of_mass residu (itu yang di-threshold `query_residues_ligand`), dan HID vs HIS harus
+memberi representasi heavy-atom identik. Juga ada `test_fixture_is_column_correct` -- fixture PDB-nya
+sendiri salah kolom saat pertama ditulis (lupa field altLoc di indeks 16), jadi alat ukurnya ikut diuji.
+
+### 4. `guidance/aggregate_results.py` — agregator multi-seed dengan guard small-n
+Menggantikan tabel multi-seed yang dihitung manual. Membaca `log.txt` (epoch dengan val_loss TERENDAH,
+bukan epoch dengan metrik terbaik -- memilih epoch yang memaksimalkan metrik yang lalu dilaporkan adalah
+bias seleksi) + `metrics.json` untuk metrik TEST. Seed dibaca dari checkpoint, bukan nama direktori,
+karena direktori di proyek ini pernah di-rename tangan (`_RANDOM_aborted`).
+
+Yang membuatnya bukan sekadar mean+-sd:
+  * sd di n=1 dilaporkan `undefined`, BUKAN 0.0000 (nol di sana terbaca sebagai presisi sempurna)
+  * n<3 memicu WARNING yang menyebut kegagalan konkret proyek ini
+  * `--compare A B` mencetak **minimum detectable difference** pada sd teramati (alpha=.05, power=.80).
+    Kalau |selisih| < MDE, verdict-nya UNDERPOWERED dan tanda selisihnya dinyatakan tidak didukung.
+  * VAL dan TEST diringkas di baris TERPISAH dan berlabel -- angka yang dikutip tesis adalah TEST,
+    val hanya yang dioptimasi model selection; mencampur keduanya adalah cara termudah melebih-lebihkan.
+  * seed duplikat dalam satu grup memicu WARNING: n-nya palsu, bukan n undian independen.
+
+Validasi: `--metric R2` atas `logs_a1g_qat_ternary` menghasilkan TEST mean 0.3437 sd 0.0377 --
+PERSIS angka yang dulu saya hitung manual. Alatnya tervalidasi terhadap hasil yang sudah diketahui.
+
+### 5. `eval_qat_test.py` sekarang mem-persist `metrics.json`
+Sebelumnya metrik test hanya di-print ke stdout, jadi tabel test multi-seed harus disusun ulang dari
+scrollback terminal -- itulah mekanisme di balik salah-baca n=1 dan n=2 pada eksperimen A1g sendiri.
+Metrik 3 seed A1g sudah di-BACKFILL dari file `.npz` prediksi yang tersimpan (CPU saja, GPU tidak
+disentuh, Arm B tidak terganggu): s2021 R2=0.3239, s2022 R2=0.3201, s2023 R2=0.3872.
+
+---
+
+## TEMUAN BARU: KEBOCORAN TINGKAT SENYAWA (2026-10-10) — SIGNIFIKAN
+
+Pemeriksaan "overlap tingkat senyawa" yang sudah lama saya tandai belum pernah dikerjakan, akhirnya
+dijalankan: `guidance/surrogate_data/compound_overlap_audit.py`.
+
+Pertanyaannya BEDA dari tiga filter sebelumnya. Ketiganya sisi-PROTEIN ("apakah protein training =
+protein test?"). Tidak ada yang bertanya "apakah LIGAN training = ligan test?". Itu jalur kebocoran
+tersendiri: model yang pernah melihat senyawa X dengan pK terukur saat training bisa mengingat angka itu
+saat X muncul di test, bahkan terhadap reseptor berbeda, karena identitas ligan sendiri membawa banyak
+sinyal afinitas.
+
+Kriteria: InChIKey SKELETON (14 karakter pertama = blok konektivitas), bukan key penuh. Skeleton
+mengabaikan stereokimia dan protonasi, jadi menangkap juga ligan test yang hadir di training sebagai
+tautomer/garam/stereoisomer berbeda -- semuanya tetap membocorkan label. Key penuh akan melewatkan 60
+dari 101 famili yang bertabrakan.
+
+### HASIL -- dan mengapa framing-nya penting
+
+|                                                  |                            |
+|--------------------------------------------------|----------------------------|
+| sisi training: baris pool terkontaminasi          | 423 / 124.973 = **0,34%**  |
+| sisi EVALUASI: record val+test terdampak          | 1.814 / 17.924 = **10,12%**|
+| ligan val/test distinct terdampak                 | 101 / 1.175 = **8,6%**     |
+
+Kebocoran yang SAMA, diukur dua arah, selisih 30x. "0,34%" terbaca seperti derau dan itulah bahayanya:
+angka yang membatasi sejauh mana skor test boleh dibaca sebagai generalisasi adalah angka EVALUASI.
+Agregator dan guard test sekarang mewajibkan KEDUA arah tercatat (`test_evaluation_side_exposure_...`).
+
+### Eksposur AKTUAL Arm B-matched yang sekarang jalan
+
+Dihitung dengan mereplikasi sampling stratified `build_bn_train_set` bit-per-bit (CSV, filter, rantai
+RandomState, seed yang sama) -- jadi ini baris yang BENAR-BENAR ditarik, bukan ekspektasi:
+
+| seed | baris training terkontaminasi | % dari 14.000 | record evaluasi terdampak | % dari 17.924 |
+|------|------------------------------|---------------|---------------------------|---------------|
+| 2021 | 43                           | 0,31%         | 549 (477 test / 72 val)   | **3,06%**     |
+| 2022 | 58                           | 0,41%         | 720 (585 / 135)           | **4,02%**     |
+| 2023 | 54                           | 0,39%         | 834 (643 / 191)           | **4,65%**     |
+
+Jadi eksposur Arm B 3-4,7%, bukan 10,12% (itu angka seluruh pool).
+
+### Remediasi: `apply_compound_leakage_filter.py` -- SUDAH DIBUAT DAN DIJALANKAN
+`bindingnet_v1_clean.csv`: 124.973 -> **124.550 baris** (buang 423, 0,34%; 123 senyawa; 5.758 -> 5.721
+template). Membayar 0,34% data training untuk menghapus kontaminan dari 10% record evaluasi bukan
+trade-off yang perlu diperdebatkan.
+
+### KEPUTUSAN PRA-REGISTRASI (ditulis SEBELUM hasil Arm B keluar, supaya bukan rasionalisasi)
+
+Arm B TIDAK dihentikan. Alasannya: restart = 16 jam untuk kontaminasi 3-4,7% record evaluasi, yang
+kemungkinan besar menggeser R² kurang dari sd antar-seed yang sudah terukur di proyek ini (0,0377).
+Membakar 16 jam untuk efek di bawah lantai deteksi sendiri tidak rasional. Tapi kontaminasinya TIDAK
+seragam antar seed (3,06% vs 4,65%), jadi ia menambah varians, dan itu harus disebut.
+
+Aturannya, berlaku apa pun hasilnya:
+1. Arm B dilaporkan DENGAN tabel eksposur di atas sebagai limitasi eksplisit, bukan catatan kaki.
+2. Kalau Arm B menunjukkan manfaat BN yang KECIL atau nol -> kontaminasi tidak mengubah kesimpulan
+   (kontaminasi hanya bisa MENAIKKAN skor BN, jadi batas atas yang bocor tetap mendukung "tidak membantu").
+   Kesimpulan aman tanpa run ulang.
+3. Kalau Arm B menunjukkan manfaat BN yang BESAR (di luar CI cluster-bootstrap) -> JANGAN dipercaya
+   sebelum diulang di atas `bindingnet_v1_clean.csv`. Arah kontaminasi persis arah yang memalsukan
+   temuan positif.
+4. Arm C (production) WAJIB pakai `bindingnet_v1_clean.csv`, tanpa pengecualian.
+
+### Yang masih harus dilakukan
+* `train_surrogate_arm.py` masih membaca `data/bindingnet_pocket10/labels.csv` + filter sekuens, BELUM
+  filter senyawa. Harus ditambah SEBELUM Arm C, mengikuti pola penegakan ganda yang sudah ada di
+  `build_bn_train_set` (filter ditegakkan di dalam kode training, bukan hanya di CSV upstream).
+
+---
+
+## A1e-BETA: DI-QUEUE DAN BERJALAN (2026-10-10 01:26)
+
+Menindaklanjuti temuan audit prior art bahwa A1e memakai loss yang literatur sudah tahu patologis
+(Seitzer et al. 2022). Implementasi, verifikasi, dan antrean sudah selesai; eksekusi menunggu GPU.
+
+### Implementasi: `--beta_nll` di `train_egnn_heteroscedastic.py`
+`beta_nll(y, mu, log_var, beta)` -- loss per-contoh dibobot `stopgrad(sigma^2)^beta`. Efeknya pada
+gradien mean: `dL/dmu = -(y-mu) * sigma^(2*beta-2)`.
+  beta=0   -> sigma^-2  (NLL biasa; rezim patologis)
+  beta=0.5 -> sigma^-1  (rekomendasi paper)
+  beta=1   -> sigma^0   (independen varians, seperti MSE)
+
+Mekanisme patologinya: di NLL biasa, contoh yang (keliru) diberi sigma besar jadi TIDAK menyumbang ke
+fit mean, sehingga error-nya tidak pernah mengecil, sehingga sigma-nya tetap besar. Loop yang
+memperkuat diri sendiri -- persis variance collapse A1e saat cold start.
+
+Dua keputusan desain yang menentukan validitas perbandingan:
+1. **beta=0.0 adalah default dan mereproduksi loss A1e BIT-PER-BIT** (short-circuit sebelum aritmetika
+   apa pun). Tanpa ini, A1e vs A1e-beta bukan perbandingan satu faktor melainkan penulisan ulang.
+2. **Validasi SELALU melaporkan dan menyeleksi pada NLL biasa**, apa pun beta saat training. Kalau beta
+   ikut mengubah objektif seleksi, perbedaan hasil tidak bisa diatribusikan ke beta. Ini juga menjaga
+   setiap angka val tetap sebanding dengan run A1e yang sudah ada.
+
+### Verifikasi (14 tes, `tests/test_beta_nll.py`, semua lolos)
+Diuji lewat autograd, bukan lewat membaca ulang rumus -- karena kalau bobotnya tidak di-detach atau
+eksponennya kena sigma bukan sigma^2, loss-nya TETAP training dan TETAP menghasilkan angka masuk akal.
+Itu tidak terlihat di kurva training.
+  * `gaussian_nll` dicek terhadap `scipy.stats.norm.logpdf` (referensi luar, bukan rumus yang sama
+    ditulis ulang)
+  * hukum skala `sigma^(2beta-2)` diverifikasi autograd untuk beta in {0, 0.25, 0.5, 1}
+  * detachment: dibandingkan dengan bentuk tertutup kasus DETACHED, DAN dibuktikan beda dari bentuk
+    attached -- jadi tes gagal ke dua arah kesalahan
+  * reproduksi patologinya sendiri: dua residual identik, sigma beda e^4 -> di beta=0 pengaruh contoh
+    sigma-tinggi ~3000x lebih kecil; beta=0.5 mengurangi ketimpangan itu
+  * stabilitas numerik di kedua ujung clamp log_var [-6,6] dalam float32
+Plus smoke test integrasi di CPU: model nyata, batch nyata, backward nyata. Rasio loss cocok persis
+dengan sigma^(2beta) (0.3349 -> 0.4301 di beta=0.5; -> 0.5525 di beta=1).
+
+### Urutan run: BERGANTIAN, dan itu bukan sembarang
+A1e yang ada **hanya 1 seed** (2021). Tiga run beta vs satu run plain = situasi n=3-vs-n=1 yang
+`aggregate_results.py` justru menolak beri verdict. Jadi chain-nya menambah A1e ke 3 seed SAMBIL
+membangun A1e-beta ke 3, berpasangan per seed:
+  step 1: beta 2021   -> 1 v 1
+  step 2: plain 2022
+  step 3: beta 2022   -> 2 v 2
+  step 4: plain 2023
+  step 5: beta 2023   -> 3 v 3
+Konsekuensinya: perbandingan tetap berimbang di SETIAP titik chain bisa terputus. Berhenti lebih awal
+mengorbankan power, tidak pernah validitas.
+
+### `scripts/queued_run.sh` — runner dengan guard termal
+Kartu 4GB tidak bisa menampung dua job, jadi pekerjaan lanjutan harus menunggu. Setiap step menunggu
+GPU bebas DAN suhu di bawah 55C selama 300 detik berturut-turut (satu sampel dingin tepat setelah job
+keluar tidak berarti apa-apa -- kartu masih melepas panas). Exit code diperiksa EKSPLISIT per step;
+`set -e` pernah gagal membatalkan chain di sini (3 seed jalan, 3 gagal, chain lapor sukses).
+Exit 75 = kondisi start tidak terpenuhi, dibedakan dari command-nya sendiri gagal.
+
+**BUG YANG KETANGKAP SEBELUM MERUSAK (penting, jangan diulang):** `pgrep -f` mencocokkan SELURUH
+command line, dan argv `queued_run.sh` sendiri memuat path skrip training sebagai argumen. Jadi
+`--wait-for "train_egnn_heteroscedastic[.]py"` mencocokkan wrapper-nya SENDIRI (dan subshell command
+substitution yang mewarisi argv sama). Trik bracket mencegah pgrep mencocokkan pgrep, BUKAN mencocokkan
+pemanggilnya. Kalau tidak diperbaiki: step pertama yang nama skripnya muncul di pola tunggunya sendiri
+akan menunggu dirinya sendiri SELAMANYA -- tanpa error, tanpa output, antrean yang tidak pernah
+menyala. Perbaikannya: match hanya dihitung kalau `/proc/<pid>/comm` adalah `python*`, karena `comm`
+memuat nama EXECUTABLE bukan argument vector (job training = "python", wrapper = "bash").
+Diuji dua arah: masih mendeteksi Arm B (pid python), dan pola deadlock kini langsung menyala.
+
+### Penegakan filter senyawa di `train_surrogate_arm.py` — SELESAI
+`build_bn_train_set(..., compound_filter=True)` sekarang menegakkan filter ligan DI DALAM kode training,
+pola yang sama dengan filter sekuens -- karena fungsi itu membaca `labels.csv` yang TIDAK terfilter
+(125.238 baris) dan menerapkan eksklusi sendiri. Aritmetika terverifikasi: 125.238 -> 124.973 (seq)
+-> 124.550 (compound) -> 122.298 (uncensored). Default True; `--no_compound_filter` harus eksplisit dan
+mencetak peringatan. Guard test memastikan default-nya tidak bisa diam-diam jadi opt-in.
+
+Status tes proyek: **6 suite, 73 tes, semua lolos.**
+
+---
+
+## LAPISAN CHEMINFORMATICS / BIOINFORMATICS (2026-10-10) — TEMUAN BESAR
+
+Bidang ini menyediakan satu kontrol yang proyek kita **belum pernah jalankan**, dan itu kontrol yang
+paling diarahkan ke kelas model kita. Semua CPU-only, tidak mengganggu Arm B.
+
+Prior art yang mendorongnya:
+* **Volkov et al. 2022, J. Med. Chem.** (170 sitasi) -- deskripsi eksplisit interaksi nonkovalen
+  protein-ligan TIDAK memberi keuntungan dibanding deskriptor ligan atau protein saja; model
+  nearest-neighbour sederhana sudah bagus; memorisasi mendominasi pembelajaran.
+* **Mattsson et al. 2026, bioRxiv** -- split berbasis identitas sekuens **inheren tidak cukup** karena
+  "target mirroring"; leakage bertahan sampai ambang identitas 0.2 (kita pakai 90% + gray zone 50-90%!).
+  Model ligand-only mencapai r=0.66 di FEP+. Mengusulkan Novelty-Tiered Affinity Benchmark.
+* **Graber et al. 2025, Nature Machine Intelligence** -- PDBbind CleanSplit; melatih ulang model
+  terdepan di split bersih membuat angka benchmark mereka jatuh drastis.
+* **Jeliazkova et al. 2026** -- conformal sebagai lapisan kalibrasi untuk applicability domain QSAR.
+* **Gibbs et al. 2023, JRSS-B** (189 sitasi) -- coverage kondisional eksak itu MUSTAHIL di sampel
+  terbatas; ada spektrum antara marginal dan kondisional.
+
+### Modul baru: `guidance/cheminformatics/`
+`chem_data.py` (SMILES dari field `ligand_smiles` LMDB + ECFP4 2048-bit + 14 deskriptor RDKit +
+scaffold Bemis-Murcko generik; 64.888 molekul, 64.888 ter-parse, 0 gagal; target dan pK di-join dari
+anchor table Track E sehingga klaster bootstrap IDENTIK dengan A1-A1g).
+
+### TEMUAN 1: model struktur TIDAK terbedakan dari ridge atas 14 deskriptor
+`ligand_only_baseline.py` + `compare_vs_structure.py` (uji BERPASANGAN, bootstrap 127 klaster target
+B=2000, koreksi BH atas 40 pasangan).
+
+| model | test R2 | catatan |
+|---|---|---|
+| EGNN Stage 0 (struktur) | 0.3420 | model yang jadi pokok tesis |
+| EGNN ensemble A1c | 0.4153 | |
+| EGNN 3 seed (QAT) | 0.3437 +- 0.0377 | |
+| **desc_ridge (14 deskriptor, TANPA protein)** | **0.3531** | **mengalahkan Stage 0** |
+| heavy_atoms (SATU fitur: jumlah atom berat) | 0.3069 | 90% performa model struktur |
+| ecfp_desc_hgb | 0.3211 | |
+| vina (fisika) | 0.2601 | |
+| tanimoto_1nn | -0.9243 | |
+
+Setelah BH atas 40 pasangan: **12 menang struktur, 28 tak terbedakan, 0 menang ligand-only.**
+Tiga "kemenangan" marginal (p=0.039/0.044/0.049) **ditarik** oleh BH (q=0.12-0.13) -- tanpa koreksi
+saya akan melaporkan temuan palsu.
+
+Yang BERTAHAN setelah BH:
+* struktur mengalahkan **tanimoto nearest-neighbour** secara dominan (dR2 ~ +1.2-1.3, q=0.002 di SEMUA
+  pasangan). Ini temuan **POSITIF tentang split kita**: berbeda dari setting PDBbind yang dianalisis
+  Volkov et al., split kita TIDAK memberi hadiah untuk menghafal ligan training terdekat.
+* ensemble dan seed 2023 mengalahkan **Vina** (q=0.002 / 0.007).
+Yang TIDAK: struktur vs desc_ridge tak terbedakan di SEMUA seed dan juga sebagai ensemble.
+
+**Konsekuensi untuk tesis:** klaim "R2 held-out kami menunjukkan pembelajaran pengenalan protein-ligan"
+TIDAK didukung. Klaim yang jujur: setara model QSAR ligand-only pada ukuran sampel ini. Ukuran ligan
+melakukan sebagian besar pekerjaan.
+
+### TEMUAN 2: 64% test set kita sudah "novel chemistry"
+`novelty_tiers.py` (protokol Mattsson; batas 0.35 diambil apa adanya, BUKAN di-tuning -- memilih ambang
+setelah melihat mana yang memisahkan model itu menyeleksi hasil).
+Distribusi max-Tanimoto test->train: p0 0.186, median **0.316**, p90 0.561. Jadi 64% test di bawah 0.35.
+Itu properti BAIK dari split kita.
+
+Hipotesis saya (protein berguna justru di kimia novel) **TIDAK terdukung**: tier novel dR2 +0.0368,
+CI [-0.0993, +0.1683], q=0.748. Setelah BH atas 4 tier, TIDAK ADA tier yang signifikan.
+
+Tapi polanya terbalik dan koheren: model ligand-only **KOLAPS** saat similarity naik
+(desc_ridge 0.3132 novel -> -0.0211 same-series; heavy_atoms -> -0.4097) sementara model struktur
+bertahan 0.17-0.24. Itu rezim **ACTIVITY CLIFF**: dalam satu seri kimia deskriptor hampir tak bergerak
+sementara afinitas bergerak. Jelas secara deskriptif, tidak separable secara statistik.
+
+### TEMUAN 3 (metodologis, dan saya hampir melaporkan kebalikannya)
+`scaffold_audit.py`. Draf pertama menyimpulkan "familiaritas scaffold menyumbang ke angka yang
+dilaporkan" karena SETIAP model kolaps di scaffold tak-terlihat (EGNN 0.3523 -> -0.0240).
+
+**Itu artefak.** R2 = 1 - SSE/SST, dan dua subset punya SST sangat berbeda: sd pK 1.72 (seen) vs 1.29
+(unseen), rasio varians **1.77x**. Dengan error absolut sama, subset lebih sempit otomatis dapat R2
+lebih rendah. Pearson pun teratenuasi oleh range restriction.
+
+**Yang membongkarnya: baseline Vina.** Vina fungsi skoring fisika yang TIDAK PERNAH dilatih di data
+kita, jadi mustahil diuntungkan familiaritas scaffold -- tapi ia menunjukkan kolaps yang sama
+(0.1606 -> -0.0181). Pola yang muncul di prediktor tak terlatih adalah properti PARTISI DATA, bukan
+pembelajaran.
+
+Setelah diukur dengan RMSE (metrik yang tidak terdistorsi): **0 dari 13 model lebih buruk** di scaffold
+tak-terlihat; 3 justru LEBIH BAIK. Familiaritas scaffold tidak membeli akurasi.
+Overlap scaffold tetap tinggi dan wajib didisklos: 40,1% molekul test berada di scaffold generik yang
+muncul di training (hanya 1.779 scaffold generik unik di 46.964 ligan training -- vokabulari kerangka
+CrossDocked memang sempit). "Held-out target" TIDAK berarti "held-out scaffold".
+
+**Aturan yang harus masuk tesis:** R2 tidak boleh dibandingkan antar subset data dengan varians label
+berbeda, dan menyimpan baseline TAK TERLATIH di setiap tabel semacam itu adalah cara murah
+menangkapnya.
+
+### Tes: `guidance/cheminformatics/tests/test_chem.py` (18 tes)
+Yang terpenting: rutin Tanimoto (matmul BLAS; interseksi = Q @ R.T) diuji terhadap
+`DataStructs.BulkTanimotoSimilarity` milik RDKit -- implementasi yang benar-benar independen, bukan
+penulisan ulang aljabar yang sama. Plus: invariansi chunking, fingerprint nol tidak menghasilkan NaN,
+guard keselarasan baris menolak permutasi YANG MEMPERTAHANKAN label (lewat cek string target), dan
+R2 subset dihitung atas mean SUBSET.
+Catatan presisi: matmul float32 -> kesepakatan dengan RDKit terbatas ~1e-7, jadi toleransi tes 1e-6.
+Draf pertama memakai 1e-9 dan gagal; yang salah toleransinya, bukan kodenya.
+
+Status tes proyek: **7 suite, 91 tes, semua lolos.**
+
+### Yang masih terbuka
+* Mattsson et al. mengklaim identitas sekuens tidak cukup sampai ambang 0.2. Kita di 90% + menyimpan
+  gray zone 50-90%. Harus didisklos sebagai keterbatasan yang kini punya rujukan, bukan lagi sekadar
+  judgement call kita.
+* Coverage KONDISIONAL conformal per tier kebaruan + per famili protein: belum dikerjakan. Ini
+  perpanjangan paling menjanjikan dari satu hasil positif kita (A1d), dan Gibbs et al. 2023 memberi
+  kerangka teoretisnya.
+
+---
+
+## TANGGA REPRESENTASI: REPLIKASI VOLKOV LENGKAP + UJI KLAIM CORDIAL (2026-10-10)
+
+Lanjutan `ligand_only_baseline.py`, yang hanya mereplikasi SEPARUH kontrol Volkov et al. 2022 -- mereka
+menguji deskriptor PROTEIN juga, bukan cuma ligan. Dua modul baru:
+`pocket_features.py` (38 deskriptor pocket + 72 fitur interaksi ECIF, dari field protein LMDB; tidak
+butuh file PDB mentah) dan `representation_ladder.py`.
+
+### Tabel: apa nilai masing-masing SUMBER INFORMASI (test, 127 klaster target, B=2000)
+
+| sumber informasi | dim | test R2 | 95% CI |
+|---|---|---|---|
+| ligand+pocket | 52 | **0.3832** | [+0.2013, +0.4963] |
+| ecif_raw (hitungan kontak) | 72 | 0.3701 | [+0.2130, +0.4730] |
+| all (ligand+pocket+ecif_norm) | 124 | 0.3639 | [+0.1746, +0.4829] |
+| ecif_norm + ukuran | 73 | 0.3547 | [+0.2073, +0.4543] |
+| ligand (14 deskriptor RDKit) | 14 | 0.3534 | [+0.2079, +0.4465] |
+| **pocket saja -- TANPA ligan** | 38 | **0.2889** | [+0.1525, +0.3765] |
+| ecif_norm (densitas interaksi) | 72 | 0.2077 | [+0.0205, +0.3478] |
+
+Model 3D GNN di baris test yang sama: ensemble A1c 0.4072 | qat_s2023 0.3872 | Stage 0 0.3415 |
+qat_s2021 0.3239 | qat_s2022 0.3201.
+
+Catatan desain: untuk SETIAP blok di-fit ridge (alpha dipilih di val) DAN gradient boosting, lalu yang
+lebih baik di VAL yang dilaporkan -- supaya sebuah blok tidak dirugikan karena cocok untuk satu
+regressor. Pertanyaannya nilai INFORMASInya, bukan regressor mana yang kebetulan pas.
+
+### Apa yang ini selesaikan (BH atas 20 uji berpasangan)
+
+**1. Replikasi Volkov sisi protein: TERKONFIRMASI.** Pocket SENDIRIAN -- tanpa ligan sama sekali, di
+target yang TIDAK PERNAH DILIHAT -- mencapai R2 0.2889. Pocket vs ligand: **seri**. Jadi kedua marginal
+bekerja sendiri-sendiri.
+
+**2. Kedua sumber TIDAK saling menambah.** ligand+pocket vs ligand: seri. vs pocket: seri (setelah BH).
+Artinya tidak ada sumber yang membawa informasi yang tidak dimiliki sumber lain di level deskriptor.
+Itu persis temuan Volkov et al., sekarang direplikasi di split kita.
+
+**3. Klaim CORDIAL (Brown 2025, PNAS) TIDAK terdukung di sini.** Mereka berargumen representasi
+interaksi-saja (tanpa parameterisasi struktur protein/ligan) harus menang di target tak-terlihat.
+ecif_norm = 0.2077, vs ligand: seri (q=0.057); vs pocket: seri. Tidak menang.
+
+**4. Konfound ukuran di hitungan interaksi: TERTANGKAP.** ecif_raw (0.3701) vs ecif_norm (0.2077):
+dR2 +0.1625, **q=0.013, SIGNIFIKAN**. Jadi hitungan kontak mentah bekerja terutama dengan menyandikan
+ulang ukuran ligan. Kalau saya hanya melaporkan ecif_raw, saya akan mengklaim "fitur interaksi
+informatif" padahal itu jumlah atom berat. Kontrol ini sengaja dibangun setelah audit scaffold
+tertangkap pada kesalahan yang sama.
+
+**5. Plafon level-deskriptor = 0.3832** (ligand+pocket). vs ligand saja: seri.
+
+**6. 3D GNN vs plafon deskriptor: 2 dari 10 pasangan** signifikan setelah BH -- dan keduanya melawan
+ecif_norm (blok terlemah), BUKAN melawan plafon. Melawan `all`: **semua seri**.
+
+### Kesimpulan gabungan yang bisa masuk tesis
+
+Di split target-disjoint ini, afinitas dapat diprediksi sampai R2 ~0.35-0.38 dari **sumber informasi
+APA SAJA secara terpisah** -- deskriptor ligan, deskriptor pocket, atau hitungan kontak -- sumber-sumber
+itu **saling redundan**, dan GNN 3D tidak melampaui plafon deskriptor itu. Ini replikasi lengkap Volkov
+et al. 2022 di split yang leakage-controlled, ditambah dua hal yang tidak ada di sana: kontrol konfound
+ukuran pada fitur interaksi, dan uji langsung klaim CORDIAL.
+
+### Cakupan bidang: apa yang SUDAH dan BELUM
+
+SUDAH -- cheminformatics: ECFP4, 14 deskriptor RDKit, Tanimoto (diuji vs RDKit BulkTanimotoSimilarity),
+scaffold Bemis-Murcko generik, novelty tier (protokol Mattsson), activity cliff, applicability domain
+lewat similarity.
+SUDAH -- bioinformatics (dasar): komposisi asam amino pocket (20-dim), pengelompokan fisikokimia
+(hidrofobik/polar/+/-/aromatik/fleksibel), komposisi elemen, fraksi backbone, geometri (Rg, extent,
+sphericity).
+SUDAH -- biomolecular informatics (dasar): ECIF-style (elemen protein x elemen ligan x shell jarak).
+
+BELUM, dan ini jujur:
+* stratifikasi error per famili protein / kelas target (kinase vs protease vs nuclear receptor)
+* konservasi sekuens / fitur MSA residu pocket
+* tipe interaksi PLIP (hbond / hidrofobik / pi-stacking / jembatan garam) -- ada di rencana Track E,
+  belum dipakai di sini. Ini yang akan membuat blok interaksi jauh lebih bermakna daripada hitungan
+  pasangan elemen.
+* coverage KONDISIONAL conformal per tier kebaruan dan per famili protein (perpanjangan A1d; kerangka
+  dari Gibbs et al. 2023)
+* deskriptor druggability pocket (volume, enclosure, buriedness) -- butuh fpocket/CASTp
+
+Status tes proyek: **7 suite, 91 tes, semua lolos.**
+
+---
+
+## PROGRAM RISET TERSATUKAN + EKSPERIMEN KUNCI (2026-10-10)
+
+Dokumen: **`guidance/RESEARCH_PROGRAM.md`** -- menggantikan tumpukan track yang dimotivasi terpisah
+dengan SATU pertanyaan, memetakan setiap celah literatur ke cabang kita, dan menyatakan bukti mana yang
+sudah dipegang / sedang jalan / masih hilang.
+
+Pertanyaan tunggalnya: ketika guidance gagal, APA tepatnya yang gagal? Tiga penjelasan hidup:
+(A) masalah tuning, (B) masalah akurasi, (C) masalah INFORMASI. Tesis sudah menyingkirkan (A) lintas
+tiga orde besaran dan tiga varian mekanisme, dan menolak (B) dengan alasan Pearson 0.58-0.65. Kerja
+2026-10-10 menegakkan **(C)** -- dan (C) itulah yang membuat penolakan (B) koheren, bukan membingungkan.
+
+### EKSPERIMEN KUNCI: `guidance/pose_sensitivity.py` -- HASIL PILOT SANGAT TAJAM
+
+Semua bukti lain bersifat tidak langsung (tentang apa yang bisa dilakukan model LAIN). Ini menguji
+predictor-nya sendiri: tahan molekul dan pocket tetap, ubah HANYA penempatan rigid-body ligan.
+
+Desain faktorial yang memisahkan "pakai antarmuka" dari "pakai statistik bulk protein" -- ketiga varian
+menghapus TEPAT 50% atom protein, jadi perubahan bulk identik dan hanya isi antarmuka yang berbeda:
+
+| manipulasi | antarmuka | jumlah atom | mean abs d-prediksi (pilot n=10) |
+|---|---|---|---|
+| simpan separuh TERDEKAT | **utuh** | -50% | **1.337 pK** |
+| simpan separuh TERJAUH | **hancur** | -50% | **1.126 pK** |
+| simpan separuh acak | sebagian | -50% | 1.320 pK |
+| tukar pocket (protein lain sama sekali) | diganti | ~sama | 0.947 pK |
+| geser ligan 8 A KELUAR pocket | hancur | utuh | **0.19-0.25 pK** |
+
+**Menghancurkan kontak asli ligan LEBIH MURAH (-16%) daripada menghapus atom yang tidak menyentuh apa
+pun.** Ketiga varian strip praktis sama besar. Dan model **~5x lebih sensitif terhadap BERAPA BANYAK
+atom protein yang ada daripada terhadap DI MANA ligannya berada**.
+
+Itu mekanismenya, dan ia menjelaskan seluruh rangkaian temuan sekaligus:
+* gradien menjauh dari pocket (r=+0.24) -- tidak ada sinyal antarmuka untuk diikuti
+* deskriptor pocket-saja bekerja (0.2889) -- properti bulk pocket
+* deskriptor ligan-saja bekerja (0.3534) -- ukuran ligan
+* ecif_raw = ukuran ligan menyamar (q=0.013)
+* guidance gagal di 5 rute dan 56 perbandingan level-pocket
+
+Dose-response translasi monoton (0.02 -> 0.04 -> 0.08 -> 0.19 -> 0.19 pK untuk 0.5/1/2/4/8 A), jadi
+modelnya TIDAK buta-pose sepenuhnya -- hanya lemah: 8 A keluar pocket = 0.28x RMSE-nya sendiri.
+Perturbasi hanya rigid-body: konformer ligan tidak pernah diubah, jadi perubahan prediksi tidak bisa
+diatribusikan ke geometri internal yang jadi tidak fisis.
+
+Run penuh n=300, B=2000 sedang jalan di CPU (`logs_queue/pose_sensitivity_n300.log`); GPU tidak
+disentuh, Arm B aman.
+
+### Celah yang masih hilang, diperingkat (detail di RESEARCH_PROGRAM.md 5)
+1. ~~pose sensitivity~~ -- pilot selesai, run penuh jalan
+2. **tipe interaksi PLIP** sebagai blok ke-8 tangga representasi (infrastruktur sudah ada di
+   `track_e/PlipLabelStore`). Kalau interaksi BERTIPE (hbond/hidrofobik/pi-stacking/jembatan garam) pun
+   tidak menambah apa-apa, klaim redundansi jadi sangat kuat. Kalau menambah, itu hasil positif dan ia
+   menamai perbaikannya. CPU saja.
+3. **coverage KONDISIONAL conformal** per tier kebaruan dan per famili protein (Gibbs et al. 2023 memberi
+   kerangka; Jeliazkova et al. 2026 memprediksi coverage turun di kimia novel). Perpanjangan paling
+   menjanjikan dari satu hasil positif kita. CPU saja.
+4. stratifikasi famili protein / kelas target
+5. A1e-beta (jalan, di antrean)
+
+### Dampak ke tesis (RESEARCH_PROGRAM.md 6)
+Tidak ada yang dibuang. Bab IV dapat satu seksi; Bab X kesimpulan (1) harus direvisi (argumen
+"kegagalan bukan karena akurasi rendah: Pearson 0.58-0.65" sekarang bocor, karena model tanpa input
+protein mencapai korelasi yang sama); abstrak dapat satu kalimat. Pernyataan kontribusi naik dari
+"negative result yang MELOKALISIR di mana guidance gagal" menjadi "negative result yang MENJELASKAN
+MENGAPA guidance gagal, dengan mekanisme diisolasi lewat audit sumber informasi".
+
+---
+
+## NOISE CEILING, DEKOMPOSISI VARIANS, DAN y-RANDOMISASI (2026-10-10) — MENGUBAH INTERPRETASI SEMUA R2
+
+`guidance/cheminformatics/noise_ceiling.py`. Ini analisis yang membingkai ulang SETIAP R2 di tesis, dan
+ia hilang sampai sekarang.
+
+### Label kita campuran, dan ketidakpastiannya SUDAH DIUKUR orang
+Komposisi LP-PDBBind: **Kd 37% / IC50 37% / Ki 26%**. Dan komposisinya BERGESER antar split --
+train Kd 41%/IC50 33%, test IC50 46%/Kd 26%. IC50 paling bergantung assay dan justru over-represented
+di test: train dan test tidak mengukur kuantitas yang persis sama.
+
+* **Hernandez-Garrido et al. 2023** (AI in the Life Sciences) memakai record ChEMBL di mana pasangan
+  protein-ligan yang sama diukur lebih dari sekali, untuk menaksir ketidakpastian menggabungkan
+  Kd+Ki+IC50: **MAE 0.78 log unit, RMSE 1.04, Pearson 0.76**.
+* **Landrum et al. 2024** (JCIM, 158 sitasi) dari arah lain: dengan kurasi minimal, **65%** pengukuran
+  IC50 berulang untuk senyawa+target yang sama berbeda >0.3 log unit, **27%** berbeda >1 log unit,
+  Kendall tau hanya 0.51 -- dan assay Ki ternyata tidak lebih baik. Mereka merilis kode "maximal
+  curation".
+
+Kalau dua pengukuran independen atas kuantitas yang sama hanya berkorelasi r=0.76, maka
+**tidak ada prediktor yang bisa melampaui R2 = 0.76^2 = 0.5776** atau menekan RMSE di bawah 1.04.
+Itu bukan batas pemodelan; itu derau label.
+
+### Performa sebagai fraksi dari yang DAPAT DICAPAI
+| model | test R2 | % dari plafon | RMSE/derau |
+|---|---|---|---|
+| egnn_a1c_ensemble | 0.4072 | **70.5%** | 1.22x |
+| egnn_qat_s2023 | 0.3872 | 67.0% | 1.24x |
+| desc_ridge (ligan saja) | 0.3531 | 61.1% | 1.27x |
+| egnn_stage0 | 0.3415 | 59.1% | 1.29x |
+| vina | 0.2601 | 45.0% | 1.36x |
+
+"R2 0.41" terbaca buruk; "70% dari yang dapat dicapai, pada RMSE 1.22x lantai derau eksperimen"
+adalah angka yang jujur dan jauh lebih informatif. Ini yang harus dikutip tesis.
+
+### ANALISIS DAYA ATAS TUGASNYA SENDIRI -- dan ini temuan metodologis serius
+* lantai (ligand-only terbaik, tanpa protein) : R2 0.3531
+* plafon (derau label eksperimen)             : R2 0.5776
+* **seluruh jendela** tempat informasi struktural bisa menunjukkan diri: **0.2245 R2**
+* lebar rata-rata CI 95% target-clustered kita: **0.3871 R2**
+* **jendela / lebar CI = 0.58**
+
+Jendelanya LEBIH SEMPIT dari SATU interval kepercayaan. Desain ini **tidak bisa** menentukan di mana
+sebuah model berada di dalamnya -- dan begitu juga perbandingan terpublikasi yang melaporkan gain
+0.02-0.05 R2 di atas data sejenis. Laporan yang jujur adalah interval, bukan peringkat. Ini properti
+TUGAS dan derau labelnya, bukan properti satu model. (Sebagai pembanding: sd antar-seed arsitektur EGNN
+yang sama = 0.0377 R2, yaitu 17% dari jendela.)
+
+### y-RANDOMISASI (Rucker et al. 2007, 897 sitasi) -- kontrol standar QSAR yang belum pernah kita jalankan
+20 permutasi, pipeline ridge-14-deskriptor di-fit ulang tanpa diubah:
+* **permutasi global**: R2 mean +0.0037, max +0.0141. desc_ridge asli 0.3531 **LOLOS** kontrol
+  chance-correlation dengan selisih +0.3390. Hasil ligand-only itu sinyal nyata, bukan artefak 14
+  deskriptor yang cukup lentur untuk memuat apa saja.
+* **permutasi DALAM-target**: R2 mean **+0.2468**, sd 0.0019.
+
+### DEKOMPOSISI VARIANS -- konsekuensi dari baris terakhir itu, dan ia besar
+Permutasi dalam-target menahan himpunan label tiap target tapi mengacak ligan mana membawa label mana.
+Jadi ia MENGHANCURKAN hubungan struktur-aktivitas sambil MEMPERTAHANKAN kaitan antara chemotype dan
+afinitas tipikal kelas protein yang diikat chemotype itu. Yang bertahan = **prior tingkat kelas**,
+bukan SAR.
+
+| | R2 |
+|---|---|
+| chance (label dipermutasi total) | +0.0037 |
+| **PRIOR TINGKAT KELAS (permutasi dalam-target)** | **+0.2468** |
+| plafon eksperimen | +0.5776 |
+| **sinyal tersedia DI LUAR prior kelas** | **0.3308** |
+
+**70% dari yang dicapai model ligand-only terbaik dapat direproduksi TANPA hubungan
+struktur-aktivitas dalam-target sama sekali.** Target test disjoint dari train, jadi ini BUKAN
+memorisasi target -- ini chemotype -> afinitas tipikal kelas protein yang diikatnya. Nyata, transferable,
+dan bukan arti dari "prediksi afinitas berbasis struktur".
+
+Diukur dari titik nol yang benar (di luar prior kelas), model struktur justru TERPISAH lebih jelas:
+| model | di luar prior | % dari headroom |
+|---|---|---|
+| egnn_a1c_ensemble | +0.1604 | **48.5%** |
+| egnn_qat_s2023 | +0.1404 | 42.4% |
+| desc_ridge (ligan) | +0.1063 | 32.1% |
+| egnn_stage0 | +0.0947 | 28.6% |
+| heavy_atoms | +0.0601 | 18.2% |
+| vina | +0.0133 | 4.0% |
+
+Caveat yang harus dinyatakan: baseline permutasi hanya di-fit ulang untuk pipeline DESKRIPTOR, karena
+mempermutasi label lalu melatih ulang EGNN butuh GPU. Jadi prior itu taksiran kanal chemotype, bukan
+kontrol per-arsitektur. Menjalankannya untuk EGNN adalah pekerjaan yang tersisa.
+
+### Prior art lain yang ditemukan dan wajib disitasi
+* **van Tilborg et al. 2022** (JCIM, 314 sitasi), MoleculeACE -- benchmark 24 pendekatan ML pada
+  activity cliff di 30 target: SEMUA kesulitan, dan **ML berbasis deskriptor MENGALAHKAN deep learning
+  yang lebih kompleks**. Itu persis pola kita (desc_ridge >= EGNN), kini dengan rujukan besar.
+* **Deng et al. 2023** (Nature Communications, 213 sitasi) -- 62.820 model dilatih: model
+  representation-learning menunjukkan performa TERBATAS vs representasi tetap di sebagian besar
+  dataset; activity cliff berdampak signifikan; ukuran dataset yang menentukan.
+* **Dablander et al. 2023** -- model QSAR memang sering gagal memprediksi activity cliff.
+* **Kwapien et al. 2022** -- data aditif paling mudah diprediksi; deep learning bukan pengecualian.
+* **Brown 2025** (PNAS, CORDIAL) -- leave-superfamily-out; split kita per-target, bukan per-superfamili,
+  jadi masih LEBIH MUDAH dari standar itu. Harus didisklos.
+* **PLIP 2021/2025** (Nucleic Acids Research, 1792 + 302 sitasi) -- delapan tipe interaksi nonkovalen.
+* **Cheng et al. 2009** (508 sitasi) -- scoring function klasik berkorelasi 0.545-0.644 dengan konstanta
+  eksperimen; angka kita setara, dan sekarang bisa dibandingkan terhadap plafon yang benar.
+
+### Pekerjaan yang tersisa, diperbarui
+1. **y-randomisasi dalam-target untuk EGNN** (butuh GPU) -- supaya prior kelas jadi kontrol
+   per-arsitektur, bukan taksiran.
+2. **metrik activity-cliff gaya MoleculeACE** di test set kita -- pola sudah terlihat di novelty tier,
+   belum diukur sebagai metrik.
+3. **analisis matched molecular pair (MMP)** -- cara ketat menguji apakah model menangkap SAR lokal.
+4. tipe interaksi PLIP sebagai blok tangga ke-8.
+5. coverage kondisional conformal per tier/famili.
+6. kurasi "maximal curation" Landrum untuk label BindingNet Arm B/C.

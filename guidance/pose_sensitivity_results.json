@@ -1,0 +1,168 @@
+{
+  "checkpoint": "./logs_lp_split_stage0/crossdocked_affinity_egnn_2026_09_08__16_12_40/checkpoints/best.pt",
+  "n_complexes": 300,
+  "device": "cpu",
+  "seed": 20260925,
+  "bootstrap": {
+    "b": 2000,
+    "seed": 20260925,
+    "n_target_clusters": 56
+  },
+  "sigma_across_ligands": 1.2648336520971704,
+  "label_sd": 1.817663079911417,
+  "model_rmse_on_sample": 1.327641429583025,
+  "native_pred_mean": 6.485660870869954,
+  "perturbations": {
+    "translate_0.5": {
+      "mean_abs_delta": 0.02058162530263265,
+      "ci95": [
+        0.017837048358372423,
+        0.024456644627462196
+      ],
+      "ratio_to_sigma": 0.01627219932716613,
+      "max_abs_delta": 0.0863347053527832,
+      "mean_signed_delta": 0.0018691841761271158
+    },
+    "translate_1": {
+      "mean_abs_delta": 0.04156468470891317,
+      "ci95": [
+        0.0358422235941841,
+        0.04970813508194889
+      ],
+      "ratio_to_sigma": 0.03286177960239785,
+      "max_abs_delta": 0.15984821319580078,
+      "mean_signed_delta": -0.0034179155031840006
+    },
+    "translate_2": {
+      "mean_abs_delta": 0.08572331110636393,
+      "ci95": [
+        0.07294748446816662,
+        0.10269289160170494
+      ],
+      "ratio_to_sigma": 0.06777437567717266,
+      "max_abs_delta": 0.4668149948120117,
+      "mean_signed_delta": 0.010581744511922201
+    },
+    "translate_4": {
+      "mean_abs_delta": 0.159601256052653,
+      "ci95": [
+        0.1360225194859516,
+        0.18354079512796265
+      ],
+      "ratio_to_sigma": 0.12618359401493193,
+      "max_abs_delta": 0.7824149131774902,
+      "mean_signed_delta": 0.012664054234822591
+    },
+    "translate_8": {
+      "mean_abs_delta": 0.27816891511281333,
+      "ci95": [
+        0.21483048428392187,
+        0.34354645279548085
+      ],
+      "ratio_to_sigma": 0.21992529582968678,
+      "max_abs_delta": 1.0795717239379883,
+      "mean_signed_delta": 0.06536141872406005
+    },
+    "rotate_15": {
+      "mean_abs_delta": 0.026208074887593587,
+      "ci95": [
+        0.020898901605434995,
+        0.03347796668579462
+      ],
+      "ratio_to_sigma": 0.02072057052256557,
+      "max_abs_delta": 0.21117210388183594,
+      "mean_signed_delta": 0.0005261325836181641
+    },
+    "rotate_45": {
+      "mean_abs_delta": 0.06390824874242147,
+      "ci95": [
+        0.05248000446571105,
+        0.07866670556458658
+      ],
+      "ratio_to_sigma": 0.05052699905355756,
+      "max_abs_delta": 0.42937469482421875,
+      "mean_signed_delta": -0.005175532499949138
+    },
+    "rotate_90": {
+      "mean_abs_delta": 0.0902988878885905,
+      "ci95": [
+        0.06942909645348029,
+        0.11609962406138621
+      ],
+      "ratio_to_sigma": 0.07139190812868515,
+      "max_abs_delta": 0.640007495880127,
+      "mean_signed_delta": -0.0038529380162556966
+    },
+    "rotate_180": {
+      "mean_abs_delta": 0.08329575300216675,
+      "ci95": [
+        0.06899420003048769,
+        0.10270632733504052
+      ],
+      "ratio_to_sigma": 0.06585510502828366,
+      "max_abs_delta": 0.48160696029663086,
+      "mean_signed_delta": -0.004563529491424561
+    },
+    "randomise": {
+      "mean_abs_delta": 0.1119862429300944,
+      "ci95": [
+        0.09824836285988667,
+        0.1301416333014275
+      ],
+      "ratio_to_sigma": 0.08853831706992811,
+      "max_abs_delta": 0.522618293762207,
+      "mean_signed_delta": 0.004084857304890951
+    },
+    "recentre_pocket": {
+      "mean_abs_delta": 0.12087316274642944,
+      "ci95": [
+        0.0660519494867017,
+        0.1924628919396775
+      ],
+      "ratio_to_sigma": 0.09556447406820213,
+      "max_abs_delta": 0.7944374084472656,
+      "mean_signed_delta": 0.07511569738388062
+    },
+    "swap_pocket": {
+      "mean_abs_delta": 0.7729494373003641,
+      "ci95": [
+        0.6993580626091586,
+        0.8660273296128499
+      ],
+      "ratio_to_sigma": 0.6111075840042424,
+      "max_abs_delta": 3.402646541595459,
+      "mean_signed_delta": 0.0653365683555603
+    },
+    "strip_distant_half": {
+      "mean_abs_delta": 1.245085101922353,
+      "ci95": [
+        1.1021247511800505,
+        1.3694005993843468
+      ],
+      "ratio_to_sigma": 0.9843864446980256,
+      "max_abs_delta": 2.326292037963867,
+      "mean_signed_delta": -1.2443933129310607
+    },
+    "strip_near_half": {
+      "mean_abs_delta": 1.057555448214213,
+      "ci95": [
+        0.8953259894399823,
+        1.2259478224777232
+      ],
+      "ratio_to_sigma": 0.8361221623576527,
+      "max_abs_delta": 2.9193501472473145,
+      "mean_signed_delta": -1.0381429402033489
+    },
+    "strip_random_half": {
+      "mean_abs_delta": 1.2686349439620972,
+      "ci95": [
+        1.1575283350257426,
+        1.3811052079592283
+      ],
+      "ratio_to_sigma": 1.0030053690132485,
+      "max_abs_delta": 2.269834518432617,
+      "mean_signed_delta": -1.2686349439620972
+    }
+  },
+  "note": "Rigid-body perturbations only: the ligand conformer is never altered, so a change in prediction cannot be attributed to unphysical internal geometry. ratio_to_sigma divides the mean absolute prediction change by the sd of the model's own native-pose predictions across complexes, i.e. by the dynamic range the model actually uses."
+}

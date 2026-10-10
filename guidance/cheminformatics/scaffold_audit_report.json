@@ -1,0 +1,194 @@
+{
+  "bootstrap": {
+    "b": 2000,
+    "seed": 20260925
+  },
+  "scaffold_definition": "generic Bemis-Murcko (MakeScaffoldGeneric)",
+  "unique_scaffolds": {
+    "train": 1779,
+    "val": 280,
+    "test": 417
+  },
+  "test_scaffolds_shared_with_train": 86,
+  "test_scaffolds_unseen": 331,
+  "test_molecules_on_seen_scaffold": 4755,
+  "test_molecules_on_unseen_scaffold": 7058,
+  "fraction_on_seen_scaffold": 0.4010965837199494,
+  "label_variance": {
+    "seen": 2.953643540380071,
+    "unseen": 1.6658821992284163,
+    "ratio": 1.7730206504085972
+  },
+  "by_model": {
+    "egnn_stage0": {
+      "rmse_seen": 1.38300971140822,
+      "rmse_unseen": 1.306012423803661,
+      "d_rmse": -0.07699728760455904,
+      "d_rmse_ci95": [
+        -0.3090593705123011,
+        0.1182139001287548
+      ],
+      "pearson_seen": 0.5987081550686845,
+      "pearson_unseen": 0.3975158983344015,
+      "r2_seen_scaffold": 0.35228534726445304,
+      "r2_unseen_scaffold": -0.024027221584715708
+    },
+    "egnn_a1c_ensemble": {
+      "rmse_seen": 1.3135400551856784,
+      "rmse_unseen": 1.2383044197202966,
+      "d_rmse": -0.07523563546538181,
+      "d_rmse_ci95": [
+        -0.26680065689140325,
+        0.10679316600454092
+      ],
+      "pearson_seen": 0.6491296312143549,
+      "pearson_unseen": 0.4229595875954804,
+      "r2_seen_scaffold": 0.4157215023328835,
+      "r2_unseen_scaffold": 0.07939838809842936
+    },
+    "egnn_qat_s2021": {
+      "rmse_seen": 1.3594030694559907,
+      "rmse_unseen": 1.352387966385859,
+      "d_rmse": -0.007015103070131756,
+      "d_rmse_ci95": [
+        -0.24431462540467727,
+        0.1924843692950822
+      ],
+      "pearson_seen": 0.6159771901219429,
+      "pearson_unseen": 0.42238469593279504,
+      "r2_seen_scaffold": 0.3742083632094403,
+      "r2_unseen_scaffold": -0.09804333571909729
+    },
+    "egnn_qat_s2022": {
+      "rmse_seen": 1.4137629088129,
+      "rmse_unseen": 1.3211476201289307,
+      "d_rmse": -0.09261528868396929,
+      "d_rmse_ci95": [
+        -0.30687491612149104,
+        0.10842358925749528
+      ],
+      "pearson_seen": 0.6365734014257618,
+      "pearson_unseen": 0.37216267571938133,
+      "r2_seen_scaffold": 0.32315935715105837,
+      "r2_unseen_scaffold": -0.04789936825507901
+    },
+    "egnn_qat_s2023": {
+      "rmse_seen": 1.3434162836190278,
+      "rmse_unseen": 1.2533555721531056,
+      "d_rmse": -0.0900607114659222,
+      "d_rmse_ci95": [
+        -0.29453091512234175,
+        0.0942369845216797
+      ],
+      "pearson_seen": 0.6341234507630558,
+      "pearson_unseen": 0.42499603260235597,
+      "r2_seen_scaffold": 0.3888406242197384,
+      "r2_unseen_scaffold": 0.05688320837468852
+    },
+    "heavy_atoms (lig)": {
+      "rmse_seen": 1.4795755556619303,
+      "rmse_unseen": 1.2952620583750025,
+      "d_rmse": -0.1843134972869278,
+      "d_rmse_ci95": [
+        -0.4292584820416783,
+        0.043493057466416386
+      ],
+      "pearson_seen": 0.5709549713292845,
+      "pearson_unseen": 0.30016769745571964,
+      "r2_seen_scaffold": 0.2586768580618112,
+      "r2_unseen_scaffold": -0.00723816500273311
+    },
+    "vina (lig)": {
+      "rmse_seen": 1.574371519084082,
+      "rmse_unseen": 1.3022451790468659,
+      "d_rmse": -0.27212634003721603,
+      "d_rmse_ci95": [
+        -0.5020947025654064,
+        -0.05199531145072338
+      ],
+      "pearson_seen": 0.5134118629508206,
+      "pearson_unseen": 0.3223533544676864,
+      "r2_seen_scaffold": 0.16064107692916552,
+      "r2_unseen_scaffold": -0.018128047613054532
+    },
+    "desc_ridge (lig)": {
+      "rmse_seen": 1.4590420006595066,
+      "rmse_unseen": 1.22821845611735,
+      "d_rmse": -0.2308235445421567,
+      "d_rmse_ci95": [
+        -0.45184364375953673,
+        -0.016075711338644664
+      ],
+      "pearson_seen": 0.5662542636591734,
+      "pearson_unseen": 0.37418815339917066,
+      "r2_seen_scaffold": 0.2791102505562002,
+      "r2_unseen_scaffold": 0.09433387651174951
+    },
+    "desc_hgb (lig)": {
+      "rmse_seen": 1.490816834886827,
+      "rmse_unseen": 1.315304686653469,
+      "d_rmse": -0.17551214823335792,
+      "d_rmse_ci95": [
+        -0.4355523610558282,
+        0.0819636176881593
+      ],
+      "pearson_seen": 0.5195214480336827,
+      "pearson_unseen": 0.28880484615544166,
+      "r2_seen_scaffold": 0.24736945634434226,
+      "r2_unseen_scaffold": -0.038650943956728634
+    },
+    "ecfp_ridge (lig)": {
+      "rmse_seen": 1.4921673540461968,
+      "rmse_unseen": 1.2814357677633426,
+      "d_rmse": -0.21073158628285427,
+      "d_rmse_ci95": [
+        -0.4125968617305874,
+        0.009739148365839575
+      ],
+      "pearson_seen": 0.5109653835293595,
+      "pearson_unseen": 0.3514823869264151,
+      "r2_seen_scaffold": 0.2460052346120667,
+      "r2_unseen_scaffold": 0.014150617143322775
+    },
+    "ecfp_desc_hgb (lig)": {
+      "rmse_seen": 1.4822982310635355,
+      "rmse_unseen": 1.26799416465965,
+      "d_rmse": -0.21430406640388555,
+      "d_rmse_ci95": [
+        -0.4256777651325147,
+        -0.022263518999374607
+      ],
+      "pearson_seen": 0.5350783607341905,
+      "pearson_unseen": 0.36089984394934393,
+      "r2_seen_scaffold": 0.25594602169183056,
+      "r2_unseen_scaffold": 0.03472425225800346
+    },
+    "tanimoto_1nn (lig)": {
+      "rmse_seen": 2.1568204187419178,
+      "rmse_unseen": 2.3691669552667904,
+      "d_rmse": 0.21234653652487268,
+      "d_rmse_ci95": [
+        -0.20919672464493058,
+        0.5964701976230401
+      ],
+      "pearson_seen": 0.30810561238417034,
+      "pearson_unseen": 0.14206293936145595,
+      "r2_seen_scaffold": -0.5752926082779974,
+      "r2_unseen_scaffold": -2.3698317519200045
+    },
+    "tanimoto_5nn (lig)": {
+      "rmse_seen": 2.211369611311722,
+      "rmse_unseen": 2.2636958565763936,
+      "d_rmse": 0.052326245264671556,
+      "d_rmse_ci95": [
+        -0.3887255848752735,
+        0.45656849738016614
+      ],
+      "pearson_seen": 0.24208609453545457,
+      "pearson_unseen": 0.12158202803314544,
+      "r2_seen_scaffold": -0.6559832394038512,
+      "r2_unseen_scaffold": -2.0764724961841536
+    }
+  },
+  "note": "Audit, not a filter: the thesis split is by TARGET by design. Read d_rmse, not the R2 columns: the seen/unseen subsets differ in label variance by 1.77x, which moves R2 and attenuates Pearson r mechanically. The untrained vina baseline shows the same R2 collapse and proves the effect is a property of the partition rather than of learning."
+}

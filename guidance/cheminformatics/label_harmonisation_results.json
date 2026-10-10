@@ -1,0 +1,155 @@
+{
+  "offset_log10": 0.3010299956639812,
+  "offset_source": "Kalliokoski et al. 2013 (PLoS ONE, 311 cites)",
+  "composition_by_split": {
+    "train": {
+      "IC50": 25968,
+      "Kd": 8171,
+      "Ki": 12825
+    },
+    "val": {
+      "Kd": 909,
+      "IC50": 4168,
+      "Ki": 962,
+      "None": 30
+    },
+    "test": {
+      "Ki": 4219,
+      "IC50": 5578,
+      "Kd": 2057,
+      "None": 1
+    }
+  },
+  "join_coverage_pct": {
+    "train": 100.0,
+    "val": 99.50568462679189,
+    "test": 99.99156474061579
+  },
+  "test_set": {
+    "n": 11855,
+    "n_adjusted": 5578,
+    "n_unknown": 1,
+    "mean_raw": 6.793749516192052,
+    "mean_harmonised": 6.935389779019019,
+    "sd_raw": 1.6482536195017414,
+    "sd_harmonised": 1.6681817441774662
+  },
+  "models": {
+    "egnn_a1c_ensemble": {
+      "r2_raw": 0.4071791626892439,
+      "r2_harmonised": 0.41571882777810165,
+      "delta": 0.008539665088857729
+    },
+    "egnn_qat_s2023": {
+      "r2_raw": 0.3871905552535958,
+      "r2_harmonised": 0.40335044194438985,
+      "delta": 0.016159886690794045
+    },
+    "desc_ridge (lig)": {
+      "r2_raw": 0.3530988567500075,
+      "r2_harmonised": 0.34302544380846056,
+      "delta": -0.010073412941546955
+    },
+    "egnn_stage0": {
+      "r2_raw": 0.34153972795011456,
+      "r2_harmonised": 0.333510950304861,
+      "delta": -0.00802877764525356
+    },
+    "egnn_qat_s2021": {
+      "r2_raw": 0.32391822276090376,
+      "r2_harmonised": 0.30355342467212454,
+      "delta": -0.020364798088779223
+    },
+    "ecfp_desc_hgb (lig)": {
+      "r2_raw": 0.32110888570341,
+      "r2_harmonised": 0.30208310719216414,
+      "delta": -0.019025778511245872
+    },
+    "egnn_qat_s2022": {
+      "r2_raw": 0.3200739037725837,
+      "r2_harmonised": 0.36642980763488986,
+      "delta": 0.04635590386230615
+    },
+    "ecfp_ridge (lig)": {
+      "r2_raw": 0.3092194377012729,
+      "r2_harmonised": 0.31019118046243777,
+      "delta": 0.000971742761164851
+    },
+    "heavy_atoms (lig)": {
+      "r2_raw": 0.30689006434188904,
+      "r2_harmonised": 0.2893608392343676,
+      "delta": -0.017529225107521418
+    },
+    "desc_hgb (lig)": {
+      "r2_raw": 0.2904243779776281,
+      "r2_harmonised": 0.26915826976324975,
+      "delta": -0.021266108214378354
+    },
+    "vina (lig)": {
+      "r2_raw": 0.26014571237034245,
+      "r2_harmonised": 0.24696614379507298,
+      "delta": -0.013179568575269474
+    },
+    "tanimoto_5nn (lig)": {
+      "r2_raw": -0.8517860286934433,
+      "r2_harmonised": -0.9034209338266037,
+      "delta": -0.05163490513316038
+    },
+    "tanimoto_1nn (lig)": {
+      "r2_raw": -0.9243313902674677,
+      "r2_harmonised": -0.9765355982998054,
+      "delta": -0.05220420803233772
+    }
+  },
+  "ranking_unchanged": false,
+  "paired_vs_ligand_champion": {
+    "egnn_stage0": {
+      "d_r2": -0.009514493503599564,
+      "ci95": [
+        -0.11643179848787133,
+        0.08589347239620827
+      ],
+      "boot_p": 0.898,
+      "verdict": "tie"
+    },
+    "egnn_a1c_ensemble": {
+      "d_r2": 0.07269338396964109,
+      "ci95": [
+        -0.005787094230844489,
+        0.15023068086856944
+      ],
+      "boot_p": 0.075,
+      "verdict": "tie"
+    },
+    "egnn_qat_s2021": {
+      "d_r2": -0.03947201913633602,
+      "ci95": [
+        -0.1905798543109233,
+        0.08148761100561001
+      ],
+      "boot_p": 0.603,
+      "verdict": "tie"
+    },
+    "egnn_qat_s2022": {
+      "d_r2": 0.023404363826429297,
+      "ci95": [
+        -0.09263140841172966,
+        0.14250943791946385
+      ],
+      "boot_p": 0.68,
+      "verdict": "tie"
+    },
+    "egnn_qat_s2023": {
+      "d_r2": 0.060324998135929286,
+      "ci95": [
+        -0.008281319301901822,
+        0.13115547427496546
+      ],
+      "boot_p": 0.091,
+      "verdict": "tie"
+    }
+  },
+  "delta_spread": 0.09856011189464386,
+  "typical_ci_width": 0.3871,
+  "note": "IC50/EC50 raised by log10(2) to a Ki/Kd-equivalent axis. Models were trained on uncorrected labels, so this tests whether the EVALUATION target changes any conclusion, not whether retraining would improve on it."
+}

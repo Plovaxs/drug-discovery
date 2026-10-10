@@ -1,0 +1,128 @@
+{
+  "metric": "val_R2",
+  "runs": [
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_09__21_31_15_arm0_cd6000_bn0_bs4_s2021",
+      "group": "surrogate_arms/arm0_cd6000_bn0_bs4",
+      "seed": 2021,
+      "seed_source": "checkpoint",
+      "best_epoch": 1,
+      "n_epochs": 6,
+      "val_loss": 2.060084,
+      "val_n": 6069,
+      "val_R2": 0.299,
+      "val_RMSE": 1.435,
+      "val_MAE": 1.118,
+      "val_Pearson": 0.55,
+      "val_Spearman": 0.557
+    },
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_09__22_24_20_arm0_cd6000_bn0_bs4_s2022",
+      "group": "surrogate_arms/arm0_cd6000_bn0_bs4",
+      "seed": 2022,
+      "seed_source": "checkpoint",
+      "best_epoch": 3,
+      "n_epochs": 4,
+      "val_loss": 2.706817,
+      "val_n": 6069,
+      "val_R2": 0.079,
+      "val_RMSE": 1.645,
+      "val_MAE": 1.313,
+      "val_Pearson": 0.619,
+      "val_Spearman": 0.614
+    },
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_09__23_18_02_armB_cd6000_bn14000_bs1_s2021_RANDOM_aborted",
+      "group": "surrogate_arms/armB_cd6000_bn14000_bs1_ABORTED",
+      "seed": 2021,
+      "seed_source": "checkpoint",
+      "best_epoch": 1,
+      "n_epochs": 2,
+      "val_loss": 2.262505,
+      "val_n": 6069,
+      "val_R2": 0.23,
+      "val_RMSE": 1.504,
+      "val_MAE": 1.191,
+      "val_Pearson": 0.527,
+      "val_Spearman": 0.547
+    },
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_10__00_32_42_armBmatch_cd6000_bn14000_bs1_s2021",
+      "group": "surrogate_arms/armBmatch_cd6000_bn14000_bs1",
+      "seed": 2021,
+      "seed_source": "checkpoint",
+      "best_epoch": 8,
+      "n_epochs": 13,
+      "val_loss": 2.063664,
+      "val_n": 6069,
+      "val_R2": 0.298,
+      "val_RMSE": 1.437,
+      "val_MAE": 1.165,
+      "val_Pearson": 0.565,
+      "val_Spearman": 0.572
+    },
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_10__07_45_22_armBmatch_cd6000_bn14000_bs1_s2022",
+      "group": "surrogate_arms/armBmatch_cd6000_bn14000_bs1",
+      "seed": 2022,
+      "seed_source": "checkpoint",
+      "best_epoch": 9,
+      "n_epochs": 14,
+      "val_loss": 2.192462,
+      "val_n": 6069,
+      "val_R2": 0.254,
+      "val_RMSE": 1.481,
+      "val_MAE": 1.18,
+      "val_Pearson": 0.551,
+      "val_Spearman": 0.526
+    },
+    {
+      "run_dir": "logs_surrogate_arms/crossdocked_affinity_egnn_2026_10_10__15_42_07_armBmatch_cd6000_bn14000_bs1_s2023",
+      "group": "surrogate_arms/armBmatch_cd6000_bn14000_bs1",
+      "seed": 2023,
+      "seed_source": "checkpoint",
+      "best_epoch": 12,
+      "n_epochs": 17,
+      "val_loss": 2.107033,
+      "val_n": 6069,
+      "val_R2": 0.283,
+      "val_RMSE": 1.452,
+      "val_MAE": 1.164,
+      "val_Pearson": 0.566,
+      "val_Spearman": 0.582
+    }
+  ],
+  "groups": {
+    "surrogate_arms/arm0_cd6000_bn0_bs4": {
+      "n": 2,
+      "mean": 0.189,
+      "min": 0.079,
+      "max": 0.299,
+      "sd": 0.15556349186104046,
+      "sem": 0.11,
+      "ci95": [
+        -1.2086825210075305,
+        1.5866825210075306
+      ]
+    },
+    "surrogate_arms/armB_cd6000_bn14000_bs1_ABORTED": {
+      "n": 1,
+      "mean": 0.23,
+      "min": 0.23,
+      "max": 0.23,
+      "sd": null
+    },
+    "surrogate_arms/armBmatch_cd6000_bn14000_bs1": {
+      "n": 3,
+      "mean": 0.2783333333333333,
+      "min": 0.254,
+      "max": 0.298,
+      "sd": 0.022368132093076813,
+      "sem": 0.012914247085207005,
+      "ci95": [
+        0.22276781286019695,
+        0.33389885380646966
+      ]
+    }
+  }
+}

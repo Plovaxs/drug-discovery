@@ -18,8 +18,28 @@ inflating sigma uniformly (variance collapse) rather than learning a sigma that 
 difficulty -- val sigma statistics are logged every epoch so this is visible during training, not just
 after the fact.
 
+A1e-beta (added 2026-10-10, --beta_nll): a prior-art audit found that A1e's loss is one the literature
+already characterises as pathological. Seitzer et al. 2022, "On the Pitfalls of Heteroscedastic
+Uncertainty Estimation with Probabilistic Neural Networks", shows Gaussian NLL under gradient-based
+optimisers converges to "very poor but stable" parameter estimates, because the gradient of the mean is
+scaled by the predictive variance -- so an example the model has wrongly assigned a large sigma stops
+contributing to the mean fit, its error never shrinks, and its sigma stays large. That is exactly A1e's
+observed cold-start collapse. Their published remedy is beta-NLL (see beta_nll() below).
+
+This matters for what A1e is allowed to conclude. "Heteroscedastic sigma does not rank error" is a much
+weaker statement if the only loss tested is the one already known to fail. So A1e-beta re-runs the same
+model, data, split, optimizer and selection criterion with the single factor beta changed, and:
+  * if beta-NLL also fails the three pre-registered tests, the negative result becomes considerably
+    STRONGER -- it survives the field's own correction;
+  * if beta-NLL passes, A1e's conclusion was an artifact of the loss and must be withdrawn.
+Either outcome is publishable; neither is available from A1e alone. The analysis plan is NOT re-derived
+for this run -- it is A1's three tests verbatim (Spearman(sigma,|err|), calibration ratio, partial
+Spearman given n_lig; cluster bootstrap B=2,000 seed 20260925, BH), via analyze_heteroscedastic.py.
+
 Usage:
   python guidance/uncertainty_a1/train_egnn_heteroscedastic.py configs/prop/crossdocked_affinity_egnn.yml --skip_test_logging
+  python guidance/uncertainty_a1/train_egnn_heteroscedastic.py configs/prop/crossdocked_affinity_egnn.yml \
+      --skip_test_logging --beta_nll 0.5 --logdir ./logs_a1e_beta_heteroscedastic --seed 2021
 """
 import argparse
 import os
@@ -66,7 +86,60 @@ def warm_start(model, ckpt_path, init_log_var=0.5):
     model.load_state_dict(new)
 
 
-def get_loss(model, batch, pos_noise_std):
+def gaussian_nll(y, mu, log_var):
+    """Per-example Gaussian NLL, constant 0.5*log(2*pi) dropped."""
+    return 0.5 * log_var + 0.5 * (y - mu) ** 2 * torch.exp(-log_var)
+
+
+def beta_nll(y, mu, log_var, beta=0.0):
+    """beta-NLL (Seitzer et al. 2022): each example's NLL is weighted by its own variance raised to beta,
+    with the weight's gradient STOPPED.
+
+        L_i = stopgrad(sigma_i^2)^beta * NLL_i
+
+    Returns (weighted_per_example_loss, plain_per_example_nll) so a run can optimise one and be SELECTED
+    on the other -- see below for why that matters.
+
+    The problem beta solves. In plain NLL the gradient of the loss w.r.t. mu carries a factor 1/sigma^2:
+
+        dNLL_i/dmu_i = -(y_i - mu_i) / sigma_i^2
+
+    so every example's pull on the mean is scaled by its own inverse predicted variance. Early in
+    training sigma is a bad estimate, and any example the model has (wrongly) assigned a large sigma is
+    effectively silenced -- it stops contributing to the mean fit, so its error never shrinks, so its
+    sigma stays large. That self-reinforcing loop is the "very poor but stable" fixed point Seitzer et al.
+    characterise, and it is precisely the variance collapse A1e hit at cold start (log_var pinned at the
+    clamp ceiling within ~3 steps).
+
+    Multiplying by stopgrad(sigma^2)^beta makes the mean gradient scale as sigma^(2*beta - 2):
+      beta = 0   -> sigma^-2, i.e. plain NLL, the pathological case
+      beta = 0.5 -> sigma^-1, partially restored  (the paper's recommended default)
+      beta = 1   -> sigma^0,  mean gradient fully independent of sigma, exactly as in MSE
+    The weight MUST be detached: left attached it would also rescale the variance objective, turning a
+    reweighting of the mean fit into a different loss whose optimum is no longer the true predictive
+    distribution. tests/test_beta_nll.py verifies the scaling law and the detachment numerically rather
+    than taking this paragraph's word for it.
+
+    beta = 0.0 is the default so this function reproduces A1e's original loss BIT-FOR-BIT, which is what
+    makes A1e vs A1e-beta a controlled comparison of one factor rather than a rewrite.
+    """
+    nll = gaussian_nll(y, mu, log_var)
+    if beta == 0.0:
+        return nll, nll
+    weight = torch.exp(beta * log_var.detach())      # (sigma^2)^beta, gradient stopped
+    return weight * nll, nll
+
+
+def get_loss(model, batch, pos_noise_std, beta=0.0):
+    """Returns (training_loss, plain_nll, mu, log_var).
+
+    Two losses, deliberately. `training_loss` is what gets backpropagated; `plain_nll` is the unweighted
+    Gaussian NLL and is what validation reports and early stopping selects on. Keeping selection on the
+    plain NLL means A1e and A1e-beta are chosen by the SAME criterion and differ only in the training
+    gradient -- if beta changed the selection objective too, a difference in the result could not be
+    attributed to beta. It also keeps every val number directly comparable to the A1e run already on
+    record, so the two can go in one table without a footnote explaining that the columns mean different
+    things."""
     protein_noise = torch.randn_like(batch.protein_pos) * pos_noise_std
     ligand_noise = torch.randn_like(batch.ligand_pos) * pos_noise_std
     out = model(
@@ -79,10 +152,8 @@ def get_loss(model, batch, pos_noise_std):
         output_kind=None,
     )
     mu, log_var = out[:, 0], out[:, 1].clamp(*LOG_VAR_CLAMP)
-    y = batch.y
-    nll = 0.5 * log_var + 0.5 * (y - mu) ** 2 * torch.exp(-log_var)
-    loss = nll.mean()
-    return loss, mu, log_var
+    weighted, nll = beta_nll(batch.y, mu, log_var, beta)
+    return weighted.mean(), nll.mean(), mu, log_var
 
 
 def main():
@@ -95,6 +166,11 @@ def main():
     parser.add_argument('--skip_test_logging', action='store_true')
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--resume', type=str, default=None)
+    parser.add_argument('--beta_nll', type=float, default=0.0,
+                        help='beta for beta-NLL (Seitzer et al. 2022). 0.0 (default) is plain Gaussian '
+                             'NLL, reproducing A1e bit-for-bit; 0.5 is the published recommendation; '
+                             '1.0 makes the mean gradient variance-independent, as in MSE. Validation '
+                             'always reports plain NLL so runs stay comparable across beta.')
     parser.add_argument('--no_warm_start', action='store_true',
                         help='train mu+log_var from scratch instead of warm-starting mu from the Stage 0 '
                              'MSE checkpoint (NOT recommended -- verified this collapses log_var to the '
@@ -179,17 +255,23 @@ def main():
         optimizer.zero_grad()
         for it, batch in enumerate(tqdm(train_loader, dynamic_ncols=True, desc=f'Epoch {epoch}'), start=1):
             batch = batch.to(args.device)
-            loss, mu, log_var = get_loss(model, batch, pos_noise_std=config.train.pos_noise_std)
+            loss, nll, mu, log_var = get_loss(model, batch, pos_noise_std=config.train.pos_noise_std,
+                                              beta=args.beta_nll)
             loss.backward()
             grad_norm = clip_grad_norm_(model.parameters(), config.train.max_grad_norm)
             optimizer.step()
             optimizer.zero_grad()
             global_it += 1
             if it % config.train.report_iter == 0:
-                logger.info('[Train] Epoch %03d Iter %04d | NLL %.6f | mean_sigma %.4f | Lr %.6f' % (
-                    epoch, it, loss.item(), log_var.detach().exp().sqrt().mean().item(),
+                # Both are logged whenever beta != 0: the optimised objective and the comparable one.
+                # Reporting only the weighted loss would make the training curve incomparable to A1e's.
+                extra = '' if args.beta_nll == 0.0 else ' | betaNLL %.6f' % loss.item()
+                logger.info('[Train] Epoch %03d Iter %04d | NLL %.6f%s | mean_sigma %.4f | Lr %.6f' % (
+                    epoch, it, nll.item(), extra, log_var.detach().exp().sqrt().mean().item(),
                     optimizer.param_groups[0]['lr']))
-            writer.add_scalar('train/nll', loss, global_it)
+            writer.add_scalar('train/nll', nll, global_it)
+            if args.beta_nll != 0.0:
+                writer.add_scalar('train/beta_nll', loss, global_it)
             writer.add_scalar('train/lr', optimizer.param_groups[0]['lr'], global_it)
             writer.add_scalar('train/grad', grad_norm, global_it)
 
@@ -200,8 +282,10 @@ def main():
         with torch.no_grad():
             for batch in tqdm(data_loader, desc=prefix):
                 batch = batch.to(args.device)
-                loss, mu, log_var = get_loss(model, batch, pos_noise_std=0.)
-                sum_loss += loss.item() * len(batch.y)
+                # beta=0 here on purpose: validation reports and selects on the PLAIN NLL regardless of
+                # how training was weighted, so the number stays comparable to the A1e run on record.
+                _, nll, mu, log_var = get_loss(model, batch, pos_noise_std=0., beta=0.0)
+                sum_loss += nll.item() * len(batch.y)
                 sum_n += len(batch.y)
                 mu_arr.append(mu); logvar_arr.append(log_var); y_arr.append(batch.y)
         if sum_n == 0:

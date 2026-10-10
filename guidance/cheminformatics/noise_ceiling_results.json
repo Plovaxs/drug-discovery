@@ -1,0 +1,167 @@
+{
+  "label_composition": {
+    "train": {
+      "Kd": 4692,
+      "IC50": 3814,
+      "Ki": 3007,
+      "n": 11513
+    },
+    "val": {
+      "IC50": 1067,
+      "Kd": 864,
+      "Ki": 491,
+      "n": 2422
+    },
+    "test": {
+      "IC50": 2213,
+      "Ki": 1374,
+      "Kd": 1273,
+      "n": 4860
+    },
+    "overall": {
+      "Kd": 7249,
+      "IC50": 7190,
+      "Ki": 5004
+    }
+  },
+  "decomposition": {
+    "chance": 0.0036972265013095586,
+    "class_level_prior": 0.24682410794656412,
+    "ceiling": 0.5776,
+    "headroom_beyond_prior": 0.3307758920534359
+  },
+  "ceiling": {
+    "source": "Hernandez-Garrido et al. 2023",
+    "exp_pearson": 0.76,
+    "exp_rmse": 1.04,
+    "exp_mae": 0.78,
+    "ceiling_r2": 0.5776
+  },
+  "models": {
+    "egnn_a1c_ensemble": {
+      "test_r2": 0.4071791626892439,
+      "pct_of_ceiling": 70.49500739079707,
+      "rmse": 1.2690170309670936,
+      "rmse_over_noise": 1.2202086836222055,
+      "beyond_class_prior": 0.1603550547426798,
+      "pct_of_headroom": 48.47845885841491
+    },
+    "egnn_qat_s2023": {
+      "test_r2": 0.3871905552535958,
+      "pct_of_ceiling": 67.03437590955606,
+      "rmse": 1.2902338909913962,
+      "rmse_over_noise": 1.24060951056865,
+      "beyond_class_prior": 0.14036644730703168,
+      "pct_of_headroom": 42.435513191619144
+    },
+    "desc_ridge (lig)": {
+      "test_r2": 0.3530988567500075,
+      "pct_of_ceiling": 61.13207353705116,
+      "rmse": 1.3256371908125928,
+      "rmse_over_noise": 1.2746511450121083,
+      "beyond_class_prior": 0.1062747488034434,
+      "pct_of_headroom": 32.1289281826727
+    },
+    "egnn_stage0": {
+      "test_r2": 0.34153972795011456,
+      "pct_of_ceiling": 59.13083932654338,
+      "rmse": 1.3374283009706875,
+      "rmse_over_noise": 1.2859887509333534,
+      "beyond_class_prior": 0.09471562000355044,
+      "pct_of_headroom": 28.634378223745948
+    },
+    "egnn_qat_s2021": {
+      "test_r2": 0.32391822276090376,
+      "pct_of_ceiling": 56.080024716222944,
+      "rmse": 1.3552060617954438,
+      "rmse_over_noise": 1.303082751726388,
+      "beyond_class_prior": 0.07709411481433964,
+      "pct_of_headroom": 23.307053708099534
+    },
+    "ecfp_desc_hgb (lig)": {
+      "test_r2": 0.32110888570341,
+      "pct_of_ceiling": 55.593643646712266,
+      "rmse": 1.3580188012208443,
+      "rmse_over_noise": 1.3057873088661964,
+      "beyond_class_prior": 0.07428477775684589,
+      "pct_of_headroom": 22.45773635306088
+    },
+    "egnn_qat_s2022": {
+      "test_r2": 0.3200739037725837,
+      "pct_of_ceiling": 55.41445702433929,
+      "rmse": 1.359053569250816,
+      "rmse_over_noise": 1.3067822781257847,
+      "beyond_class_prior": 0.07324979582601959,
+      "pct_of_headroom": 22.144841140413675
+    },
+    "ecfp_ridge (lig)": {
+      "test_r2": 0.3092194377012729,
+      "pct_of_ceiling": 53.535221208669135,
+      "rmse": 1.3698587075795206,
+      "rmse_over_noise": 1.3171718342110774,
+      "beyond_class_prior": 0.062395329754708795,
+      "pct_of_headroom": 18.863324460365757
+    },
+    "heavy_atoms (lig)": {
+      "test_r2": 0.30689006434188904,
+      "pct_of_ceiling": 53.13193634727996,
+      "rmse": 1.3721664063405827,
+      "rmse_over_noise": 1.3193907753274834,
+      "beyond_class_prior": 0.060065956395324915,
+      "pct_of_headroom": 18.159109487223887
+    },
+    "desc_hgb (lig)": {
+      "test_r2": 0.2904243779776281,
+      "pct_of_ceiling": 50.28122887424309,
+      "rmse": 1.3883694976567857,
+      "rmse_over_noise": 1.3349706708238325,
+      "beyond_class_prior": 0.04360027003106398,
+      "pct_of_headroom": 13.181211532798311
+    },
+    "vina (lig)": {
+      "test_r2": 0.26014571237034245,
+      "pct_of_ceiling": 45.03907762644433,
+      "rmse": 1.4176819759974348,
+      "rmse_over_noise": 1.3631557461513797,
+      "beyond_class_prior": 0.013321604423778333,
+      "pct_of_headroom": 4.027380696059393
+    },
+    "tanimoto_5nn (lig)": {
+      "test_r2": -0.8517860286934433,
+      "pct_of_ceiling": -147.4698803139618,
+      "rmse": 2.2428546100982447,
+      "rmse_over_noise": 2.156590971248312
+    },
+    "tanimoto_1nn (lig)": {
+      "test_r2": -0.9243313902674677,
+      "pct_of_ceiling": -160.02967283024026,
+      "rmse": 2.2863654700049305,
+      "rmse_over_noise": 2.1984283365432025
+    }
+  },
+  "power": {
+    "floor_r2": 0.3530988567500075,
+    "floor_model": "desc_ridge (lig)",
+    "best_structure_r2": 0.4071791626892439,
+    "best_structure_model": "egnn_a1c_ensemble",
+    "window": 0.22450114324999249,
+    "mean_ci_width": 0.38713359346132603,
+    "window_over_ci": 0.5799061281216862,
+    "between_seed_sd": 0.0377
+  },
+  "y_randomisation": {
+    "global": {
+      "mean": 0.0036972265013095586,
+      "sd": 0.007488278361767984,
+      "max": 0.014066477832609614,
+      "min": -0.014370254162727303
+    },
+    "within_target": {
+      "mean": 0.24682410794656412,
+      "sd": 0.0019455239875721601,
+      "max": 0.2499246085579344,
+      "min": 0.24298531508627386
+    }
+  },
+  "note": "The ceiling is the reproducibility of the LABELS, not a modelling limit. Quote R2 as a fraction of it. The window between the ligand-only floor and that ceiling is the only room structural information has to demonstrate itself, and it must be compared against the width of the confidence intervals before any ranking is claimed."
+}

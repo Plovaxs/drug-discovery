@@ -30,6 +30,7 @@ Usage (one arm per sitting; resumable via --resume after a cooldown/shutdown):
       --arm_tag arm0 --cd_rows 6000 --seed 2021 --batch_size 8
 """
 import argparse
+import json
 import os
 import shutil
 
@@ -54,13 +55,53 @@ from guidance.lp_split.lp_split_loader import build_lp_splits
 
 BN_ROOT = './data/bindingnet_pocket10'
 BN_LABELS = os.path.join(BN_ROOT, 'labels.csv')
+SEQ_LEAK_SUMMARY = './guidance/surrogate_data/bindingnet_v1_final_summary.json'
+CMP_LEAK_SUMMARY = './guidance/surrogate_data/bindingnet_v1_clean_summary.json'
 
 
 def build_bn_train_set(n_rows, transform, seed, keep_censored=False,
-                       max_core_rmsd=None, min_similarity=None):
+                       max_core_rmsd=None, min_similarity=None, match_pk_to_cd=None,
+                       compound_filter=True):
     """BindingNet training subset. Val/test are NEVER drawn from here -- they stay pure CrossDocked."""
     labels = pd.read_csv(BN_LABELS)
     n_all = len(labels)
+
+    # Sequence-identity leakage filter, enforced HERE (not only in the upstream CSV) so that training
+    # cannot accidentally use an unfiltered index. leakage_audit.py found templates that both ID-based
+    # filters missed -- e.g. 1fm9 chain A is 100% identical to P19793 (RXRA_HUMAN), a test target, because
+    # 1FM9 is a PPARg/RXRa heterodimer whose PDB ID differs from the ones ID-matching caught.
+    with open(SEQ_LEAK_SUMMARY) as f:
+        excluded = set(json.load(f)['templates_excluded'])
+    before = len(labels)
+    labels = labels[~labels['pdb_template'].isin(excluded)]
+    print(f'BN sequence-identity leakage filter: dropped {before - len(labels)} rows '
+          f'({len(excluded)} templates >=90% identical to a val/test target)', flush=True)
+
+    # Compound (ligand-side) leakage filter, enforced here for the same reason as the one above. The
+    # three upstream filters are all protein-side; compound_overlap_audit.py found 123 BindingNet
+    # compounds whose InChIKey connectivity skeleton matches a CrossDocked val/test ligand. The
+    # training-side cost reads as negligible (423/124,973 rows = 0.34%) but the evaluation-side exposure
+    # does not: 1,814 of 17,924 val+test records = 10.12%. Same leak, thirtyfold apart depending on which
+    # side you measure, so it is enforced rather than noted.
+    if compound_filter:
+        if not os.path.exists(CMP_LEAK_SUMMARY):
+            raise SystemExit(
+                f'{CMP_LEAK_SUMMARY} not found. Run:\n'
+                f'  python guidance/surrogate_data/compound_overlap_audit.py\n'
+                f'  python guidance/surrogate_data/apply_compound_leakage_filter.py\n'
+                f'or pass --no_compound_filter to train on the known-contaminated pool deliberately '
+                f'(Arm B pre-dates this filter; see TASKS.md for the pre-registered rule).')
+        with open(CMP_LEAK_SUMMARY) as f:
+            bad_compounds = set(json.load(f)['compounds_excluded'])
+        before = len(labels)
+        labels = labels[~labels['chembl_compound'].isin(bad_compounds)]
+        print(f'BN compound leakage filter: dropped {before - len(labels)} rows '
+              f'({len(bad_compounds)} compounds sharing a ligand skeleton with a val/test record)',
+              flush=True)
+    else:
+        print('BN compound leakage filter: DISABLED -- training pool knowingly contains ligands present '
+              'in val/test; this must be disclosed wherever this run is reported', flush=True)
+
     if not keep_censored:
         labels = labels[~labels['censored'].astype(bool)]
     if max_core_rmsd is not None:
@@ -71,7 +112,31 @@ def build_bn_train_set(n_rows, transform, seed, keep_censored=False,
           f'(keep_censored={keep_censored}, max_core_rmsd={max_core_rmsd}, min_similarity={min_similarity})',
           flush=True)
 
-    if n_rows is not None and n_rows < len(labels):
+    if match_pk_to_cd is not None and n_rows is not None:
+        # Stratified sampling so the BN label histogram matches the CrossDocked one. Measured shift
+        # without this: BN mean 7.12 / sd 1.37 / p1 3.62 vs CD test 6.79 / 1.65 / 2.30 -- BN is shifted
+        # +0.32 pK, narrower, and missing the weak-binder tail (ChEMBL publication bias: actives get
+        # published, weak binders do not). KS D=0.099 vs 0.045 for natural CD-train/CD-test variation.
+        # That matters because R2 is variance-explained: a narrow training label range with no low tail
+        # means the model never learns to predict the low pK values the test set does contain, so a weak
+        # Arm B result would be confounded by label shift rather than by BindingNet data quality.
+        bins = [0, 4, 5, 6, 7, 8, 9, 10, 100]
+        cd_hist, _ = np.histogram(match_pk_to_cd, bins=bins)
+        frac = cd_hist / cd_hist.sum()
+        parts, rng = [], np.random.RandomState(seed)
+        for i in range(len(bins) - 1):
+            want = int(round(frac[i] * n_rows))
+            pool = labels[(labels.pk >= bins[i]) & (labels.pk < bins[i + 1])]
+            if want == 0 or len(pool) == 0:
+                continue
+            take = min(want, len(pool))
+            if take < want:
+                print(f'  WARN bin {bins[i]}-{bins[i+1]}: wanted {want}, only {len(pool)} available', flush=True)
+            parts.append(pool.sample(n=take, random_state=rng.randint(1 << 30)))
+        labels = pd.concat(parts)
+        print(f'BN stratified to match CD pK distribution: {len(labels)} rows '
+              f'(mean {labels.pk.mean():.2f}, sd {labels.pk.std():.2f})', flush=True)
+    elif n_rows is not None and n_rows < len(labels):
         labels = labels.sample(n=n_rows, random_state=seed)
     base = PocketLigandPairDataset(BN_ROOT)
     indices = labels['idx'].astype(int).tolist()
@@ -88,6 +153,15 @@ def main():
     parser.add_argument('--bn_keep_censored', action='store_true')
     parser.add_argument('--bn_max_core_rmsd', type=float, default=None)
     parser.add_argument('--bn_min_similarity', type=float, default=None)
+    parser.add_argument('--bn_match_pk', action='store_true',
+                        help='stratify the BN sample so its pK histogram matches the CrossDocked\n'
+                             'training labels, removing the measured +0.32 pK / narrower-spread shift\n'
+                             'as a confound (see build_bn_train_set)')
+    parser.add_argument('--no_compound_filter', action='store_true',
+                        help='train on BN rows whose ligand also appears in CrossDocked val/test. Default\n'
+                             'is to EXCLUDE them (123 compounds, 423 rows, 0.34% of the pool) because the\n'
+                             'evaluation-side exposure is 10.12% of val+test records. Only for\n'
+                             'reproducing Arm B, which was launched before the audit existed.')
     parser.add_argument('--batch_size', type=int, default=None, help='override config.train.batch_size')
     parser.add_argument('--amp', action='store_true',
                         help='bf16 autocast. Measured 1.38x faster at bs=4 (16.0 vs 11.6 rows/sec) with '
@@ -143,9 +217,11 @@ def main():
         train_parts.append(CrossDockedAffinityDataset(cd_base, cd_train_idx, cd_pk, transform))
         part_desc.append(f'CD={len(cd_train_idx)}')
     if args.bn_rows > 0:
+        cd_label_ref = np.array([cd_pk[i] for i in cd_splits['train']]) if args.bn_match_pk else None
         bn_set, n_bn = build_bn_train_set(
             args.bn_rows, transform, config.train.seed, args.bn_keep_censored,
-            args.bn_max_core_rmsd, args.bn_min_similarity)
+            args.bn_max_core_rmsd, args.bn_min_similarity, match_pk_to_cd=cd_label_ref,
+            compound_filter=not args.no_compound_filter)
         train_parts.append(bn_set)
         part_desc.append(f'BN={n_bn}')
     assert train_parts, 'need cd_rows > 0 or bn_rows > 0'
