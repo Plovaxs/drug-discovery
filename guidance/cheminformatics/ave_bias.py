@@ -114,22 +114,50 @@ def ave(va_act_to_tr_act, va_act_to_tr_ina, va_ina_to_tr_ina, va_ina_to_tr_act):
             + (va_ina_to_tr_ina - va_ina_to_tr_act))
 
 
-def ave_for_split(tr_fp, tr_pk, te_fp, te_pk, thr, rows=None):
-    """AVE at one pK threshold. `rows` restricts the validation side (for bootstrapping)."""
+def nn_similarities_once(tr_fp, tr_pk, te_fp, thr):
+    """Per-test-molecule nearest-neighbour similarity to the training actives and inactives, computed
+    ONCE for a threshold.
+
+    This is the whole fix. A test molecule's distance to the training actives is a property of that
+    molecule and the (fixed) training set; it does not depend on which other test molecules are drawn in
+    a bootstrap resample. The previous version recomputed the full similarity matrix inside every draw —
+    8,000 times over four thresholds and 2,000 resamples — and spent 4 h 42 min at 92 C without
+    finishing one threshold. Two matrix products replace all of it.
+
+    Returns (sim_to_train_actives, sim_to_train_inactives, n_train_active, n_train_inactive), each
+    similarity array aligned to te_fp's rows.
+    """
+    tr_a, tr_i = tr_fp[tr_pk >= thr], tr_fp[tr_pk < thr]
+    if len(tr_a) == 0 or len(tr_i) == 0:
+        return None, None, len(tr_a), len(tr_i)
+    return (nn_sim_matrix(te_fp, tr_a), nn_sim_matrix(te_fp, tr_i), len(tr_a), len(tr_i))
+
+
+def ave_from_cached(sim_a, sim_i, te_pk, thr, rows=None, n_tr_a=0, n_tr_i=0):
+    """AVE at one threshold from the cached per-molecule similarities. `rows` restricts the validation
+    side, which is all a bootstrap draw actually changes."""
+    if sim_a is None:
+        return float('nan'), {}
     if rows is None:
         rows = np.arange(len(te_pk))
-    tr_a, tr_i = tr_fp[tr_pk >= thr], tr_fp[tr_pk < thr]
-    te_a = te_fp[rows][te_pk[rows] >= thr]
-    te_i = te_fp[rows][te_pk[rows] < thr]
-    if min(len(tr_a), len(tr_i), len(te_a), len(te_i)) == 0:
+    lab = te_pk[rows] >= thr
+    act, ina = rows[lab], rows[~lab]
+    if len(act) == 0 or len(ina) == 0:
         return float('nan'), {}
-    aa = cdf_auc(nn_sim_matrix(te_a, tr_a))
-    ai = cdf_auc(nn_sim_matrix(te_a, tr_i))
-    ii = cdf_auc(nn_sim_matrix(te_i, tr_i))
-    ia = cdf_auc(nn_sim_matrix(te_i, tr_a))
+    aa = cdf_auc(sim_a[act])
+    ai = cdf_auc(sim_i[act])
+    ii = cdf_auc(sim_i[ina])
+    ia = cdf_auc(sim_a[ina])
     return ave(aa, ai, ii, ia), dict(AUC_A_to_A=aa, AUC_A_to_I=ai, AUC_I_to_I=ii, AUC_I_to_A=ia,
-                                     n_train_active=int(len(tr_a)), n_train_inactive=int(len(tr_i)),
-                                     n_val_active=int(len(te_a)), n_val_inactive=int(len(te_i)))
+                                     n_train_active=int(n_tr_a), n_train_inactive=int(n_tr_i),
+                                     n_val_active=int(len(act)), n_val_inactive=int(len(ina)))
+
+
+def ave_for_split(tr_fp, tr_pk, te_fp, te_pk, thr, rows=None):
+    """Convenience wrapper kept so the signature in tests and any other caller still works. For a
+    bootstrap, call nn_similarities_once outside the loop and ave_from_cached inside it."""
+    sim_a, sim_i, n_a, n_i = nn_similarities_once(tr_fp, tr_pk, te_fp, thr)
+    return ave_from_cached(sim_a, sim_i, te_pk, thr, rows, n_a, n_i)
 
 
 def main():
@@ -159,7 +187,9 @@ def main():
     print(f'{"pK cut":>7s} {"AVE":>9s} {"95% CI (target bootstrap)":>28s}   interpretation')
     print('-' * 78)
     for thr in THRESHOLDS:
-        point, terms = ave_for_split(tr_fp, tr_pk, te['fp'], te['pk'], thr)
+        # Two matrix products, outside the bootstrap. Everything the resampling needs is in these.
+        sim_a, sim_i, n_tr_a, n_tr_i = nn_similarities_once(tr_fp, tr_pk, te['fp'], thr)
+        point, terms = ave_from_cached(sim_a, sim_i, te['pk'], thr, None, n_tr_a, n_tr_i)
         if not np.isfinite(point):
             print(f'{thr:>7.1f}  (one class empty at this cut)')
             continue
@@ -167,7 +197,7 @@ def main():
         for _ in range(args.b):
             gi = rng.integers(0, len(groups), len(groups))
             rows = np.concatenate([groups[g] for g in gi])
-            v, _ = ave_for_split(tr_fp, tr_pk, te['fp'], te['pk'], thr, rows=rows)
+            v, _ = ave_from_cached(sim_a, sim_i, te['pk'], thr, rows, n_tr_a, n_tr_i)
             if np.isfinite(v):
                 boot.append(v)
         lo, hi = np.percentile(boot, [2.5, 97.5])
@@ -191,7 +221,8 @@ def main():
     print(f'{"pK cut":>7s} {"AVE":>9s}   vs our split')
     print('-' * 46)
     for thr in THRESHOLDS:
-        point, terms = ave_for_split(all_fp[r_tr], all_pk[r_tr], all_fp[r_te], all_pk[r_te], thr)
+        s_a, s_i, n_a, n_i = nn_similarities_once(all_fp[r_tr], all_pk[r_tr], all_fp[r_te], thr)
+        point, terms = ave_from_cached(s_a, s_i, all_pk[r_te], thr, None, n_a, n_i)
         ours = results.get(f'target_split_pk{thr}', {}).get('ave')
         delta = '' if ours is None else f'   ours {ours:+.4f}, diff {point - ours:+.4f}'
         print(f'{thr:>7.1f} {point:>+9.4f}{delta}')

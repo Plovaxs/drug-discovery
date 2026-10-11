@@ -7,8 +7,16 @@ How it integrates into an existing architecture (the actual answer to "how would
   1. ste_ternarize(w): forward pass applies TWN's threshold rule (Li et al. 2016) to get the ternary
      {-alpha, 0, alpha} tensor; backward pass is IDENTITY (gradient flows to the full-precision weight
      unchanged), via the standard trick `w_t = w + (ternary(w) - w).detach()` -- in the forward value this
-     equals ternary(w) exactly, but autograd sees d(w_t)/d(w) = 1 because the detached term carries no
+     equals ternary(w), but autograd sees d(w_t)/d(w) = 1 because the detached term carries no
      gradient.
+
+     This said "equals ternary(w) exactly" until a test asserted exactly that and failed. The
+     equality holds in real arithmetic; in float32 the addition rounds. Measured over 16,200
+     weights: 0.1% of the NONZERO ternary values differ by at most 1.192e-07, which is exactly one
+     unit in the last place. The ZEROS are exact, because w + (0 - w) is evaluated as w - w, so the
+     sparsity pattern a ternary network claims is not approximate. Both bounds are pinned in
+     guidance/tests/test_tnn_qat.py. For scale, the between-seed sd of the result this supports is
+     0.0377 R2, so one ULP is no threat to it -- but the docstring should not have overstated it.
   2. TernaryLinear(nn.Linear): drop-in replacement whose forward() ternarizes self.weight on the fly before
      the matmul. Bias is NOT ternarized (standard TWN/TTQ practice, same as the post-hoc probe).
   3. convert_to_ternary_qat(model): walks the module tree and swaps every nn.Linear for a TernaryLinear

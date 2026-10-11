@@ -40,6 +40,36 @@ def normalize_unit_per_atom(grad_pos, grad_v, batch_ligand, eps=1e-6):
     Position and categorical/type-logit components are normalized
     SEPARATELY (different scales/meaning), each independently to a
     per-sample average-per-atom norm of 1.
+
+    VALIDITY BOUNDARY (measured, added after the fact -- the claim above is
+    exact only in the limit). The eps in the denominator attenuates the
+    result whenever the raw gradient is small: the achieved norm is
+    mean/(mean+eps), i.e. a relative shortfall of eps/(mean+eps). With
+    eps=1e-6 that is
+
+        raw mean |g| per atom     achieved norm      shortfall
+                       1e-2          0.999939            0.01%
+                       1e-3          0.999388            0.06%
+                       1e-4          0.993915            0.61%
+                       1e-5          0.942306            5.77%
+                       1e-6          0.620247           37.98%
+                       1e-7          0.140398           85.96%
+
+    so "unit per-atom norm" holds to better than 1% only for raw gradients
+    above roughly 1e-4, and below 1e-5 this transform silently WEAKENS
+    guidance -- the very failure it exists to rule out, displaced to a
+    different scale rather than removed.
+
+    Our three guidance models are inside the safe regime
+    (guidance/diag_gradient_magnitude_results.json): mean per-atom gradient
+    magnitude 1.011e-3 (original EGNN), 6.53e-4 (noise-matched) and 3.37e-4
+    (vina-target), giving shortfalls of 0.10%, 0.15% and 0.30%. Against a
+    between-seed sd of 0.0377 R2 and the granularity of any lambda sweep,
+    that is negligible, so no reported result is affected. The boundary is
+    documented because a future guidance model with weaker raw gradients
+    would cross it without any error being raised, and because the
+    scale-invariance this module promises would then quietly stop holding.
+    Pinned in guidance/tests/test_gradient_normalization.py.
     """
     n_samples = int(batch_ligand.max().item()) + 1 if batch_ligand.numel() > 0 else 0
 

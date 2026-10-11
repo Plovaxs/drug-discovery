@@ -22,6 +22,11 @@
 #
 # Options:
 #   --wait-for PATTERN   pgrep -f pattern that must have NO matches before starting (repeatable)
+#   --throttle-at C      suspend the running job above this CPU temp (default 88; 0 disables)
+#   --throttle-resume C  ...and resume it once back below this (default 75)
+#   --throttle-for S     how long it must stay above before suspending (default 60)
+#   --throttle-budget S  total suspended time allowed before giving up on throttling (default 7200)
+#   --threads N          cap BLAS/OMP threads for the job (default 0 = leave alone)
 #   --cool-to C          start only below this GPU temperature in Celsius (default 55)
 #   --cpu-cool-to C      ...and below this CPU package temperature (default 80; 0 disables)
 #   --cool-for SECONDS   how long BOTH must stay below those, continuously (default 600)
@@ -36,6 +41,11 @@ PATTERNS=()
 COOL_TO=55
 CPU_COOL_TO=80
 COOL_FOR=600
+THROTTLE_AT=88
+THROTTLE_RESUME=75
+THROTTLE_FOR=60
+THROTTLE_BUDGET=7200
+THREADS=0
 POLL=60
 MAX_WAIT=86400
 SKIP_COOL=0
@@ -46,6 +56,11 @@ while [[ $# -gt 0 ]]; do
     --wait-for) PATTERNS+=("$2"); shift 2 ;;
     --cool-to)  COOL_TO="$2"; shift 2 ;;
     --cpu-cool-to) CPU_COOL_TO="$2"; shift 2 ;;
+    --throttle-at) THROTTLE_AT="$2"; shift 2 ;;
+    --throttle-resume) THROTTLE_RESUME="$2"; shift 2 ;;
+    --throttle-for) THROTTLE_FOR="$2"; shift 2 ;;
+    --throttle-budget) THROTTLE_BUDGET="$2"; shift 2 ;;
+    --threads) THREADS="$2"; shift 2 ;;
     --cool-for) COOL_FOR="$2"; shift 2 ;;
     --poll)     POLL="$2"; shift 2 ;;
     --max-wait) MAX_WAIT="$2"; shift 2 ;;
@@ -199,8 +214,84 @@ while true; do
 done
 
 log "START: $*"
-"$@"
+
+# Cap the job's thread pools at the source. ave_bias reached 1,978% CPU because BLAS took all twenty
+# threads; capping generates less heat than reacting to it, and for an unattended backlog the extra
+# wall-clock time costs nothing.
+if [[ "$THREADS" -gt 0 ]]; then
+  export OMP_NUM_THREADS="$THREADS" OPENBLAS_NUM_THREADS="$THREADS" MKL_NUM_THREADS="$THREADS" \
+         NUMEXPR_NUM_THREADS="$THREADS" VECLIB_MAXIMUM_THREADS="$THREADS"
+  log "thread cap: $THREADS"
+fi
+
+# setsid makes the job a process-group leader so the watchdog can signal it and all of its children
+# (python dataloader workers are separate processes) with one kill to the negative pgid.
+setsid "$@" &
+JOB_PID=$!
+
+STOPPED=0
+SPENT=0
+# Always resume before leaving, on every path. A watchdog that exits with the job suspended would hang
+# the queue indefinitely -- worse than the heat it exists to prevent.
+resume_if_stopped() {
+  if [[ "$STOPPED" -eq 1 ]]; then
+    kill -CONT -"$JOB_PID" 2>/dev/null || kill -CONT "$JOB_PID" 2>/dev/null
+    STOPPED=0
+  fi
+}
+trap 'resume_if_stopped' EXIT INT TERM
+
+if [[ "$THROTTLE_AT" -gt 0 ]]; then
+  log "thermal watchdog: suspend above ${THROTTLE_AT}C held ${THROTTLE_FOR}s, resume below ${THROTTLE_RESUME}C, budget ${THROTTLE_BUDGET}s"
+  HOT_SINCE=0
+  while kill -0 "$JOB_PID" 2>/dev/null; do
+    sleep 15
+    kill -0 "$JOB_PID" 2>/dev/null || break
+    CT=$(cpu_temp)
+    [[ -z "$CT" ]] && continue
+    NOW=$(date +%s)
+    if [[ "$STOPPED" -eq 1 ]]; then
+      SPENT=$(( SPENT + 15 ))
+      if [[ "$CT" -lt "$THROTTLE_RESUME" ]]; then
+        log "CPU ${CT}C < ${THROTTLE_RESUME}C -- resuming job (suspended ${SPENT}s in total)"
+        resume_if_stopped
+        HOT_SINCE=0
+      elif [[ "$SPENT" -ge "$THROTTLE_BUDGET" ]]; then
+        # LEAVE the watchdog loop rather than zeroing THROTTLE_AT. Setting it to 0 was the obvious
+        # disable, and it was wrong: the inner test is `CT >= THROTTLE_AT`, which with 0 is true for any
+        # temperature, so the safety net suspended the job MORE eagerly instead of stopping. Caught by
+        # the budget-exhaustion test, which is exactly why a watchdog's failure path needs a test and
+        # not an argument.
+        log "WARN stop budget ${THROTTLE_BUDGET}s exhausted at CPU ${CT}C -- resuming and NO LONGER throttling."
+        log "     This machine's sustained temperature is above the resume threshold; raise"
+        log "     --throttle-resume or accept the heat, but the job will not be held any longer."
+        resume_if_stopped
+        break
+      else
+        log "job suspended, CPU ${CT}C (waiting for < ${THROTTLE_RESUME}C, ${SPENT}/${THROTTLE_BUDGET}s used)"
+      fi
+      continue
+    fi
+    if [[ "$CT" -ge "$THROTTLE_AT" ]]; then
+      [[ "$HOT_SINCE" -eq 0 ]] && HOT_SINCE=$NOW
+      if [[ $(( NOW - HOT_SINCE )) -ge "$THROTTLE_FOR" ]]; then
+        log "CPU ${CT}C >= ${THROTTLE_AT}C for $(( NOW - HOT_SINCE ))s -- SUSPENDING job to let it cool"
+        kill -STOP -"$JOB_PID" 2>/dev/null || kill -STOP "$JOB_PID" 2>/dev/null
+        STOPPED=1
+      fi
+    else
+      HOT_SINCE=0
+    fi
+  done
+fi
+
+wait "$JOB_PID"
 rc=$?
+resume_if_stopped
+trap - EXIT INT TERM
+if [[ "$SPENT" -gt 0 ]]; then
+  log "thermal watchdog suspended the job for ${SPENT}s in total"
+fi
 if [[ $rc -ne 0 ]]; then
   log "FAILED with exit $rc: $*"
 else

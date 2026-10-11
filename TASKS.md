@@ -357,6 +357,73 @@ overfitting (Wallach 2017; Chen 2019; Kapoor 2023).
 
 ---
 
+**TAMBAHAN 2026-10-11: klaim QAT ternary divalidasi HANYA dengan R2, dan itu tidak cukup.**
+
+*Zhou, Xue, Zhang & Fu 2026* (arXiv:2601.02213, 8-bit SO(3)-ekuivarian, QM9/rMD17) **sudah ada di audit
+prior art kita** sebagai prior art terdekat -- jadi makalahnya bukan temuan baru, saya menemukannya ulang.
+Yang baru adalah apa yang ia ungkap tentang pekerjaan kita sendiri. Diverifikasi dengan mengambil
+abstraknya: 8-bit, energi/gaya, transformer atensi SO(3); **tanpa ternary, tanpa data protein-ligan**,
+jadi klaim (b) kita TIDAK terscoop.
+
+Mereka menunjukkan kuantisasi low-bit naif **merusak** struktur ekuivarian, dan melacaknya dengan
+*Local Equivariance Error*; menjaganya utuh butuh tiga inovasi terpisah. Klaim kita -- ternary tak
+terbedakan dari FP32, R2 0,3437+-0,0377 vs 0,3420 -- berdiri **sepenuhnya di atas R2**. Model bisa
+mempertahankan R2 sementara simetrinya merosot. Kita tidak pernah mengukurnya.
+
+**Prediksi, dicatat SEBELUM mengukur** (prediksi yang dibuat sesudahnya bukan uji): EGNN kita seharusnya
+imun *secara konstruksi*, karena dua hal yang terlihat di `models/egnn.py` -- geometri masuk ke fitur
+skalar hanya lewat `d_sq = sum(rel_x**2)` (baris 42) melalui Gaussian smearing, yakni JARAK antar-atom,
+yang tak diubah gerak rigid; dan pembaruan koordinat (baris 63) adalah
+`delta_x = scatter_sum((xi-xj)/(|d|+1) * x_mlp(mij))`, vektor posisi relatif dikali **skalar** terpelajar.
+Mengkuantisasi `nn.Linear` hanya mengubah skalar itu, jadi pembaruannya tetap kombinasi vektor relatif
+yang sama. Kasus Zhou dkk. justru kebalikannya: di sana **fitur vektor ekuivarian itu sendiri** yang
+dikuantisasi, dan itulah sebabnya dekopling magnitudo-arah diperlukan.
+
+**Mengapa ini lebih dari menambal lubang:** kalau prediksinya benar, klaimnya naik kelas dari "ternary
+kebetulan bekerja untuk kami" menjadi "**apakah kuantisasi bobot bisa mengancam ekuivariansi itu sifat
+ARSITEKTUR** -- message passing berbasis jarak aman secara gratis, fitur vektor terkuantisasi tidak".
+Lebih sempit, lebih kuat, dan menjelaskan alih-alih sekadar melaporkan.
+
+**HASIL (dijalankan 2026-10-11 17:36, 24 kompleks uji x 8 rotasi, 4 model):** prediksi bertahan.
+
+| model | deviasi gerak rigid (mean / max) | median per-kompleks | >1e-4 | kontrol positif (mean) | rasio |
+|---|---|---|---|---|---|
+| fp32_stage0 | 7,9e-07 / 1,1e-05 | 9,54e-07 | 0/24 | 7,2e-02 | 8,7e4x |
+| ternary s2021 | 1,9e-05 / 1,7e-03 | 9,54e-07 | 1/24 | 1,7e-01 | 8,9e3x |
+| ternary s2022 | 6,2e-07 / 3,4e-05 | 9,54e-07 | 0/24 | 7,9e-02 | 1,1e5x |
+| ternary s2023 | 2,6e-07 / 4,3e-06 | 4,77e-07 | 0/24 | 1,3e-01 | 4,2e5x |
+
+Tiga hal yang membuat ini bermakna, bukan sekadar "angkanya kecil":
+1. **Kontrol positif bekerja.** Transform yang sengaja dirusak menggerakkan prediksi 0,07-0,17 pK rata-rata
+   (maks 0,85), empat sampai lima orde lebih besar dari deviasi gerak rigid. Jadi harness-nya MAMPU
+   mendeteksi pelanggaran; tidak menemukannya adalah informasi, bukan kebisuan.
+2. **Deviasi median ADALAH batas aritmetika.** 9,537e-07 = 2^-20 dan 4,768e-07 = 2^-21; ULP float32 pada
+   6,0 adalah 4,77e-07 dan pada 10,0 adalah 9,54e-07. Untuk prediksi berskala 5-7 pK, median itu 1-2 ULP.
+   Invariansi bukan "hampir terjaga" -- ia eksak sejauh float32 mampu menyatakannya, dan sama eksaknya
+   untuk ternary seperti untuk FP32.
+3. **Max s2021 adalah SATU kompleks, bukan degradasi.** Median per-kompleksnya identik dengan FP32 dan
+   hanya 1 dari 24 kompleks melewati 1e-4. Dilaporkan apa adanya: 1,7e-03 pK itu 0,14% dari sd prediksi
+   (1,23 pK) dan 100x di bawah kontrol positif, jadi verdict tak berubah -- tapi agregat max tanpa
+   rincian per-kompleks tidak bisa membedakan satu pencilan dari kemerosotan menyeluruh, dan skripnya
+   diperbaiki untuk menyimpan keduanya setelah saya menyadari itu.
+
+**Klaim yang kini boleh dibuat:** bukan "ternary kebetulan bekerja", melainkan *apakah kuantisasi bobot
+bisa mengancam ekuivariansi adalah sifat ARSITEKTUR* -- message passing berbasis jarak aman secara
+gratis, sedangkan fitur vektor ekuivarian yang dikuantisasi langsung (kasus Zhou dkk.) butuh tiga
+inovasi agar aman. Itu menjelaskan, bukan sekadar melaporkan, dan ia memberi klaim QAT kita validasi
+simetri yang sebelumnya hanya bersandar pada R2.
+
+**Skrip:** `guidance/uncertainty_a1/equivariance_check.py` (hanya forward pass, tanpa latihan, tanpa komitmen GPU). Ia membandingkan FP32 Stage-0 terhadap ketiga seed QAT
+ternary di bawah rotasi proper acak (det=+1, jadi tanpa refleksi -- refleksi bukan simetri molekul kiral)
+plus translasi SELURUH kompleks. **Ia membawa kontrol positifnya sendiri**: transform yang sengaja
+dirusak, merotasi ligan saja terhadap sentroidnya sendiri, yang mengubah jarak antar-atom nyata dan wajib
+menggerakkan prediksi. Skripnya MENOLAK memberi verdict bersih kalau kontrol itu tetap di bawah 1e-3 pK,
+karena harness yang tak mampu mendeteksi pelanggaran tidak membuktikan apa pun dengan tidak menemukannya.
+Ini juga satu-satunya tempat di proyek ini yang kontrol positifnya sudah terpasang -- lihat item #1 di
+URUTAN KERJA, tempat ketiadaannya dicatat sebagai celah teratas.
+
+---
+
 ### C. SCOPING YANG DIPAKSA LITERATUR -- masuk ABSTRAK, bukan lampiran
 
 1. **Pose kita DOCKED, bukan kristal** (terverifikasi: `_lig_tt_min_0.sdf`). Boyles et al. 2021
@@ -395,15 +462,116 @@ overfitting (Wallach 2017; Chen 2019; Kapoor 2023).
 7. **Toleransi tes salah** (1e-9 untuk matmul float32) -- kodenya benar, tesnya salah.
 8. **Hipotesis batch-size 6x dibantah pengukuran sendiri.**
 9. **Terlalu cepat meremehkan MLflow** -- Anda mendorong balik dan Anda benar.
+10. **Kemunculan KEEMPAT self-match, kali ini di kode verifikasi saya sendiri.** Pemeriksa "apakah ada
+    proses queue yang bertahan" melaporkan shell yang menjalankan pemeriksa itu, karena teks heredoc-nya
+    memuat string `queued_run.sh`. Filter `comm` tidak menolong: shell itu memang `bash`. Perbaikan yang
+    benar butuh dua hal lagi -- kecualikan pid sendiri **beserta seluruh leluhurnya**, dan cocokkan hanya
+    **argv[1]** (skrip yang bash memang disuruh jalankan), bukan string mana pun di argumen berikutnya.
+11. **Mem-patch skrip sementara queue-nya jalan TIDAK berefek, dan saya hampir tidak menyadarinya.**
+    Watchdog termal sudah saya tulis, uji, dan perbaiki -- tapi queue yang sedang jalan tetap memakai
+    versi lama. Sebabnya justru properti yang membuat patch itu aman: `os.replace` menukar entri
+    direktori, dan shell yang sedang jalan tetap memegang inode lama yang sudah terhapus
+    (`/proc/213447/fd/255 -> master_queue.sh (deleted)`). Buktinya bukan dugaan: gerbang yang ia
+    lancarkan untuk `noise_ceiling_refresh` **tidak membawa** `--throttle-at/--throttle-resume/--threads`.
+    Dua step terakhir akan jalan tanpa watchdog **dan tanpa thread cap** -- tepat kondisi 92 C/4j42m yang
+    watchdog itu dibuat untuk mencegah. **Aturan baru: setiap patch pada `master_queue.sh` atau
+    `queued_run.sh` wajib diikuti restart queue, dan diverifikasi dengan membaca cmdline gerbang baru +
+    `/proc/<pid>/fd/255` (harus inode hidup, bukan `(deleted)`).**
+12. **Lalu saya langsung melanggar sisi lain aturan yang sama.** Saat menambahkan peringatan di atas ke
+    header `master_queue.sh`, saya memakai `open(p,'w')` -- truncate di tempat -- sementara bash memegang
+    fd 255 pada inode yang **hidup** (queue baru di-restart, jadi tidak lagi inode terhapus). Menambah
+    baris menggeser offset baca; bash membaca skrip bertahap dan bisa mengeksekusi sampah. Tidak terjadi
+    apa-apa hanya karena body `cmd_run` sudah selesai di-parse. **Aturan: `os.replace` atau `mv`, JANGAN
+    `open(...,'w')`, untuk setiap skrip yang mungkin sedang dibaca shell.**
+
+    **KOREKSI 17:34 -- risikonya TERWUJUD, dan saya sudah menyatakan sebaliknya.** Saya memeriksa segera
+    setelah mengedit, melihat queue sehat, lalu menulis "risikonya tidak terwujud karena bash sudah
+    selesai mem-parse body `cmd_run`". Dua puluh tujuh menit kemudian, saat bash membaca bagian AKHIR
+    skrip dari offset yang tergeser:
+    `scripts/master_queue.sh: line 290: unexpected EOF while looking for matching '"'`.
+    Dampaknya nol -- error muncul SETELAH `queue idle` dicatat dan seluruh 13 step tersimpan, dan file di
+    disk sendiri valid (`bash -n` lolos). Tapi pelajaran sebenarnya bukan soal aturan atomic replace,
+    melainkan soal cara saya memverifikasi: **"saya cek dan tidak ada yang rusak" bukan bukti aman untuk
+    kerusakan yang baru muncul saat kode yang terpengaruh akhirnya dibaca.** Pemeriksaan segera hanya
+    menyampel satu titik waktu. Untuk bahaya yang tertunda, pernyataan yang benar adalah "belum terwujud
+    sejauh ini", bukan "tidak terwujud". Perhatikan bahwa dua aturan
+    ini saling melengkapi, bukan bertentangan: atomic replace aman bagi proses berjalan justru karena ia
+    *tidak* mengubah apa yang mereka jalankan -- itulah sebabnya restart tetap wajib.
+13. **Guard idempotensi saya sendiri tersandung sebutan yang baru saja saya sisipkan.** Skrip patch untuk
+    `test_gradient_normalization.py` memeriksa `'eps_floor_attenuates' not in s` agar tidak menambal dua
+    kali -- tapi penggantian sebelumnya di skrip yang sama menyisipkan komentar yang MENYEBUT nama tes
+    itu, jadi guard-nya gagal dan tak ada yang tertulis. Keluarga yang sama dengan self-match pgrep:
+    mencocokkan sebutan, bukan hal itu sendiri. **Aturan: guard idempotensi harus mencocokkan DEFINISI
+    (`def test_...`), bukan namanya saja.**
 
 **Pelajaran operasional:** jangan percaya ingatan saya soal apa yang hidup;
-`bash scripts/master_queue.sh status` membacanya dari keadaan nyata.
+`bash scripts/master_queue.sh status` membacanya dari keadaan nyata. Dan `status` membaca **disk**, bukan
+apa yang proses hidup benar-benar jalankan -- untuk itu baca `/proc/<pid>/fd/255` dan cmdline-nya.
 
 ---
 
 ### E. INFRASTRUKTUR YANG DIBANGUN -- selesai, jangan disentuh
 
-* **7 suite, 91 tes** (`python guidance/run_tests.py`), pre-commit hook terpasang, jalur FAIL/SKIP diuji
+* **13 suite, 178 tes** (`python guidance/run_tests.py`), pre-commit hook terpasang, jalur FAIL/SKIP diuji
+* **Watchdog termal** (`queued_run.sh`): gerbang lama hanya mengatur saat MULAI, dan itu terbukti tidak
+  cukup -- `ave_bias` lolos di CPU 57°C lalu bertahan di 92°C selama 4j42m. Sekarang ada SIGSTOP/SIGCONT
+  (>=88°C bertahan 60s -> suspend; <75°C -> resume; budget 7200s lalu menyerah dan membiarkan jalan) plus
+  thread cap 10/20 untuk mengurangi panas di sumbernya. 4 jalur diuji, termasuk satu bug yang ditemukan
+  oleh tes saya sendiri (`THROTTLE_AT=0` justru membuat `CT >= THROTTLE_AT` selalu benar). **Terkonfirmasi
+  aktif di produksi** pada 2026-10-11 17:08: `thread cap: 10` + `thermal watchdog: suspend above 88C`.
+* **`guidance/track_a/tests/test_physics.py` (12 tes) -- menutup celah yang paling berisiko yang ditemukan
+  audit:** `interaction_masks` dipanggil dari `track_a/model.py:114`, jadi ia menentukan pasangan atom mana
+  yang menyumbang energi vdW/H-bond/metal/hidrofobik pada model TERLATIH -- dan ia tidak punya satu tes pun.
+  Tes intinya memanfaatkan pasangan keras/lunak: `soft_interaction_masks` mengaku relaksasi kontinu
+  (perkalian untuk AND, a+b-ab untuk OR), jadi diberi probabilitas 0/1 ia WAJIB identik dengan versi keras,
+  karena untuk x,y in {0,1}: x*y = x AND y dan x+y-xy = x OR y. 200 undian acak: identik eksak. Nilai
+  harapan contoh kecilnya dihitung di atas kertas, bukan dari kode yang diuji.
+* **`guidance/lp_split/tests/test_lp_split_loader.py` (15 tes) + penjaga tabrakan indeks.** Audit impor
+  menemukan 55 modul kita diimpor kode nyata tapi tak disentuh tes mana pun. Mayoritas driver eksperimen
+  (ujinya ya eksperimen itu), tapi satu menonjol: **`build_lp_splits` punya 37 pengimpor** dan ia yang
+  menentukan mana data latih dan mana yang ditahan -- cacat di situ tidak menghasilkan eksperimen salah,
+  ia menghasilkan tesis yang setiap angkanya tidak sah. 40 baris, penanggung beban, tanpa tes.
+  **Bahaya laten yang ditemukan:** `pk_by_idx[idx] = pk` ditulis untuk ketiga partisi tanpa deteksi
+  tabrakan, jadi indeks yang hadir di train DAN test akan diciutkan jadi satu label -- kebocoran
+  tersamarkan justru oleh struktur yang dibuat untuk mencegahnya. Sekarang `raise` dengan pesan yang
+  membedakan kebocoran lintas-partisi dari duplikat dalam satu partisi. Split terkirim diverifikasi
+  bersih: 46.964/6.069/11.855 indeks disjoint berpasangan, tanpa duplikat internal, tanpa konflik pK,
+  dan 779/65/127 target-nya juga disjoint. Ukuran itu dipaku di tes supaya perubahan senyap pada file
+  split jadi kegagalan tes, bukan kejanggalan tabel yang baru disadari berbulan-bulan kemudian.
+* **`guidance/tests/test_tnn_qat.py` (18 tes) -- menemukan docstring saya sendiri terlalu kuat.** Modul
+  ini menopang klaim "QAT ternary tak terbedakan dari FP32" (0,3437+-0,0377 vs 0,3420, n=3) dan tak punya
+  tes. Tes yang menuntut `ste_ternarize(w)` identik bit-per-bit dengan `twn_ternary(w)` **GAGAL**:
+  `w + (ternary(w) - w)` sama dalam aritmetika real tapi penjumlahannya membulatkan di float32. Terukur
+  atas 16.200 bobot: 0,1% nilai TAK-NOL bergeser maksimum 1,192e-07 = **tepat 1 ULP**. Nolnya **eksak**,
+  karena `w + (0 - w)` dievaluasi sebagai `w - w` -- jadi pola sparsity yang diklaim TNN bukan aproksimasi.
+  Docstring dikoreksi dari "equals ternary(w) exactly" menjadi pernyataan dua-bagian yang terukur. Satu
+  ULP bukan ancaman bagi klaim itu (sd antar-seed 0,0377 R2), tapi docstring tidak boleh melebihkan.
+  Ikut dipaku: aturan TWN terhadap contoh hitung-tangan, alpha = mean|w| survivor, gradien STE sampai ke
+  bobot yang dinolkan forward (inilah beda QAT vs pruning post-hoc yang mengolapskan R2 ke -1,50), dan
+  `convert_to_ternary_qat` MEMBAGI objek nn.Parameter (bukan menyalin) -- salinan akan tetap load tanpa
+  error lalu melatih tensor yang tak pernah dibaca forward, kegagalan yang menghasilkan angka masuk akal.
+* **`guidance/tests/test_gradient_normalization.py` (14 tes) -- batas validitas yang belum pernah
+  dinyatakan, kini terukur.** Transform Track B1 ini ada untuk menghapus SATU ambiguitas: "hasil guidance
+  nol itu arah yang tak informatif, atau magnitudo yang salah skala?" Tesnya mengungkap bahwa norma yang
+  tercapai bukan 1 melainkan `mean/(mean+eps)`, jadi kekurangannya `eps/(mean+eps)`:
+
+  | mean \|g\| per atom | norma tercapai | kekurangan |
+  |---|---|---|
+  | 1e-2 | 0,999939 | 0,01% |
+  | 1e-3 | 0,999388 | 0,06% |
+  | 1e-4 | 0,993915 | 0,61% |
+  | 1e-5 | 0,942306 | 5,77% |
+  | 1e-6 | 0,620247 | 37,98% |
+
+  Jadi di bawah ~1e-5 transform ini **melemahkan panduan secara diam-diam** -- justru kegagalan yang ia
+  dibuat untuk menyingkirkan, hanya dipindah ke skala lain. **Model kita aman:** gradien per-atom terukur
+  (`diag_gradient_magnitude_results.json`) 1,011e-3 / 6,53e-4 / 3,37e-4 -> kekurangan 0,10% / 0,15% /
+  0,30%, sepele terhadap sd antar-seed 0,0377 R2. **Tidak ada hasil terlapor yang terpengaruh.** Batasnya
+  kini ada di docstring sebagai tabel DAN dipaku oleh tes yang membaca JSON terukur itu, sehingga
+  menambah model guidance bergradien lebih lemah akan menjatuhkan tes alih-alih kehilangan invariansi
+  skala tanpa suara. Ikut diuji: arah terjaga eksak (cosine=1), normalisasi per-SAMPEL bukan per-batch
+  (sampel 1e-2 dan 1e4 keduanya mencapai 1), independensi antar-sampel, komponen posisi vs tipe
+  dinormalisasi terpisah, dan gradien nol menghasilkan nol bukan NaN.
 * **4 filter kebocoran** (PDB ID -> UniProt -> identitas sekuens 90% -> skeleton InChIKey ligan) + guard
   test yang menghitung ULANG set eksklusi dari audit, bukan mempercayai summary
 * **Queue master ber-gerbang termal** (GPU <55°C DAN CPU <80°C bertahan 300s, istirahat 20 menit,
@@ -416,6 +584,23 @@ overfitting (Wallach 2017; Chen 2019; Kapoor 2023).
 * **beta-NLL** (`--beta_nll`) + 14 tes yang memverifikasi hukum skala lewat autograd dan detachment
   yang gagal ke DUA arah kesalahan
 * `guidance/RESEARCH_PROGRAM.md` -- 1.241 baris, Part I-VIII
+
+**Audit kode mati (AST, bukan grep) -- 2026-10-11.** Instrumen pertama saya grep dan ia salah: mencari
+`nama(` sehingga 18 fungsi yang dirujuk sebagai NILAI di `make_figures.py:487` tampak tak terpakai, dan
+mencari `args.flag` sehingga skrip yang memakai `a.flag` tampak mengabaikan semua flag-nya. ~70 positif
+palsu. Scan AST yang benar menyisakan 5 kandidat di seluruh repo:
+* `scripts/data_preparation/split_pl_dataset.py::get_chain_name` dan
+  `scripts/property_prediction/extract_pockets.py --fixed_sdf_dir` -- **upstream TargetDiff**
+  (guanjq / Jiaqi Guan, 2023). Tidak disentuh: memangkasnya hanya menciptakan derau diff terhadap upstream.
+* `lp_split/ligand_similarity.py::ligand_similarity` dan
+  `lp_split/protein_similarity.py::build_category_grouped_pairs` -- artefak REPRODUKSI LP-PDBBind
+  (cascade tie-breaking radius 2->4->10->SMILES kanonik). Tak terpakai karena kita memakai split yang
+  sudah diterbitkan, bukan menghitungnya ulang; dipertahankan sebagai dokumentasi metode untuk tesis.
+* `track_a/physics.py::soft_interaction_masks` -- tak terpakai DAN (dulu) tak teruji, kombinasi paling
+  berbahaya. Diselesaikan dengan menguji, bukan menghapus: lihat butir test_physics.py di atas.
+
+Kesimpulan audit: tidak ada overengineering yang perlu dipangkas di kode kita sendiri. Yang ada adalah
+kode tak teruji, dan itu sudah ditutup.
 
 ---
 

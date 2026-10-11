@@ -25,9 +25,31 @@ def build_lp_splits(split_json='./guidance/lp_split/leakage_safe_split.json',
     base = PocketLigandPairDataset(root)
     pk_by_idx = {}
     splits = {}
+    seen_in = {}
     for part in ('train', 'val', 'test'):
         indices = []
         for idx, pk in d[part]:
+            # Fail closed on any index that appears twice. `pk_by_idx[idx] = pk` keeps whichever entry
+            # came last, so without this check an index present in both train and test -- which IS
+            # train/test leakage -- would be silently collapsed to one label by the very structure that
+            # exists to prevent leakage. 37 modules import this function, so a masked overlap here would
+            # travel into every number in the thesis.
+            #
+            # The shipped leakage_safe_split.json is clean: 46,964 / 6,069 / 11,855 indices, pairwise
+            # disjoint, no internal duplicates, no conflicting pK, and its 779 / 65 / 127 targets are
+            # disjoint too. The guard costs nothing today and keeps that true if the split is rebuilt.
+            prev = seen_in.get(idx)
+            if prev is not None:
+                where = (f'twice inside {part!r}' if prev == part
+                         else f'in both {prev!r} and {part!r}')
+                raise ValueError(
+                    f'ABORT: index {idx} appears {where} of {split_json}. '
+                    + ('A duplicated index inflates that partition and makes its pK ambiguous.'
+                       if prev == part else
+                       'That is train/test leakage; pk_by_idx would have hidden it by keeping only the '
+                       'last value.')
+                    + ' Rebuild the split before training or evaluating anything on it.')
+            seen_in[idx] = part
             pk_by_idx[idx] = pk
             indices.append(idx)
         splits[part] = indices

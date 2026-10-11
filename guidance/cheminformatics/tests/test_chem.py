@@ -238,6 +238,58 @@ def test_alignment_guard_rejects_a_missing_file_without_raising():
     assert p is None and 'missing file' in note
 
 
+# ----------------------------------------------- AVE: the cached bootstrap must equal recomputation
+
+def test_ave_cached_equals_full_recomputation():
+    """Guards the fix for a bug that cost 4 h 42 min at 92 C.
+
+    ave_bias.py originally recomputed the entire |validation| x |training| similarity matrix inside every
+    bootstrap draw -- 8,000 times over four thresholds and 2,000 resamples. A test molecule's distance to
+    the training actives does not depend on which other test molecules are in the resample, so all of it
+    was redundant. The fix hoists two matrix products out of the loop.
+
+    This test pins the EQUIVALENCE: the cached path must return exactly what the recomputing path
+    returned, on full data and on an arbitrary subset. If a future edit breaks the caching, the numbers
+    change and this fails -- rather than the result quietly drifting."""
+    import numpy as np
+    from guidance.cheminformatics.ave_bias import (ave_for_split, ave_from_cached,
+                                                   nn_similarities_once)
+    rng = np.random.default_rng(0)
+    tr_fp = (rng.random((200, 128)) < 0.1).astype(np.uint8)
+    te_fp = (rng.random((60, 128)) < 0.1).astype(np.uint8)
+    tr_pk = rng.uniform(4, 10, 200)
+    te_pk = rng.uniform(4, 10, 60)
+    thr = 7.0
+
+    sim_a, sim_i, n_a, n_i = nn_similarities_once(tr_fp, tr_pk, te_fp, thr)
+
+    full_cached, t1 = ave_from_cached(sim_a, sim_i, te_pk, thr, None, n_a, n_i)
+    full_recomp, t2 = ave_for_split(tr_fp, tr_pk, te_fp, te_pk, thr)
+    assert abs(full_cached - full_recomp) < 1e-12, (full_cached, full_recomp)
+    for k in ('AUC_A_to_A', 'AUC_A_to_I', 'AUC_I_to_I', 'AUC_I_to_A'):
+        assert abs(t1[k] - t2[k]) < 1e-12, k
+
+    # and on subsets, which is what a bootstrap draw actually passes
+    for _ in range(10):
+        rows = np.unique(rng.integers(0, 60, 40))
+        a, _ = ave_from_cached(sim_a, sim_i, te_pk, thr, rows, n_a, n_i)
+        b, _ = ave_for_split(tr_fp, tr_pk, te_fp, te_pk, thr, rows=rows)
+        if np.isfinite(a) or np.isfinite(b):
+            assert abs(a - b) < 1e-12, (rows[:5], a, b)
+
+
+def test_nn_similarities_once_returns_none_when_a_class_is_empty():
+    """A threshold above or below every training label leaves one class empty; the caller must get None
+    rather than an exception or a silently wrong array."""
+    import numpy as np
+    from guidance.cheminformatics.ave_bias import nn_similarities_once
+    tr_fp = (np.random.default_rng(1).random((50, 64)) < 0.1).astype(np.uint8)
+    tr_pk = np.full(50, 6.0)
+    te_fp = tr_fp[:10]
+    sim_a, sim_i, n_a, n_i = nn_similarities_once(tr_fp, tr_pk, te_fp, 99.0)
+    assert sim_a is None and sim_i is None and n_a == 0 and n_i == 50
+
+
 # ----------------------------------------------- scaffolds
 
 def test_generic_scaffold_abstracts_atom_identity():

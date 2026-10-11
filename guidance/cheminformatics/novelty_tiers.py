@@ -88,7 +88,12 @@ def main():
     L = np.load(LIGAND_PREDS, allow_pickle=True)
     pk = np.asarray(L['pk'], dtype=np.float64)
     target = np.asarray(L['target'], dtype=str)
-    assert len(sim) == len(pk), f'similarity vector {len(sim)} vs {len(pk)} test rows'
+    # An explicit raise, not an assert: assertions are stripped under `python -O`, and a row-alignment
+    # mismatch is exactly the class of bug that yields confident wrong numbers instead of a crash.
+    if len(sim) != len(pk):
+        raise SystemExit(f'ABORT: similarity vector has {len(sim)} entries but there are {len(pk)} test '
+                         f'rows. The cached similarities are stale -- rebuild with --force before '
+                         f'trusting any tier result.')
 
     print(f'\nmax-Tanimoto-to-train distribution over {len(sim)} test ligands:')
     for q in (0, 10, 25, 50, 75, 90, 100):

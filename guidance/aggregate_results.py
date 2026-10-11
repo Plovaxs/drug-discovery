@@ -57,6 +57,16 @@ METRIC_RE = re.compile(
     r'\s*R\^2 score:\s*(?P<R2>[-\d.]+),\s*Pearson:\s*(?P<Pearson>[-\d.]+),\s*Spearman:\s*(?P<Spearman>[-\d.]+)')
 # `[Validate] Epoch 005 | Loss 2.311473`
 EPOCH_RE = re.compile(r'\[(?P<phase>\w+)\]\s+Epoch\s+(?P<epoch>\d+)\s+\|\s+Loss\s+(?P<loss>[-\d.]+)')
+# The heteroscedastic / evidential trainers use a different line shape, with everything on one line and
+# no num / MAE / Pearson / Spearman:
+# `[Validate] Epoch 006 | NLL 2.584953 | RMSE(mu) 1.3856 | R2(mu) 0.3467 | mean_sigma 0.5583 | std_sigma 0.0968`
+# Matching this is what makes the aggregator usable on A1e/A1e-beta at all; without it parse_log returned
+# nothing and the queue step exited 1.
+A1E_RE = re.compile(
+    r'\[(?P<phase>\w+)\]\s+Epoch\s+(?P<epoch>\d+)\s+\|\s+NLL\s+(?P<loss>[-\d.]+)\s+\|'
+    r'\s+RMSE\(mu\)\s+(?P<RMSE>[-\d.]+)\s+\|\s+R2\(mu\)\s+(?P<R2>[-\d.]+)'
+    r'(?:\s+\|\s+mean_sigma\s+(?P<mean_sigma>[-\d.]+))?'
+    r'(?:\s+\|\s+std_sigma\s+(?P<std_sigma>[-\d.]+))?')
 TIMESTAMP_RE = re.compile(r'_?\d{4}_\d{2}_\d{2}__\d{2}_\d{2}_\d{2}_?')
 SEED_RE = re.compile(r'_s(\d{3,5})(?:_|$)')
 
@@ -107,6 +117,19 @@ def parse_log(log_path):
     epochs, pending, test_metrics = [], None, None
     with open(log_path, errors='replace') as f:
         for line in f:
+            # The single-line heteroscedastic format is checked first: it also contains "Epoch NNN", so
+            # EPOCH_RE would not match it (no "| Loss") but order makes the intent explicit.
+            m = A1E_RE.search(line)
+            if m and m.group('phase').lower().startswith('valid'):
+                rec = dict(epoch=int(m.group('epoch')), loss=float(m.group('loss')),
+                           R2=float(m.group('R2')), RMSE=float(m.group('RMSE')),
+                           MAE=None, Pearson=None, Spearman=None, n=None)
+                for extra in ('mean_sigma', 'std_sigma'):
+                    v = m.group(extra)
+                    rec[extra] = float(v) if v is not None else None
+                epochs.append(rec)
+                pending = None
+                continue
             m = EPOCH_RE.search(line)
             if m and m.group('phase').lower().startswith('valid'):
                 pending = dict(epoch=int(m.group('epoch')), loss=float(m.group('loss')))
@@ -156,18 +179,28 @@ def collect(roots):
                    seed=meta.get('seed', int(dir_seed.group(1)) if dir_seed else None),
                    seed_source='checkpoint' if 'seed' in meta else ('dirname' if dir_seed else 'unknown'),
                    best_epoch=parsed['best']['epoch'], n_epochs=parsed['n_epochs'],
-                   val_loss=parsed['best']['loss'], val_n=parsed['best']['n'],
-                   **{f'val_{k}': parsed['best'][k] for k in METRICS})
+                   val_loss=parsed['best']['loss'], val_n=parsed['best'].get('n'),
+                   **{f'val_{k}': parsed['best'].get(k) for k in METRICS})
+        # Heteroscedastic runs carry the sigma statistics; they are the quantity of interest there,
+        # since std_sigma near zero is the variance-collapse signature.
+        for extra in ('mean_sigma', 'std_sigma'):
+            if parsed['best'].get(extra) is not None:
+                rec[f'val_{extra}'] = parsed['best'][extra]
         if parsed['test']:
             rec.update({f'test_{k}': parsed['test'][k] for k in METRICS}, test_n=parsed['test']['n'])
         mpath = os.path.join(run_dir, 'metrics.json')
         if os.path.exists(mpath):
+            # A malformed metrics.json must be visible. Swallowing it with `except: pass` meant a
+            # corrupt or truncated file simply dropped out of the table -- and the table is what the
+            # thesis quotes, so a silently missing row is the worst available failure mode.
             try:
                 for k, v in json.load(open(mpath)).items():
                     if isinstance(v, (int, float)):
                         rec.setdefault(f'test_{k}', v)
-            except Exception:
-                pass
+            except Exception as e:
+                rec['metrics_json_error'] = f'{type(e).__name__}: {e}'
+                print(f'  WARNING {mpath} could not be read ({type(e).__name__}: {e}); test metrics '
+                      f'for this run are MISSING, not zero', flush=True)
         runs.append(rec)
     return runs
 
@@ -298,8 +331,15 @@ def main():
         for r in rs:
             test = f"  test_{args.metric}={r[f'test_{args.metric}']:.4f}" if f'test_{args.metric}' in r else ''
             src = '' if r['seed_source'] == 'checkpoint' else f" [seed from {r['seed_source']}]"
+            if r.get('metrics_json_error'):
+                src += '  [metrics.json UNREADABLE]'
+            mv = r.get(key)
+            mstr = f'{mv:.4f}' if isinstance(mv, (int, float)) else 'n/a'
+            sig = ''
+            if r.get('val_std_sigma') is not None:
+                sig = f"  sigma {r['val_mean_sigma']:.4f}+-{r['val_std_sigma']:.4f}"
             print(f"  seed {str(r['seed']):>5}  ep {r['best_epoch']:>3}/{r['n_epochs']:<3} "
-                  f"val_loss={r['val_loss']:.4f}  {key}={r.get(key, float('nan')):.4f}{test}{src}")
+                  f"val_loss={r['val_loss']:.4f}  {key}={mstr}{sig}{test}{src}")
         print('  VAL   ' + fmt_summary(s))
         # Test is summarised separately and labelled, because the test mean is the number a thesis
         # quotes while the val mean is only what model selection optimised. Conflating the two, or

@@ -1,6 +1,6 @@
 {
   "bootstrap": {
-    "b": 50,
+    "b": 2000,
     "seed": 20260925,
     "n_target_clusters": 127
   },
@@ -12,108 +12,108 @@
   ],
   "results": {
     "target_split_pk6.0": {
-      "ave": 0.036536769098890864,
+      "ave": 0.049279378479708535,
       "ci95": [
-        0.008282183570230738,
-        0.06439881486086502
+        0.014089693735822908,
+        0.08193833400039748
       ],
-      "AUC_A_to_A": 0.3097141162514828,
-      "AUC_A_to_I": 0.27372479240806646,
-      "AUC_I_to_I": 0.3688525547445256,
-      "AUC_I_to_A": 0.3683051094890511,
-      "n_train_active": 5768,
-      "n_train_inactive": 2232,
+      "AUC_A_to_A": 0.3236245551601423,
+      "AUC_A_to_I": 0.28413641755634633,
+      "AUC_I_to_I": 0.3851518248175183,
+      "AUC_I_to_A": 0.37536058394160576,
+      "n_train_active": 33501,
+      "n_train_inactive": 13463,
       "n_val_active": 8430,
       "n_val_inactive": 3425
     },
     "target_split_pk6.5": {
-      "ave": 0.0580870907758293,
+      "ave": 0.06386545294412188,
       "ci95": [
-        0.03486010860052447,
-        0.08321499052102431
+        0.04760436470932507,
+        0.08546553978321282
       ],
-      "AUC_A_to_A": 0.30213837764144513,
-      "AUC_A_to_I": 0.28310770279481934,
-      "AUC_I_to_I": 0.37558738938053093,
-      "AUC_I_to_A": 0.33653097345132743,
-      "n_train_active": 4858,
-      "n_train_inactive": 3142,
+      "AUC_A_to_A": 0.3142665303340151,
+      "AUC_A_to_I": 0.2930913428766189,
+      "AUC_I_to_I": 0.3905154867256636,
+      "AUC_I_to_A": 0.3478252212389379,
+      "n_train_active": 28373,
+      "n_train_inactive": 18591,
       "n_val_active": 7335,
       "n_val_inactive": 4520
     },
     "target_split_pk7.0": {
-      "ave": 0.041128883846618725,
+      "ave": 0.042195983888806576,
       "ci95": [
-        0.01672241474844575,
-        0.07138173141600346
+        0.022330315335205013,
+        0.0675789985538136
       ],
-      "AUC_A_to_A": 0.28953896103896104,
-      "AUC_A_to_I": 0.28787012987012983,
-      "AUC_I_to_I": 0.3653942054433714,
-      "AUC_I_to_A": 0.3259341527655839,
-      "n_train_active": 4124,
-      "n_train_inactive": 3876,
+      "AUC_A_to_A": 0.30003733766233764,
+      "AUC_A_to_I": 0.29899675324675323,
+      "AUC_I_to_I": 0.3789771729587357,
+      "AUC_I_to_A": 0.3378217734855135,
+      "n_train_active": 24039,
+      "n_train_inactive": 22925,
       "n_val_active": 6160,
       "n_val_inactive": 5695
     },
     "target_split_pk7.5": {
-      "ave": 0.04776527477985565,
+      "ave": 0.0424793373263338,
       "ci95": [
-        0.03388753443267925,
-        0.07058422742592231
+        0.025548814339792635,
+        0.06266604256554682
       ],
-      "AUC_A_to_A": 0.287027880636027,
-      "AUC_A_to_I": 0.2920028316270965,
-      "AUC_I_to_I": 0.3573781662995595,
-      "AUC_I_to_A": 0.30463794052863435,
-      "n_train_active": 3163,
-      "n_train_inactive": 4837,
+      "AUC_A_to_A": 0.2931333042910042,
+      "AUC_A_to_I": 0.3059017643214985,
+      "AUC_I_to_I": 0.37002477973568276,
+      "AUC_I_to_A": 0.31477698237885465,
+      "n_train_active": 18563,
+      "n_train_inactive": 28401,
       "n_val_active": 4591,
       "n_val_inactive": 7264
     },
     "random_ligand_split_pk6.0": {
-      "ave": 1.0542517031505527,
-      "AUC_A_to_A": 0.9341181999765009,
-      "AUC_A_to_I": 0.33634825519915396,
-      "AUC_I_to_I": 0.9105442583732057,
-      "AUC_I_to_A": 0.4540624999999999,
-      "n_train_active": 5687,
-      "n_train_inactive": 2313,
-      "n_val_active": 8511,
-      "n_val_inactive": 3344
+      "ave": 1.187535967487129,
+      "AUC_A_to_A": 0.9945711926389051,
+      "AUC_A_to_I": 0.3537507372891352,
+      "AUC_I_to_I": 0.993194197750148,
+      "AUC_I_to_A": 0.4464786856127887,
+      "n_train_active": 33454,
+      "n_train_inactive": 13510,
+      "n_val_active": 8477,
+      "n_val_inactive": 3378
     },
     "random_ligand_split_pk6.5": {
-      "ave": 1.0393382107513391,
-      "AUC_A_to_A": 0.934316566429743,
-      "AUC_A_to_I": 0.3734923455440131,
-      "AUC_I_to_I": 0.9151971799955938,
-      "AUC_I_to_A": 0.43668319012998463,
-      "n_train_active": 4877,
-      "n_train_inactive": 3123,
-      "n_val_active": 7316,
-      "n_val_inactive": 4539
+      "ave": 1.173603368190443,
+      "AUC_A_to_A": 0.9942783149171269,
+      "AUC_A_to_I": 0.3868667127071824,
+      "AUC_I_to_I": 0.993614301191766,
+      "AUC_I_to_A": 0.42742253521126755,
+      "n_train_active": 28468,
+      "n_train_inactive": 18496,
+      "n_val_active": 7240,
+      "n_val_inactive": 4615
     },
     "random_ligand_split_pk7.0": {
-      "ave": 1.035481898539436,
-      "AUC_A_to_A": 0.9353715120051913,
-      "AUC_A_to_I": 0.39021820246593114,
-      "AUC_I_to_I": 0.9169495694956951,
-      "AUC_I_to_A": 0.4266209804955192,
-      "n_train_active": 4120,
-      "n_train_inactive": 3880,
-      "n_val_active": 6164,
-      "n_val_inactive": 5691
+      "ave": 1.1698028592135474,
+      "AUC_A_to_A": 0.9947248530372303,
+      "AUC_A_to_I": 0.40632838014369704,
+      "AUC_I_to_I": 0.9933807363461875,
+      "AUC_I_to_A": 0.4119743500261734,
+      "n_train_active": 24075,
+      "n_train_inactive": 22889,
+      "n_val_active": 6124,
+      "n_val_inactive": 5731
     },
     "random_ligand_split_pk7.5": {
-      "ave": 1.0479409015381438,
-      "AUC_A_to_A": 0.9352503761014401,
-      "AUC_A_to_I": 0.41972061035890834,
-      "AUC_I_to_I": 0.9205970563732295,
-      "AUC_I_to_A": 0.3881859205776174,
-      "n_train_active": 3101,
-      "n_train_inactive": 4899,
-      "n_val_active": 4653,
-      "n_val_inactive": 7202
+      "ave": 1.1596471803518802,
+      "AUC_A_to_A": 0.9941485315867316,
+      "AUC_A_to_I": 0.43738326642721326,
+      "AUC_I_to_I": 0.9938331929233362,
+      "AUC_I_to_A": 0.3909512777309744,
+      "n_train_active": 18421,
+      "n_train_inactive": 28543,
+      "n_val_active": 4733,
+      "n_val_inactive": 7122
     }
   },
   "note": "AVE = (AUC[A->A] - AUC[A->I]) + (AUC[I->I] - AUC[I->A]) over cumulative nearest-neighbour Tanimoto distributions (Wallach & Heifets 2017). Compared against a random ligand split of the same molecules, which anchors the scale without relying on published values for other datasets."

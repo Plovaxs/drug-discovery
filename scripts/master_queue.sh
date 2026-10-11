@@ -33,12 +33,23 @@
 #   scripts/master_queue.sh run               # work the queue (foreground)
 #   scripts/master_queue.sh start             # same, detached; survives closing the terminal
 #   scripts/master_queue.sh stop              # stop the queue (does NOT kill a running step)
+#
+# EDITING THIS FILE, OR queued_run.sh, WHILE THE QUEUE IS RUNNING HAS NO EFFECT ON THE RUNNING QUEUE.
+# bash holds the script open on fd 255, and an atomic replace (which is what makes editing safe at all)
+# leaves that fd pointing at the old, deleted inode. You MUST restart the queue, and you MUST verify:
+#   tr '\0' ' ' < /proc/<gate-pid>/cmdline     # the new flags are actually there
+#   ls -l /proc/<gate-pid>/fd/255               # a live path, NOT "(deleted)"
+# This was missed once: the thermal watchdog was written, tested and fixed, and the running queue still
+# launched its steps without it.
 #   scripts/master_queue.sh reset <name>      # forget one completed step so it runs again
 #
 # Options (env vars):
 #   REST=1200        seconds of rest after each step            (default 1200 = 20 min)
 #   COOL_TO=55       start the next step below this GPU temp C   (default 55)
 #   CPU_COOL_TO=80   ...and below this CPU package temp C         (default 80; 0 disables)
+#   THROTTLE_AT=88   suspend a RUNNING job above this CPU temp     (default 88; 0 disables)
+#   THROTTLE_RESUME=75  ...and resume it below this                (default 75)
+#   THREADS=10       cap the job's BLAS/OMP threads                (default 10 of 20; 0 = uncapped)
 #   COOL_FOR=300     ...held for this many seconds continuously  (default 300 = 5 min)
 #   ONLY=3           work at most N steps this session, then exit cleanly
 #   GATE_MAX_WAIT=14400  give up on a step whose thermal gate never opens (default 4 h; 0 = forever)
@@ -63,6 +74,12 @@ COOL_TO="${COOL_TO:-55}"
 # i7-12700H is 100 C, so the machine sits ~8 C from throttling on one busy dataloader thread. Gating on
 # GPU temperature alone was watching the wrong sensor. 0 disables the CPU gate.
 CPU_COOL_TO="${CPU_COOL_TO:-80}"
+# The start gate alone proved insufficient: ave_bias passed it at 57 C and then held 92 C for 4 h 42 min.
+# These bound the job while it RUNS. THREADS caps its thread pools so less heat is generated in the
+# first place; the watchdog suspends and resumes it if that is still not enough.
+THROTTLE_AT="${THROTTLE_AT:-88}"
+THROTTLE_RESUME="${THROTTLE_RESUME:-75}"
+THREADS="${THREADS:-10}"
 # How long a step may sit in the thermal gate before the queue gives up on it. Unbounded waiting is fine
 # with a human watching, but left unattended it can deadlock: if this laptop's idle CPU temperature
 # settles above CPU_COOL_TO, the gate would never open and nothing would say why. Four hours is far
@@ -120,12 +137,23 @@ cmd_status() {
          esac
        done | sort -rn | head -1)
   [ -n "$ct" ] && ct=$(( ct / 1000 ))
-  echo "GPU now: ${t:-?}C (gate <${COOL_TO}C)   CPU now: ${ct:-?}C (gate <${CPU_COOL_TO}C)"
+  echo "GPU now: ${t:-?}C (gate <${COOL_TO}C)   CPU now: ${ct:-?}C (gate <${CPU_COOL_TO}C, throttle >=${THROTTLE_AT}C)"
   if [ -n "$ct" ] && [ "$ct" -ge "$CPU_COOL_TO" ]; then
     echo "  -> CPU is above its gate; the next step waits regardless of CPU_PARALLEL"
   fi
-  if pgrep -f "train_.*[.]py" >/dev/null 2>&1; then
-    echo "a training process is currently running -- the queue would wait for it"
+  # Count only real interpreters. `pgrep -f` matches whole command lines, and queued_run.sh carries
+  # "train_egnn[a-z_]*[.]py" inside its own --wait-for argument, so an unfiltered check reports a running
+  # trainer while nothing is training. busy() has always filtered on comm; this display did not.
+  # Never decide what is running from pgrep -f alone -- confirm with /proc/<pid>/comm.
+  local running_trainers=0 tp tcomm
+  for tp in $(pgrep -f "train_.*[.]py" 2>/dev/null); do
+    tcomm=$(cat "/proc/$tp/comm" 2>/dev/null) || continue
+    case "$tcomm" in python*|Python*) running_trainers=$((running_trainers + 1)) ;; esac
+  done
+  if [ "$running_trainers" -gt 0 ]; then
+    echo "a training process is currently running ($running_trainers) -- the queue waits for it"
+  else
+    echo "no training process running"
   fi
   if [ -f "$STATE_DIR/master_queue.failed" ]; then
     echo "LAST RUN FAILED: $(cat "$STATE_DIR/master_queue.failed")"
@@ -183,13 +211,15 @@ cmd_run() {
     local gate=() pat
     if [ "$kind" = "cpu" ]; then
       gate=(--cool-to 999 --cpu-cool-to "$CPU_COOL_TO" --cool-for "$COOL_FOR" --poll 60
-            --max-wait "$GATE_MAX_WAIT")
+            --max-wait "$GATE_MAX_WAIT" --throttle-at "$THROTTLE_AT"
+            --throttle-resume "$THROTTLE_RESUME" --threads "$THREADS")
       if [ "$CPU_PARALLEL" != "1" ]; then
         for pat in $GATE_WAIT; do gate+=(--wait-for "$pat"); done
       fi
     else
       gate=(--cool-to "$COOL_TO" --cpu-cool-to "$CPU_COOL_TO" --cool-for "$COOL_FOR"
-            --poll 60 --max-wait "$GATE_MAX_WAIT")
+            --poll 60 --max-wait "$GATE_MAX_WAIT" --throttle-at "$THROTTLE_AT"
+            --throttle-resume "$THROTTLE_RESUME" --threads "$THREADS")
       for pat in $GATE_WAIT; do gate+=(--wait-for "$pat"); done
     fi
 

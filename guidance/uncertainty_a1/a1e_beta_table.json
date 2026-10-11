@@ -1,0 +1,133 @@
+{
+  "metric": "val_R2",
+  "runs": [
+    {
+      "run_dir": "logs_a1e_beta_heteroscedastic/crossdocked_affinity_egnn_2026_10_11__01_40_17_a1eb_s2021",
+      "group": "a1e_beta_heteroscedastic/a1eb",
+      "seed": 2021,
+      "seed_source": "checkpoint",
+      "best_epoch": 7,
+      "n_epochs": 12,
+      "val_loss": 1.226299,
+      "val_n": null,
+      "val_R2": 0.347,
+      "val_RMSE": 1.3853,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 0.7981,
+      "val_std_sigma": 0.1994
+    },
+    {
+      "run_dir": "logs_a1e_beta_heteroscedastic/crossdocked_affinity_egnn_2026_10_11__06_22_07_a1eb_s2022",
+      "group": "a1e_beta_heteroscedastic/a1eb",
+      "seed": 2022,
+      "seed_source": "checkpoint",
+      "best_epoch": 2,
+      "n_epochs": 7,
+      "val_loss": 1.285951,
+      "val_n": null,
+      "val_R2": 0.371,
+      "val_RMSE": 1.3596,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 0.7765,
+      "val_std_sigma": 0.0561
+    },
+    {
+      "run_dir": "logs_a1e_beta_heteroscedastic/crossdocked_affinity_egnn_2026_10_11__09_42_53_a1eb_s2023",
+      "group": "a1e_beta_heteroscedastic/a1eb",
+      "seed": 2023,
+      "seed_source": "checkpoint",
+      "best_epoch": 1,
+      "n_epochs": 6,
+      "val_loss": 1.207786,
+      "val_n": null,
+      "val_R2": 0.2365,
+      "val_RMSE": 1.4979,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 0.9267,
+      "val_std_sigma": 0.1693
+    },
+    {
+      "run_dir": "logs_a1e_heteroscedastic/crossdocked_affinity_egnn_2026_10_08__17_21_42_a1e_s2021",
+      "group": "a1e_heteroscedastic/a1e",
+      "seed": 2021,
+      "seed_source": "checkpoint",
+      "best_epoch": 7,
+      "n_epochs": 12,
+      "val_loss": 1.310307,
+      "val_n": null,
+      "val_R2": 0.3499,
+      "val_RMSE": 1.3822,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 0.8276,
+      "val_std_sigma": 0.3509
+    },
+    {
+      "run_dir": "logs_a1e_heteroscedastic/crossdocked_affinity_egnn_2026_10_11__04_24_33_a1e_s2022",
+      "group": "a1e_heteroscedastic/a1e",
+      "seed": 2022,
+      "seed_source": "checkpoint",
+      "best_epoch": 3,
+      "n_epochs": 8,
+      "val_loss": 1.324816,
+      "val_n": null,
+      "val_R2": 0.3057,
+      "val_RMSE": 1.4285,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 0.8709,
+      "val_std_sigma": 0.1789
+    },
+    {
+      "run_dir": "logs_a1e_heteroscedastic/crossdocked_affinity_egnn_2026_10_11__08_08_23_a1e_s2023",
+      "group": "a1e_heteroscedastic/a1e",
+      "seed": 2023,
+      "seed_source": "checkpoint",
+      "best_epoch": 1,
+      "n_epochs": 6,
+      "val_loss": 0.943927,
+      "val_n": null,
+      "val_R2": 0.3442,
+      "val_RMSE": 1.3883,
+      "val_MAE": null,
+      "val_Pearson": null,
+      "val_Spearman": null,
+      "val_mean_sigma": 1.0,
+      "val_std_sigma": 0.1741
+    }
+  ],
+  "groups": {
+    "a1e_beta_heteroscedastic/a1eb": {
+      "n": 3,
+      "mean": 0.31816666666666665,
+      "min": 0.2365,
+      "max": 0.371,
+      "sd": 0.07173620657194896,
+      "sem": 0.04141691817495733,
+      "ci95": [
+        0.13996405062558476,
+        0.49636928270774855
+      ]
+    },
+    "a1e_heteroscedastic/a1e": {
+      "n": 3,
+      "mean": 0.33326666666666666,
+      "min": 0.3057,
+      "max": 0.3499,
+      "sd": 0.024042947683953656,
+      "sem": 0.013881202317442734,
+      "ci95": [
+        0.27354067362405726,
+        0.39299265970927605
+      ]
+    }
+  }
+}

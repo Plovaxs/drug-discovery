@@ -110,6 +110,7 @@ def build_features(force=False):
     gen = rdFingerprintGenerator.GetMorganGenerator(radius=FP_RADIUS, fpSize=FP_BITS)
     desc_fns = [(name, getattr(Descriptors, name)) for name in DESCRIPTORS]
 
+    n_desc_fail = [0]      # list so the inner loop can increment it without a nonlocal declaration
     fp = np.zeros((len(idxs), FP_BITS), dtype=np.uint8)
     desc = np.full((len(idxs), len(DESCRIPTORS)), np.nan, dtype=np.float64)
     scaffold = np.empty(len(idxs), dtype=object)
@@ -130,7 +131,11 @@ def build_features(force=False):
             try:
                 desc[row, c] = float(fn(mol))
             except Exception:
-                pass
+                # Left as NaN deliberately. Every consumer calls np.nan_to_num, which would turn this
+                # into 0.0 -- a molecular weight of zero handed to a regressor as if measured. The
+                # failure is therefore COUNTED and reported below, so "no NaNs" is a verified statement
+                # rather than an assumption.
+                n_desc_fail[0] += 1
         try:
             # Generic (topological) Bemis-Murcko framework: atom types and bond orders abstracted away.
             # The stricter choice on purpose -- it makes scaffold overlap between train and test LARGER,
@@ -144,11 +149,20 @@ def build_features(force=False):
             print(f'  featurised {row + 1}/{len(idxs)}', flush=True)
 
     out = dict(idx=np.array(idxs, dtype=np.int64), smiles=smiles, fp=fp, desc=desc,
-               scaffold=scaffold, ok=ok, descriptor_names=np.array(DESCRIPTORS, dtype=object))
+               scaffold=scaffold, ok=ok, descriptor_names=np.array(DESCRIPTORS, dtype=object),
+               n_descriptor_nan=np.array([n_nan]), n_descriptor_raised=np.array([n_desc_fail[0]]))
     os.makedirs(CACHE_DIR, exist_ok=True)
     np.savez_compressed(FP_CACHE, **out)
+    n_nan = int(np.isnan(desc).sum())
     print(f'wrote {FP_CACHE}: {len(idxs)} molecules, {int(ok.sum())} parsed, '
           f'{int((~ok).sum())} failed')
+    print(f'  descriptor values that are NaN: {n_nan} '
+          f'({n_desc_fail[0]} raised, rest from unparsed molecules)')
+    if n_nan:
+        print(f'  WARNING consumers call np.nan_to_num, which turns each of those into 0.0 -- a '
+              f'descriptor of zero treated as a measurement. Investigate before trusting any model '
+              f'fitted on this cache.')
+    out_nan = n_nan
     return out
 
 
