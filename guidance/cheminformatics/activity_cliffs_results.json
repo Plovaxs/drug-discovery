@@ -1,0 +1,44 @@
+{
+  "sim_threshold": 0.9,
+  "delta_pk_threshold": 1.0,
+  "B": 2000,
+  "boot_seed": 20260925,
+  "n_pairs_checked": 4050366,
+  "n_cliff_pairs": 2856,
+  "n_cliff_compounds": 344,
+  "n_test": 11855,
+  "structure_model": "egnn_a1c_ensemble",
+  "ligand_champion": "desc_ridge",
+  "by_stratum": {
+    "cliff": {
+      "n": 344,
+      "n_target_clusters": 11,
+      "structure_r2": 0.2903667369789549,
+      "ligand_r2": 0.3611262965571119,
+      "d_r2": -0.07075955957815705,
+      "ci95": [
+        -0.42756004170775275,
+        0.06507116562689078
+      ],
+      "boot_p": 0.285,
+      "underpowered": false,
+      "degenerate": false,
+      "boot_p_bh": 0.285
+    },
+    "non_cliff": {
+      "n": 11511,
+      "n_target_clusters": 126,
+      "structure_r2": 0.41108113686642755,
+      "ligand_r2": 0.3516677304557767,
+      "d_r2": 0.05941340641065085,
+      "ci95": [
+        -0.03200401312704069,
+        0.15023326385887
+      ],
+      "boot_p": 0.209,
+      "underpowered": false,
+      "degenerate": false,
+      "boot_p_bh": 0.285
+    }
+  }
+}

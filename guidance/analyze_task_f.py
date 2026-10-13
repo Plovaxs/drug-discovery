@@ -208,22 +208,36 @@ def main():
         for k, val in s.items():
             print(f'  {k}: {val}')
 
-    sig = None
-    hacking = None
-    if 'baseline' in subs and 'affinity_only' in subs:
-        metrics = ['qed', 'sa', 'ra_score', 'vina_dock', 'ligand_efficiency']
-        sig = significance_tests(subs['baseline'], subs['affinity_only'], metrics)
-        print('\n=== Significance tests (baseline vs affinity_only) ===')
-        for metric, res in sig.items():
-            print(f'  {metric}: {res}')
+    # Every OTHER variant is compared against 'baseline' -- this used to be hardcoded to exactly
+    # the pair (baseline, affinity_only), which silently said nothing about any variant added later.
+    # 'vina_rerank' (the RQ2 positive control, guidance/RQ2_POSITIVE_CONTROL_PREREGISTRATION.md) is
+    # the reason this was generalised: the comparison that actually answers RQ2 is baseline vs
+    # vina_rerank, and without this change it would have loaded and printed descriptive stats for
+    # vina_rerank while silently never testing it against anything.
+    comparisons = {}
+    metrics = ['qed', 'sa', 'ra_score', 'vina_dock', 'ligand_efficiency']
+    if 'baseline' in subs:
+        for v in variants:
+            if v == 'baseline' or v not in subs:
+                continue
+            sig = significance_tests(subs['baseline'], subs[v], metrics)
+            hacking = vina_hacking_check(all_stats['baseline'], all_stats[v])
+            comparisons[f'baseline_vs_{v}'] = {'significance': sig, 'vina_hacking': hacking}
+            print(f'\n=== Significance tests (baseline vs {v}) ===')
+            for metric, res in sig.items():
+                print(f'  {metric}: {res}')
+            print(f'\n=== Vina-hacking check (baseline vs {v}) ===')
+            for f in hacking:
+                print(f'  {f}')
 
-        hacking = vina_hacking_check(all_stats['baseline'], all_stats['affinity_only'])
-        print('\n=== Vina-hacking check ===')
-        for f in hacking:
-            print(f'  {f}')
+    # Kept for exact backward compatibility with anything reading the old top-level keys (the
+    # affinity_only comparison is the one every existing script/figure already expects there).
+    sig = comparisons.get('baseline_vs_affinity_only', {}).get('significance')
+    hacking = comparisons.get('baseline_vs_affinity_only', {}).get('vina_hacking')
 
     with open(args.out, 'w') as f:
-        json.dump({'variant_stats': all_stats, 'significance': sig, 'vina_hacking': hacking}, f, indent=2)
+        json.dump({'variant_stats': all_stats, 'significance': sig, 'vina_hacking': hacking,
+                   'comparisons': comparisons}, f, indent=2)
     print(f'\nSaved full analysis to {args.out}')
 
 

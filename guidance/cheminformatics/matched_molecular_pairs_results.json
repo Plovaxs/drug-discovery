@@ -1,0 +1,34 @@
+{
+  "n_series": 183,
+  "n_pairs": 375,
+  "n_pairs_nonzero_delta": 360,
+  "min_core_fraction": 0.6,
+  "structure_model": "egnn_a1c_ensemble",
+  "ligand_champion": "desc_ridge",
+  "structure": {
+    "sign_agreement": 0.46111111111111114,
+    "sign_agreement_ci95": [
+      0.39898782911077996,
+      0.5345910138248846
+    ],
+    "n_target_clusters": 43,
+    "pearson_actual_vs_pred": -0.023344588838781526
+  },
+  "ligand_only": {
+    "sign_agreement": 0.48333333333333334,
+    "sign_agreement_ci95": [
+      0.3911738218603504,
+      0.5961041793187213
+    ],
+    "n_target_clusters": 43,
+    "pearson_actual_vs_pred": -0.05923310724842873
+  },
+  "paired_structure_minus_ligand": {
+    "delta": -0.022222222222222223,
+    "ci95": [
+      -0.10193118569741946,
+      0.04314185602038647
+    ],
+    "boot_p": 0.551
+  }
+}

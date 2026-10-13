@@ -16,7 +16,34 @@ The blocks:
                distance shell) contact counts
   ecif_norm    the same, divided by ligand heavy atoms     -- interaction DENSITY
   ecif_norm+size                                           -- density plus one size feature
+  plip_raw     4 (hbond/hydrophobic/pi-stack/salt-bridge)  -- TYPED interaction counts (PLIP)
+               counts, summed over ligand atoms
+  plip_norm    the same, divided by ligand heavy atoms     -- typed interaction DENSITY
+  plip_norm+size                                           -- density plus one size feature
   all          ligand + pocket + ecif_norm                 -- descriptor-level ceiling
+
+TODO item 2 (added 2026-10-13): ecif's contact counts are untyped (element x element x distance shell,
+no chemistry). PLIP typed interactions test the sharper version of the same question: if BERTYPED
+contact counts -- "this is specifically an h-bond", not just "these elements are within 3.5 Angstrom" --
+still add nothing beyond the marginals, that strengthens the redundancy claim considerably, since typed
+interactions are the more informative representation a structure-based model's advantage is usually
+argued to come from. If they DO add something ecif_norm did not, that is a genuinely new positive result
+and should be reported as cleanly as the AVE-bias finding was.
+
+Classes used: all four PLIP_CLASSES_ALL (hbond, hydrophobic, pi_stack, salt_bridge) from
+guidance/track_e/core.py's PlipLabelStore, cached from guidance/track_e/build_plip_cache.py -- verified
+100% coverage across train/val/test (64,888/64,888 LP-split rows) before this was written, so there is no
+missing-row exclusion logic to get wrong. Track E's own prediction head (decision D2, same file) drops
+pi_stack from what it tries to PREDICT; that decision is about head stability for a different task
+(predicting labels from structure) and is not reused here uncritically -- no evidence was found that
+pi_stack counts are unreliable AS a feature for affinity regression specifically, so all four are kept,
+and this choice is stated rather than silently inherited.
+
+The raw/norm pair mirrors ecif_raw/ecif_norm for exactly the reason stated two paragraphs below: raw
+counts of ANY kind scale with ligand size, and this project already found that mistake once (ecif_raw
+dR2 was +0.1625 over ecif_norm, "working mainly by re-encoding ligand size" -- see this file's own
+ecif section). Running plip_raw without plip_norm alongside it would risk repeating that exact finding
+under a different feature name instead of learning from it.
 
 Two claims are under test.
 
@@ -56,16 +83,37 @@ from guidance.cheminformatics.chem_data import build_features, split_view, targe
 from guidance.cheminformatics.pocket_features import build as build_pocket, split_view_pocket
 from guidance.cheminformatics.compare_vs_structure import (LIGAND_PREDS, STRUCTURE_SOURCES,
                                                            load_structure, r2_rows)
+from guidance.track_e.core import PLIP_CLASSES_ALL, PlipLabelStore
 from guidance.uncertainty_a1.stats_common import bh, cluster_bootstrap_indices
 
 OUT = './guidance/cheminformatics/representation_ladder_results.json'
 BOOT_SEED = 20260925
 
 
-def blocks(chem, pock):
+def plip_features(idx_array, n_lig_array, store=None):
+    """(raw, norm) typed-interaction feature matrices, row-aligned to idx_array. raw[i, c] is the COUNT
+    of PLIP class c (PLIP_CLASSES_ALL order) over complex i's ligand atoms; norm is the same divided by
+    that complex's heavy-atom count -- the ecif_raw/ecif_norm convention, for the reason given in this
+    module's docstring. Raises, not silently zero-fills, if any idx is missing from the store -- coverage
+    was verified 100% before this was written, so a miss here means the cache went stale, not that a
+    gap was always expected and should be papered over."""
+    store = store or PlipLabelStore()
+    missing = [int(i) for i in idx_array if i not in store]
+    if missing:
+        raise SystemExit(f'ABORT: {len(missing)} / {len(idx_array)} rows have no PLIP labels (first few: '
+                         f'{missing[:5]}) -- coverage was 100% when this was written; rebuild the PLIP '
+                         f'cache (guidance/track_e/build_plip_cache.py) before trusting this block.')
+    raw = np.array([store.get(int(i), classes=PLIP_CLASSES_ALL).sum(axis=0) for i in idx_array],
+                   dtype=np.float64)
+    norm = raw / np.maximum(n_lig_array.astype(np.float64)[:, None], 1.0)
+    return raw, norm
+
+
+def blocks(chem, pock, plip_store=None):
     """Feature matrices per information source, all row-aligned to the split."""
     size = chem['n_lig'].astype(np.float64)[:, None]
     lig = np.nan_to_num(chem['desc'])
+    plip_raw, plip_norm = plip_features(chem['idx'], chem['n_lig'], store=plip_store)
     return {
         'ligand': lig,
         'pocket': pock['pocket'],
@@ -73,6 +121,12 @@ def blocks(chem, pock):
         'ecif_raw': pock['ecif_raw'],
         'ecif_norm': pock['ecif_norm'],
         'ecif_norm+size': np.hstack([pock['ecif_norm'], size]),
+        'plip_raw': plip_raw,
+        'plip_norm': plip_norm,
+        'plip_norm+size': np.hstack([plip_norm, size]),
+        # 'all' is UNCHANGED (ligand + pocket + ecif_norm, no plip) -- this is an already-reported block
+        # and folding plip in would silently change its number. A plip-inclusive ceiling, if wanted, is
+        # a separate deliberate addition, not an implicit side effect of adding the plip blocks above.
         'all': np.hstack([lig, pock['pocket'], pock['ecif_norm']]),
     }
 
@@ -113,7 +167,10 @@ def main():
     ptr = split_view_pocket('train', pock); pva = split_view_pocket('val', pock)
     pte = split_view_pocket('test', pock)
 
-    Btr, Bva, Bte = blocks(tr, ptr), blocks(va, pva), blocks(te, pte)
+    plip_store = PlipLabelStore()      # loaded once (7.5MB), passed to all three blocks() calls below
+    Btr = blocks(tr, ptr, plip_store=plip_store)
+    Bva = blocks(va, pva, plip_store=plip_store)
+    Bte = blocks(te, pte, plip_store=plip_store)
     groups = target_groups(te['target'])
     all_rows = np.concatenate(groups)
     print(f"train {len(tr['pk'])} | val {len(va['pk'])} | test {len(te['pk'])} over {len(groups)} "
@@ -154,7 +211,13 @@ def main():
     pairs = [('ligand+pocket', 'ligand'), ('ligand+pocket', 'pocket'), ('pocket', 'ligand'),
              ('ecif_norm', 'ligand'), ('ecif_norm', 'pocket'), ('ecif_raw', 'ecif_norm'),
              ('ecif_norm+size', 'ecif_norm'), ('all', 'ligand'), ('all', 'ligand+pocket'),
-             ('all', 'ecif_norm')]
+             ('all', 'ecif_norm'),
+             # item 2's actual questions: does the TYPED (plip_norm) representation beat the
+             # marginals the same way ecif_norm was tested against them, does it beat UNTYPED ecif_norm
+             # specifically, and does plip_raw/plip_norm show the same size-confound ecif_raw/ecif_norm
+             # already did.
+             ('plip_norm', 'ligand'), ('plip_norm', 'pocket'), ('plip_norm', 'ecif_norm'),
+             ('plip_raw', 'plip_norm'), ('plip_norm+size', 'plip_norm')]
     for sname in struct:
         pairs.append((('STRUCT', sname), 'all'))
         pairs.append((('STRUCT', sname), 'ecif_norm'))

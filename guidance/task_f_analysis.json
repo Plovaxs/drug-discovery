@@ -61,6 +61,37 @@
       "pb_valid_rate": 0.5510887772194305,
       "standard_success_rate": 0.07035175879396985,
       "honest_success_rate": 0.03015075376884422
+    },
+    "vina_rerank": {
+      "variant": "vina_rerank",
+      "n_attempted": 600,
+      "n_scored": 600,
+      "validity_rate": 1.0,
+      "uniqueness_rate": 1.0,
+      "diversity_mean_1_minus_tanimoto": 0.9066928598061427,
+      "qed_mean_std": [
+        0.46198920151317074,
+        0.1865640862488264
+      ],
+      "sa_mean_std": [
+        0.5716333333333333,
+        0.11274092609274285
+      ],
+      "ra_score_mean_std": [
+        0.352936142689432,
+        0.35784208638957277
+      ],
+      "vina_dock_mean_std": [
+        -8.06824,
+        2.6604475257862985
+      ],
+      "ligand_efficiency_mean_std": [
+        -0.3690654326296279,
+        0.10899112547883001
+      ],
+      "pb_valid_rate": 0.5816666666666667,
+      "standard_success_rate": 0.085,
+      "honest_success_rate": 0.04666666666666667
     }
   },
   "significance": {
@@ -104,5 +135,95 @@
     "affinity_only Vina Dock improved vs baseline (-7.251 < -6.813).",
     "  ...and ligand efficiency did not worsen (-0.3717 vs -0.3399) -- not consistent with simple size-inflation hacking.",
     "  ...and PoseBusters pass rate dropped (0.545 < 0.551) -- poses may be less physically plausible."
-  ]
+  ],
+  "comparisons": {
+    "baseline_vs_affinity_only": {
+      "significance": {
+        "qed": {
+          "mannwhitney_p": 0.8891923436321267,
+          "wilcoxon_paired_p": 0.6476554870605469,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 596
+        },
+        "sa": {
+          "mannwhitney_p": 0.7978999042753928,
+          "wilcoxon_paired_p": 0.2771920054090605,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 596
+        },
+        "ra_score": {
+          "mannwhitney_p": 0.8156132456772407,
+          "wilcoxon_paired_p": 0.3117942810058594,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 596
+        },
+        "vina_dock": {
+          "mannwhitney_p": 0.9605246208233663,
+          "wilcoxon_paired_p": 0.5458755493164062,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 596
+        },
+        "ligand_efficiency": {
+          "mannwhitney_p": 0.9560385336196194,
+          "wilcoxon_paired_p": 0.3299827575683594,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 596
+        }
+      },
+      "vina_hacking": [
+        "affinity_only Vina Dock improved vs baseline (-7.251 < -6.813).",
+        "  ...and ligand efficiency did not worsen (-0.3717 vs -0.3399) -- not consistent with simple size-inflation hacking.",
+        "  ...and PoseBusters pass rate dropped (0.545 < 0.551) -- poses may be less physically plausible."
+      ]
+    },
+    "baseline_vs_vina_rerank": {
+      "significance": {
+        "qed": {
+          "mannwhitney_p": 0.3091254533566402,
+          "wilcoxon_paired_p": 0.15364646911621094,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 600
+        },
+        "sa": {
+          "mannwhitney_p": 3.3436024200480605e-05,
+          "wilcoxon_paired_p": 8.20159912109375e-05,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 600
+        },
+        "ra_score": {
+          "mannwhitney_p": 6.0579318815741525e-05,
+          "wilcoxon_paired_p": 2.6702880859375e-05,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 600
+        },
+        "vina_dock": {
+          "mannwhitney_p": 3.065854290287219e-10,
+          "wilcoxon_paired_p": 1.9073486328125e-06,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 600
+        },
+        "ligand_efficiency": {
+          "mannwhitney_p": 0.7901977025183363,
+          "wilcoxon_paired_p": 0.7561664581298828,
+          "n_pockets_paired": 20,
+          "n_a": 597,
+          "n_b": 600
+        }
+      },
+      "vina_hacking": [
+        "affinity_only Vina Dock improved vs baseline (-8.068 < -6.813).",
+        "  ...and ligand efficiency did not worsen (-0.3691 vs -0.3399) -- not consistent with simple size-inflation hacking.",
+        "  ...PoseBusters pass rate held or improved (0.582 vs 0.551)."
+      ]
+    }
+  }
 }

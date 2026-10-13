@@ -149,22 +149,145 @@ sebagai sebab. Gagal juga -> penjelasan pindah ke M2/M3, sama berharganya.
 **Biaya:** GPU, sampling generatif. Perlu di-scope dulu (berapa pocket, berapa molekul) sebelum dilepas.
 **Prasyarat:** 0a selesai. Mulai dengan menulis rencana pra-registrasi, BUKAN langsung lari.
 
-### 2. PLIP typed interactions sebagai blok ke-8 tangga representasi
+**STATUS 2026-10-12: pra-registrasi SELESAI, implementasi SELESAI dan diverifikasi, menunggu keputusan
+skala.** Dokumen lengkap: `guidance/RQ2_POSITIVE_CONTROL_PREREGISTRATION.md`. Desain: best-of-N Vina
+rerank (bukan backprop lewat Vina -- tidak differentiable) -- oversample pool tanpa guidance, seleksi
+murah via `score_only` (~0,57s/molekul, tidak sirkular karena evaluasi akhir pakai pass Vina independen
+mode `dock` exhaustiveness=16, SAMA seperti baseline/affinity_only). Kode: variant baru `vina_rerank` di
+`guidance/run_task_f.py` (fungsi sibling `run_triple_vina_rerank`, TIDAK mengedit `run_triple` yang
+dipakai baseline/affinity_only -- nol risiko regresi). Diverifikasi dua jalur: (1) smoke test mekanis
+end-to-end (1 pocket, num_steps=25 sengaja kecil) -- jalur kegagalan pool-kosong bekerja benar, tertangkap
+dan tercatat rapi, bukan crash; (2) logika baru (Vina score_only + ranking + mapping kolom
+`vina_select_score`) diuji LANGSUNG pakai 5 molekul nyata dari `baseline/pocket0_seed1` yang sudah ada --
+skor masuk akal (-5,5 sampai -8,7, searah dengan Vina Dock mean yang sudah dilaporkan -6,8/-7,3), urutan
+benar, mapping DataFrame benar. 13 suite / 178 tes lama tetap hijau (tidak ada regresi).
+**Skala:** pilot 6 pocket x 1 seed x K=2 ~= 1,1 jam GPU (direkomendasikan untuk dijalankan duluan);
+skala penuh (20 pocket x 3 seed, sama seperti baseline/affinity_only) ~= 11,5 jam (K=2) atau 21,5 jam
+(K=4). **Ini komitmen GPU/waktu besar -- menunggu persetujuan eksplisit sebelum dilepas**, sesuai
+protokol operasional proyek ini.
+
+**HASIL FINAL -- SELESAI 2026-10-13, 60/60 triple (20 pocket x 3 seed), ~22 jam wall-clock total
+(pilot+full, lebih lama dari estimasi 12,6 jam karena overhead suspend termal).**
+
+| metrik | vina_rerank | baseline | uji berpasangan (n=20 pocket, 600 vs 597 molekul) |
+|---|---|---|---|
+| **Vina Dock** | **-8,068 +- 2,660** | -6,813 +- 10,079 | **Wilcoxon p=1,9e-06**, Mann-Whitney p=3,1e-10 |
+| delta per-pocket (CI bootstrap klaster-target B=2000) | | | **-1,2668 kcal/mol, CI95 [-2,149, -0,740] -- mengecualikan nol** |
+| SA | 0,572 | 0,601 | p=8,2e-05 (SIGNIFIKAN, turun) |
+| RA score | 0,353 | 0,435 | p=2,67e-05 (SIGNIFIKAN, turun) |
+| QED | 0,462 | 0,449 | p=0,154 (tidak signifikan) |
+| ligand efficiency | -0,369 | -0,340 | p=0,756 (tidak signifikan -- FLAT) |
+| PoseBusters valid | 0,582 | 0,551 | bertahan/sedikit naik, tidak turun |
+| heavy_atoms | 23,09 +- 8,36 | 21,32 +- 9,06 | Mann-Whitney p=0,0002 (SIGNIFIKAN, naik +1,8 atom) |
+
+**Verdict: HARNESS VALID. M1 terkonfirmasi sebagai sebab kegagalan guidance EGNN-surrogate.** Seleksi
+berbasis Vina docking ASLI (zero-shot, tidak pernah dilatih di label pK kita, bukan gradien) menggeser
+distribusi molekul yang dihasilkan ke arah Vina Dock yang jauh lebih baik -- signifikan secara
+statistik, bukan sirkular (skor seleksi `score_only` cepat vs skor evaluasi `dock` mode penuh adalah
+dua pass Vina yang berbeda), dan tetap bertahan setelah target-clustered bootstrap. Ini membuktikan
+generator + pocket + jalur evaluasi SANGGUP mendeteksi perbaikan ketika sinyal pemandunya genuinely
+informatif -- jawaban langsung untuk pertanyaan "bagaimana saya tahu harness-mu bukan yang rusak?"
+
+**Tapi ada confound ukuran yang HARUS dinyatakan, bukan disembunyikan**: molekul vina_rerank
+sedikit lebih besar (+1,8 atom berat, p=0,0002) dan kurang synthetically-accessible (SA, RA keduanya
+turun signifikan). Ini pola klasik "molekul lebih besar = skor Vina absolut lebih baik". **Tapi bukan
+size-inflation SEDERHANA**: ligand efficiency (Vina Dock per atom berat -- metrik yang DIRANCANG
+menangkap pola ini) FLAT, tidak memburuk (p=0,756); PoseBusters validitas fisik bertahan/naik, tidak
+turun. Jadi perbaikannya sebagian riil (per-atom tidak memburuk), sebagian berasal dari ukuran yang
+sedikit lebih besar -- kedua hal ini harus dilaporkan bersama, bukan dipilih salah satu yang nyaman.
+
+**Bug ditemukan dan diperbaiki di tengah jalan**: `rq2_analyze` GAGAL pertama kali (exit 1, IndexError)
+karena `run_triple_vina_rerank` menulis marker DONE dengan skema kunci BERBEDA (`n_pool=...`) dari yang
+dibaca `load_all_results` (`n_attempted=...`). Verifikasi sintetis sebelumnya tidak pernah memanggil
+`load_all_results` sama sekali, jadi ketidakcocokan ini tak terlihat sampai run 60-triple nyata mencapai
+tahap analisis. Diperbaiki di kode (tambah `n_attempted=` ke marker baru) DAN di 60 file yang sudah
+ditulis di disk (ditambal di tempat, bukan dijalankan ulang -- datanya valid, cuma format markernya
+salah). 3 tes regresi baru (`test_analyze_task_f_marker.py`).
+
+### 2. PLIP typed interactions sebagai blok ke-8 tangga representasi -- SELESAI 2026-10-13
 **Apa:** hbond / hidrofobik / pi-stacking / jembatan garam / halogen sebagai fitur, masuk
 `representation_ladder.py`. Infrastruktur sudah ada: `guidance/track_e/core.py` `PlipLabelStore`.
 **Mengapa:** ECIF (pasangan elemen x shell jarak) itu notasi interaksi yang kasar. Kalau interaksi
 BERTIPE pun tidak menambah apa-apa di atas marginal, klaim redundansi jadi sangat kuat. Kalau menambah,
 itu hasil POSITIF dan ia menamai perbaikannya.
-**Biaya:** CPU saja, bisa paralel dengan GPU. Setengah hari.
 
-### 3. Coverage KONDISIONAL conformal per novelty tier + famili protein
+**Catatan skop**: `PlipLabelStore` punya 4 kelas (hbond/hidrofobik/pi-stack/jembatan-garam) -- TIDAK ada
+halogen (tak pernah dibangun di cache aslinya). Coverage diverifikasi 100% (64.888/64.888 baris LP-split)
+sebelum dikerjakan. Fitur yang dipakai: hitungan BERTIPE dijumlahkan di seluruh atom ligan per kompleks
+(4 angka/kompleks) -- representasi paling kasar yang mungkin, BUKAN pernyataan definitif soal semua
+representasi interaksi bertipe yang bisa dibuat (versi ber-shell-jarak seperti ECIF tapi dengan tipe PLIP
+belum diuji). Ini dinyatakan secara eksplisit sebagai keterbatasan, bukan disembunyikan.
+
+**HASIL** (`guidance/cheminformatics/representation_ladder.py`, blok lama diverifikasi BYTE-EXACT
+tak berubah sebelum/sesudah):
+
+| blok | dim | model | val R2 | test R2 | CI95 |
+|---|---|---|---|---|---|
+| plip_raw | 4 | hgb | 0,1681 | 0,0743 | [-0,093, +0,173] |
+| plip_norm | 4 | hgb | 0,2147 | 0,0822 | [-0,043, +0,173] |
+| plip_norm+size | 5 | ridge | 0,3654 | 0,3241 | [+0,167, +0,430] |
+
+| perbandingan berpasangan | dR2 | q | verdict |
+|---|---|---|---|
+| plip_norm - ligand | -0,2712 | 0,003 | ligand MENANG signifikan |
+| plip_norm - pocket | -0,2066 | 0,003 | pocket MENANG signifikan |
+| plip_norm - ecif_norm | -0,1254 | 0,198 | seri |
+| plip_raw - plip_norm | -0,0080 | 0,870 | seri (tak ada confound ukuran ANTARA raw/norm) |
+| **plip_norm+size - plip_norm** | **+0,2419** | **<0,001** | **size MENANG telak** |
+
+**Temuan: lebih tajam dari ecif.** Empat hitungan interaksi bertipe, dijumlah mentah-mentah per kompleks,
+HAMPIR TAK MEMBAWA INFORMASI (R2 0,07-0,08) -- kalah signifikan dari ligand (0,353) MAUPUN pocket (0,289)
+sendirian. Begitu satu fitur ukuran (jumlah atom berat) ditambahkan, melompat ke R2=0,324 -- hampir
+seluruh sinyal yang berguna datang dari UKURAN, bukan dari TIPE interaksinya. Ini memperkuat (bukan
+cuma mengulang) temuan ecif_raw/ecif_norm: bahkan representasi yang secara eksplisit bertipe kimiawi
+pun runtuh jadi proksi ukuran begitu diringkas kasar ke beberapa angka per kompleks.
+
+2 tes baru (`test_chem.py`) memakai contoh hitung-tangan untuk `plip_features` + abort eksplisit untuk
+baris yang tak tercakup. **Biaya:** ~15 detik tambahan di atas waktu ladder yang sudah ada.
+
+### 3. Coverage KONDISIONAL conformal per novelty tier + famili protein -- SELESAI 2026-10-12
 **Apa:** A1d membuktikan conformal satu-satunya UQ yang valid — tapi itu coverage MARGINAL. Uji apakah
 coverage tetap valid per tier Tanimoto (tier sudah ada) dan per famili protein.
 **Mengapa:** Jeliazkova et al. 2026 memprediksi coverage TURUN di kimia novel; Gibbs et al. 2023 memberi
 kerangkanya. Interval yang valid secara marginal tapi diam-diam under-cover justru pada senyawa novel
 yang dipedulikan praktisi adalah temuan yang layak dilaporkan. Ini perpanjangan paling menjanjikan dari
 satu hasil positif kita.
-**Biaya:** CPU saja. Setengah hari.
+
+**HASIL** (`guidance/uncertainty_a1/conditional_conformal_coverage.py`, B=2000, q=2,1960 dipakai
+APA ADANYA dari a1d -- tidak dihitung ulang, supaya pertanyaannya murni "apakah q yang SUDAH dipakai
+tetap menepati janjinya per subgrup"):
+
+| tier Tanimoto | n | target | coverage | CI95 | nominal 0,90 di dalam? |
+|---|---|---|---|---|---|
+| novel (<0,35) | 7577 | 79 | 0,9104 | [0,864, 0,955] | YA |
+| distant (0,35-0,50) | 2319 | 67 | 0,8875 | [0,835, 0,935] | YA |
+| related (0,50-0,70) | 1526 | 51 | 0,8309 | [0,710, 0,911] | YA (paling dekat gagal) |
+| same series (>=0,70) | 433 | 41 | 0,8984 | [0,818, 0,956] | YA |
+
+**0 dari 4 tier novelty gagal.** Bertentangan dengan prediksi umum Jeliazkova et al. 2026 untuk kimia
+novel -- tier TERSULIT (<0,35 Tanimoto) justru coverage-nya 0,9104, SEDIKIT DI ATAS nominal, bukan di
+bawahnya. Tier "related (0,50-0,70)" paling dekat ke batas gagal (titik 0,83) tapi CI95 [0,710, 0,911]
+masih memuat 0,90.
+
+**Per famili Pfam**: 127/127 target test teranotasi (tidak ada yang hilang). Tapi hanya **2 dari 10
+strata famili punya >= 10 klaster target** (ambang `MIN_CLUSTERS` yang sama dipakai `novelty_tiers.py`)
+-- PF00069/kinase (11 target, CI [0,877, 1,000], LOLOS) dan `other_family` gabungan 83 target (CI
+[0,863, 0,940], LOLOS). **7 famili lain (PF01327, PF00169, PF00194, PF00775, PF07714, PF00104, PF00064,
+3-7 target masing-masing) ditandai UNDERPOWERED, bukan diberi verdict** -- titik estimasinya melompat
+liar (0,52 sampai 0,99) justru karena n sekecil itu, persis contoh kenapa underpowered harus dinyatakan
+eksplisit bukan disembunyikan di balik angka titik yang kelihatan meyakinkan.
+
+**Kesimpulan jujur, dua sisi:** (1) tidak ada strata yang cukup bertenaga menunjukkan coverage
+kondisional gagal -- hasil positif conformal (A1d) bertahan lebih kuat dari ekspektasi, bahkan di tier
+paling novel; (2) tapi mayoritas pemecahan per-famili TIDAK bertenaga untuk mendeteksi apa pun -- ini
+keterbatasan daya, bukan bukti tidak ada masalah, dan harus dinyatakan sebagai itu di tesis, bukan
+dibiarkan terbaca sebagai "semua famili lolos".
+
+9 tes baru (`guidance/uncertainty_a1/tests/test_conditional_conformal_coverage.py`) menguji logika BARU
+(mapping famili, collapse famili jarang via jumlah TARGET bukan jumlah baris, keputusan underpowered) --
+`cluster_bootstrap_coverage` dipakai ulang dari `conformal_prediction.py`, tidak diimplementasi ulang.
+**Biaya:** CPU saja, ~3,4 detik untuk B=2000 (murni resampling numpy di array yang sudah di-cache,
+bukan training ulang) -- dikerjakan paralel sementara GPU dipakai RQ2, tanpa bersaing sumber daya.
 
 ### 4. y-randomisasi DALAM-TARGET untuk EGNN
 **Apa:** permutasi label dalam target, latih ulang EGNN, ukur R2.
@@ -173,32 +296,181 @@ per-arsitektur (bukan taksiran kanal chemotype), EGNN-nya harus dilatih ulang di
 Tanpa ini, tabel "di luar prior kelas" punya caveat yang harus selalu dinyatakan.
 **Biaya:** GPU, 1 run (~2.5 jam). Murah, dan menutup caveat di temuan terkuat kita.
 
-### 5. Metrik activity-cliff gaya MoleculeACE
+**HASIL -- SELESAI 2026-10-13 23:57** (early-stop epoch 7, best val epoch 2, hanya 1j54m -- jauh lebih
+cepat dari estimasi karena tidak ada sinyal real untuk terus dipelajari setelah plafon prior tercapai):
+
+| | test R2 | Pearson | Spearman | RMSE |
+|---|---|---|---|---|
+| EGNN label TERPERMUTASI dalam-target | **0,307** | 0,560 | 0,559 | 1,372 |
+| (pembanding) ridge-14-deskriptor, label terpermutasi (sudah ada) | 0,2468 +- 0,0019 | - | - | - |
+| (pembanding) EGNN Stage 0, label REAL (sudah ada) | 0,342 | 0,609 | - | - |
+
+**EGNN yang dilatih TANPA sinyal SAR dalam-target sama sekali (label diacak dalam setiap target)
+mencapai 0,307 -- LEBIH TINGGI dari benchmark deskriptor (0,2468), dan itu 90% (0,307/0,342) dari
+performa EGNN NORMAL yang dilatih di label asli.** Ini menutup caveat yang sudah berulang kali disebut:
+klaim prior-kelas sekarang terbukti untuk ARSITEKTUR EGNN sendiri, bukan cuma pipeline deskriptor.
+
+**Kenapa angkanya LEBIH TINGGI dari ridge (bukan kontradiksi, mekanisme beda)**: ridge-deskriptor
+mencapai prior kelasnya lewat korelasi TAK LANGSUNG (kemotipe ligan kebetulan berkorelasi dengan target
+mana yang diuji). EGNN punya rute LANGSUNG -- ia benar-benar membaca struktur 3D protein, jadi
+mengenali "target mana ini" tidak perlu lewat korelasi kemotipe sama sekali. EGNN lebih efisien
+MENCAPAI prior yang sama, bukan belajar SAR yang lebih banyak dari itu.
+
+**Implikasi yang lebih tajam dari temuan ligand-only**: untuk ridge, 70% performa adalah prior kelas.
+Untuk EGNN, **90%** performa normalnya bisa direproduksi TANPA SATU PUN sinyal SAR dalam-target.
+Sisa ruang untuk "benar-benar membaca interaksi" bahkan lebih sempit dari yang sudah disangka.
+
+### 5. Metrik activity-cliff gaya MoleculeACE -- KODE SELESAI, EKSEKUSI DIANTRIKAN 2026-10-12
 **Apa:** identifikasi pasangan activity cliff di test set, ukur performa khusus di sana.
 **Mengapa:** pola sudah terlihat di novelty tier (ligand-only kolaps di similarity tinggi) tapi belum
 diukur sebagai metrik. van Tilborg et al. 2022 (314 sitasi) menyediakan definisi dan platformnya, dan
 temuan mereka (deskriptor > deep learning pada cliff) persis pola kita.
-**Biaya:** CPU saja. Setengah hari.
 
-### 6. Analisis matched molecular pair (MMP)
+**Definisi yang dipakai (DISCLOSED sebagai penyederhanaan, bukan reimplementasi setia)**: konvensi
+terpublikasi `calc_cliff_rmse(similarity=0.9, potency_fold=10, in_log10=True)` -- sim>=0,9, |delta pK|
+>=1,0 (pK sudah skala log10, tanpa konversi). Kriteria similaritas asli MoleculeACE konsensus TIGA ukuran
+(substruktur/scaffold/SMILES); implementasi kita pakai SATU -- ECFP4 Tanimoto yang sudah dipakai di
+seluruh proyek ini. Pasangan cliff dihitung HANYA dalam-target (lintas-target tidak bermakna -- split
+kita target-disjoint jadi tidak ada partner cliff dari train). Similaritas berpasangan dihitung lewat
+matmul matriks bit (intersection = F @ F.T), bukan loop RDKit per-pasangan -- itulah yang membuat target
+terbesar (~1 juta pasangan) tangani.
+
+**Kode selesai dan diverifikasi** (`guidance/cheminformatics/activity_cliffs.py`, 4 tes baru di
+`test_chem.py` memakai contoh hitung-tangan 4-molekul, termasuk kasus tepat-di-ambang dan kasus yang
+sengaja GAGAL salah satu kriteria). **Eksekusi nyata DIANTRIKAN** (`activity_cliffs` di
+`queue_steps.sh`, setelah `rq2_analyze`) -- ditulis sementara CPU sudah jadi bottleneck RQ2; estimasi
+kasar 10 target terbesar saja ~15 milyar operasi, jadi dijalankan setelah CPU bebas, bukan bersaing
+dengan run yang diminta diprioritaskan.
+**HASIL NYATA -- SELESAI 2026-10-13 21:11** (11.855 ligan test, 127 target, B=2000):
+4.050.366 pasangan dalam-target diperiksa, **2.856 pasangan cliff ditemukan, 344 compound cliff (2,9%)**.
+
+| stratum | n | target | struct_R2 | lig_R2 | dR2 [95% CI] |
+|---|---|---|---|---|---|
+| cliff | 344 | 11 | 0,2904 | 0,3611 | -0,0708 [-0,428, +0,065] |
+| non_cliff | 11.511 | 126 | 0,4111 | 0,3517 | +0,0594 [-0,032, +0,150] |
+
+**CI pada stratum cliff mengecualikan nol? TIDAK** (p=0,285) -- bukan beda signifikan, titik estimasi
+sedikit mendukung ligand-only tapi CI-nya lebar dan memuat nol. **Tidak ada klaim "descriptor menang di
+cliff" yang dibuat** (skrip sendiri mencetak itu secara eksplisit) -- berbeda dari pola Kwapien et al.
+2022 yang dikutip sebagai motivasi, di split DAN sampel ini tidak terbukti signifikan. Konsisten dengan
+disiplin proyek: titik estimasi yang menarik tapi CI lebar dilaporkan sebagai itu, bukan dibesar-besarkan.
+**Biaya nyata:** ~15 detik (fragmentasi) -- jauh di bawah estimasi awal "sehari".
+
+**PERBAIKAN PREVENTIF 2026-10-13, sebelum skrip ini sempat jalan sekali pun**: audit ulang menemukan
+`stratum_r2_comparison`-nya memakai `r2_rows` yang SAMA yang menyebabkan bug +5,8e16 di item 7 (varian
+pK lokal mendekati nol tapi tidak persis nol, lolos guard `denom<=0`). Dipasang guard yang sama
+(ambang relatif std pK lokal < 1% std pK global) SEBELUM dijalankan di queue tanpa pengawasan --
+ditemukan lewat audit, bukan lewat kegagalan nyata. Sekaligus ditemukan DAN diperbaiki kesalahan kedua
+di blok "Van Tilborg et al." akhir skrip: perbandingan `champ_cliff > struct_cliff` memakai titik
+estimasi TANPA uji signifikansi apa pun -- versi lebih telanjang dari kesalahan yang sama yang baru
+diperbaiki di item 6 (MMP). Diganti memakai bootstrap berpasangan yang sudah dihitung di tabel strata
+di atasnya. 2 tes baru (`test_chem.py`) memaku guard degenerate dan memastikan strata sehat tidak
+ikut tertandai degenerate.
+
+### 6. Analisis matched molecular pair (MMP) -- SELESAI 2026-10-13
 **Apa:** pasangan yang beda satu substituen; apakah model menangkap arah perubahan afinitasnya.
 **Mengapa:** cara paling ketat menguji SAR LOKAL, dan pelengkap langsung dekomposisi prior kelas: prior
 kelas menangkap antar-seri, MMP menguji dalam-seri. Kwapien et al. 2022 menunjukkan data aditif paling
 mudah dan deep learning bukan pengecualian.
-**Biaya:** CPU saja. Sehari.
 
-### 7. Stratifikasi error per famili protein / kelas target
+**Metode** (`guidance/cheminformatics/matched_molecular_pairs.py`): fragmentasi single-cut via
+`rdMMPA.FragmentMol` (algoritma standar Hussain & Rea 2010, bukan buatan sendiri) -- fragmen lebih besar
+= core, lebih kecil = r-group; dua ligan jadi matched pair kalau core SAMA PERSIS dan core >= 60% berat
+molekul. **Dalam-target saja** (lintas-target tidak bermakna, dan split kita target-disjoint jadi tidak
+ada partner lintas-target tersedia). Dedup pose-duplikat SEBELUM fragmentasi: 783/861 pasangan
+(SMILES,target) punya >1 baris (pose docking berbeda), 26 di antaranya pK sedikit berbeda (rounding,
+bukan pengukuran berbeda) -- dirata-rata.
+
+**HASIL: 183 seri matched-pair, 375 pasangan, 360 berdelta-pK taknol.**
+
+| model | sign agreement | vs kebetulan (0,5) | Pearson(aktual,prediksi) |
+|---|---|---|---|
+| structure (egnn_a1c_ensemble) | 0,461 | CI [0,399, 0,535] memuat 0,5 | -0,0233 |
+| ligand_only (desc_ridge) | 0,483 | CI [0,391, 0,596] memuat 0,5 | -0,0592 |
+
+**Uji BERPASANGAN** (bukan membandingkan dua CI marginal yang tumpang-tindih -- lihat catatan kesalahan
+di bawah): delta (structure-ligand_only) = -0,0222, CI95 [-0,102, +0,043], p=0,551. **Tidak ada beda
+signifikan antar kedua model.**
+
+**Temuan utama, independen dari siapa yang menang**: KEDUA model sign agreement-nya DI BAWAH ATAU DI
+TITIK kebetulan (0,461 dan 0,483, keduanya <=0,5). **Tidak satu pun model menangkap arah perubahan
+afinitas akibat satu substituen lebih baik dari lempar koin** -- ini SAR paling lokal dan paling mudah
+yang bisa diuji (persis yang Kwapien et al. 2022 sebut "kasus termudah untuk model apa pun"), dan
+keduanya gagal di situ juga. Konsisten dengan dan memperkuat dekomposisi prior kelas: performa model
+bukan dari menangkap SAR, bahkan di tingkat paling lokal sekalipun.
+
+**Kesalahan saya sendiri, ditemukan dan diperbaiki sebelum dicatat**: draf pertama skrip ini
+menyimpulkan "ligand-only menang" HANYA dari titik estimasi (0,483 > 0,461) dengan dua CI terpisah yang
+jelas tumpang-tindih -- persis kesalahan yang `compare_vs_structure.py` sendiri sudah mendisiplinkan diri
+untuk hindari ("overlapping marginal intervals are weak evidence either way, because both models are
+evaluated on the SAME complexes"). Diperbaiki dengan bootstrap berpasangan pada pasangan yang SAMA PERSIS
+sebelum menyimpulkan apa pun. 5 tes baru di `test_chem.py` memaku fragmentasi, guard lintas-target, arah
+delta_pk, ambang core-fraction, dan regresi kesalahan "menang berdasar CI terpisah" ini secara spesifik.
+
+**Biaya terukur:** ~7,5 detik untuk seluruh test set (bukan "sehari" seperti estimasi awal) -- fragmentasi
+RDKit jauh lebih murah dari yang diperkirakan; dijalankan langsung `nice -19` paralel dengan RQ2 tanpa
+masalah.
+
+### 7. Stratifikasi error per famili protein / kelas target -- SELESAI 2026-10-12
 **Apa:** kinase vs protease vs nuclear receptor, dsb. Nama entry UniProt sudah ada di anchor table.
 **Mengapa:** mengubah satu angka gabungan jadi angka yang bisa dipakai; menunjukkan DI MANA gagalnya.
-**Biaya:** CPU saja. Beberapa jam.
 
-### 8. Arm A + Arm C (produksi)
+**HASIL** (`guidance/cheminformatics/protein_family_stratification.py`, dibangun di atas mapping famili
+yang sama dipakai item 3, B=2000):
+
+| famili (confirmatory, >=10 klaster target) | n | target | struct_R2 | lig_R2 | dR2 [95% CI] | BH q |
+|---|---|---|---|---|---|---|
+| PF00069 (kinase) | 3306 | 11 | 0,3632 | 0,2885 | +0,0747 [-0,264, +0,365] | 0,652 (tidak signifikan) |
+| other_family (83 famili digabung) | 6751 | 83 | 0,4550 | 0,4091 | +0,0459 [-0,068, +0,154] | 0,652 (tidak signifikan) |
+
+**Hanya 2 dari 10 strata famili punya >=10 klaster target** (ambang sama seperti item 3) -- 7 famili
+lain (3-7 target) ditandai UNDERPOWERED, bukan diberi verdict. Bahkan di famili TUNGGAL terbesar
+(kinase, yang paling dipedulikan secara praktis), structure TIDAK mengalahkan ligand-only secara
+signifikan -- pola yang sama dengan hasil gabungan (§A.2) bertahan sampai ke level famili yang bisa
+diuji.
+
+**Bug nyata ditemukan dan diperbaiki sebelum dilaporkan**: tabel deskriptif (semua ~70 famili, tanpa
+CI, "pola untuk dibaca bukan bukti untuk disitir") awalnya mencetak dR2 segila **+5,8e16** untuk famili
+berukuran 1-2 target -- bukan temuan, itu `r2_rows` membagi dengan varian pK lokal yang mendekati nol
+(terukur: PF08917, 6 baris, varian 1,13e-16) tapi tidak PERSIS nol sehingga lolos guard `denom<=0` yang
+sudah ada. Diperbaiki dengan ambang relatif (std pK lokal < 1% std pK global) -- 14 famili kini tertanda
+`n/a (no real spread)` eksplisit alih-alih angka yang menyesatkan. **Ditemukan karena saya benar-benar
+membaca keluaran angka demi angka, bukan hanya memeriksa skrip tidak crash** -- kelas kesalahan yang
+sama dengan "aggregator melaporkan sd `undefined` di n=1, bukan `0.0000`".
+
+2 tes baru (`guidance/cheminformatics/tests/test_chem.py`) memaku ambang degenerate ini dan memverifikasi
+tidak ada |dR2| meledak di hasil nyata. **Biaya:** CPU saja, ~3,7 detik untuk B=2000 -- dijalankan
+`nice -19` paralel tanpa bersaing sumber daya dengan RQ2 yang sedang berjalan.
+
+### 8. Arm A + Arm C (produksi) -- DIANTRIKAN 2026-10-13, ~32 jam gabungan, dikonfirmasi user
 **Apa:** Arm A (20.000 CD, 3 seed). Arm C produksi, WAJIB pakai `bindingnet_v1_clean.csv`.
 **Catatan:** pertanyaannya sudah diperbaiki — bukan "apakah R2 naik" tapi "apakah data BN menutup jarak
 ke model ligand-only, dan apakah ia melampaui prior kelas 0.2468". Baseline ligand-only jadi komparator
 WAJIB tiap arm.
 **Prasyarat:** aturan pra-registrasi Arm B (lihat bagian kebocoran senyawa) sudah dievaluasi dulu.
-**Biaya:** GPU, ~16 jam per arm.
+
+**Prasyarat DIVERIFIKASI 2026-10-13 (baca kode langsung, bukan diasumsikan)**: `train_surrogate_arm.py`
+sudah menegakkan filter senyawa DI DALAM KODE (`compound_filter=True` default, membaca
+`bindingnet_v1_clean_summary.json`, raise eksplisit kalau file itu hilang) -- bukan hanya mengandalkan
+CSV upstream. Berkas ringkasan filter (sekuens dan senyawa) keduanya ada di disk. Arm C AMAN dijalankan.
+
+**Konfigurasi, mengikuti rezim bs=1/no-AMP yang sudah divalidasi** (bs=4+AMP DITOLAK gerbang Arm 0 --
+lihat historis di bawah): Arm A `--cd_rows 20000` (murni CrossDocked, pembanding ukuran-sama terhadap
+Arm B/C). Arm C `--cd_rows 6000 --bn_rows 14000 --bn_match_pk` (komposisi IDENTIK dengan Arm B yang
+sudah tervalidasi) MINUS `--no_compound_filter` -- flag itu cuma ada supaya seed 2021 Arm B (dilatih
+SEBELUM filter ada) tetap sebanding lintas-seed-nya sendiri; Arm C tidak punya kendala itu dan WAJIB
+pakai pool bersih. 3 seed (2021/2022/2023) tiap arm, diantrikan di `scripts/queue_steps.sh`.
+
+**Estimasi ~32 jam gabungan (16 jam/arm x 2) -- dikonfirmasi eksplisit dengan user sebelum diantrikan**
+(AskUserQuestion, opsi "jalankan keduanya" dipilih), karena jauh lebih besar dari item lain sesi ini.
+Menyusul item 4 (y-randomisasi EGNN, ~2,5 jam) yang jalan lebih dulu di GPU yang sama.
+
+**Bug kecil diperbaiki sebelum diantrikan**: draf pertama memanggil `aggregate_results.py` DUA KALI
+(`armA_aggregate`, `armC_aggregate`) dengan nama `--json` berbeda -- tapi skrip itu otomatis
+mengelompokkan SEMUA run yang ditemukan di `logs_surrogate_arms` (arm0/armBmatch/armA/armC sekaligus),
+jadi dua panggilan itu akan menghasilkan DUA FILE IDENTIK yang masing-masing diberi nama menyesatkan
+seolah hanya memuat satu arm. Diganti satu panggilan `armAC_aggregate` -> `armAC_table.json`.
+**Biaya:** GPU, ~16 jam per arm (32 jam gabungan).
 
 ### 9. Penulisan tesis (satu rebuild di akhir, jangan tiap perubahan)
 Urutan: (a) Bab IV seksi baru: audit sumber informasi + noise ceiling + dekomposisi prior kelas;
@@ -210,7 +482,7 @@ Kd/Ki/IC50 yang komposisinya bergeser antar split; (e) sitasi wajib yang hilang:
 2026, Graber 2025, Bret 2026, van Tilborg 2022, Deng 2023, Hernandez-Garrido 2023, Landrum 2024,
 Rucker 2007, Seitzer 2022, Wallace 2023, Gao 2022, Thomas 2021, PLIP; LALU rebuild PDF/DOCX SEKALI.
 
-### 10. RQ4 — conformal-gated guidance (prediksi pra-registrasi)
+### 10. RQ4 — conformal-gated guidance -- DISELESAIKAN 2026-10-13 (tanpa GPU, lewat pra-registrasi)
 **Apa:** terapkan gradien guidance / terima kandidat rejection-sampling HANYA di tempat interval conformal
 surrogate cukup sempit.
 **Mengapa menarik:** kombinasinya untuk SBDD tampak kosong (komponennya ada terpisah: conformal untuk
@@ -218,14 +490,46 @@ afinitas, AD-gating anti reward-hacking Yoshizawa 2025, guidance-strength bergan
 2025). **Tulis prediksinya DULU:** M3 memprediksi membantu rute rejection; M1 memprediksi TIDAK membantu
 rute gradien. Satu eksperimen yang mengkonfirmasi satu dan membantah satunya = bukti kuat untuk seluruh
 dekomposisi.
-**Biaya:** GPU. Scope dulu.
 
-### 11. RQ3 — DOODL / SVDD (prediksi paling tajam)
+**Pra-registrasi lengkap**: `guidance/RQ4_CONFORMAL_GATED_PREREGISTRATION.md`. **Gap desain ditemukan
+sebelum kode guidance ditulis**: `q` conformal A1d itu GLOBAL (satu angka untuk semua titik, dibaca
+langsung dari `conformal_prediction.py`) -- "terima HANYA di interval sempit" tidak bermakna kalau lebar
+interval tidak pernah bervariasi antar molekul. Dua kandidat paling alami untuk membuat lebar bervariasi
+secara lokal, DIUJI LANGSUNG (CPU, menit, pakai cache yang sudah ada, tanpa GPU):
+
+| kandidat sinyal lokal | hasil terukur | verdict |
+|---|---|---|
+| spread ensemble A1c sebagai proksi ketidakpastian | spearman(sigma,error)=0,0084, CI [-0,099, +0,132] | **CI memuat nol -- tidak informatif** |
+| novelty tier (item 3) sebagai kategori Mondrian | coverage 0,831-0,910 antar 4 tier, rasio 1,10x | **nyaris flat -- tidak ada variasi bermakna** |
+
+**Kedua kandidat yang paling mungkin dipakai untuk menggerbangi "confidence" sudah terbukti tidak
+membawa sinyal yang bisa dipakai** -- bukan dugaan baru, melainkan konfirmasi langsung dari dua temuan
+yang SUDAH tercatat (A1c sigma-error, item 3 coverage kondisional). **Kesimpulan: RQ4 seperti yang
+dirancang TIDAK BISA diuji secara bermakna dengan infrastruktur UQ yang kita punya** -- bukan karena M1
+atau M3 salah, tapi karena tidak ada alat ukur confidence yang terbukti bekerja untuk menggerbanginya.
+Ini temuan substantif, bukan jalan buntu: memperkuat kesimpulan UQ-suite (hanya coverage MARGINAL yang
+valid, 5/6 metode titik-demi-titik gagal) dengan konsekuensi langsung ke desain guidance generasi
+berikutnya -- siapa pun yang mau mencoba conformal-gated guidance di proyek ini harus dulu membangun
+metode UQ lokal-adaptif yang BENAR-BENAR terkalibrasi, bukan asumsikan salah satu yang sudah ada cukup.
+
+**Biaya: nol GPU, menit CPU.** Tidak ada komitmen GPU yang dibuat atau diperlukan.
+
+### 11. RQ3 — DOODL / SVDD -- PRA-REGISTRASI SELESAI 2026-10-13, implementasi DITUNDA
 **Apa:** gradien lewat denoiser (DOODL, Wallace et al. 2023) atau guidance tanpa turunan (SVDD, Li et al.
 2024) dengan surrogate yang ADA.
 **Mengapa terakhir:** paling mahal, dan **M1 memprediksi TIDAK akan membantu** padahal literatur
 mengharapkan sebaliknya. Nilainya justru dari prediksi itu — jadi pra-registrasikan sebelum jalan.
-**Biaya:** GPU, implementasi besar.
+
+**Pra-registrasi**: `guidance/RQ3_DOODL_SVDD_PREREGISTRATION.md`. **RQ2 mengubah kalkulusnya**:
+affinity_only (gradien dari surrogate) gagal, vina_rerank (seleksi dari Vina asli) berhasil -- kontras
+ini sudah memberi bukti tidak langsung kuat bahwa masalahnya di SINYAL (M1), bukan mekanisme gradien
+klasik. Menjalankan DOODL/SVDD dengan surrogate yang SAMA (**Jalur A**) kemungkinan besar cuma
+mengonfirmasi ulang apa yang sudah bisa disimpulkan, dengan biaya implementasi terbesar di seluruh
+daftar. **Jalur B** (SVDD + Vina asli sebagai fungsi nilai, bukan surrogate) adalah pertanyaan BARU yang
+baru dibuka oleh RQ2 -- apakah mekanisme guidance canggih menambah nilai DI ATAS reranking sederhana yang
+sudah terbukti bekerja -- dan nilainya lebih tinggi. **Keputusan: implementasi DITUNDA** untuk keduanya;
+Jalur B dicatat sebagai arah riset terbuka untuk pekerjaan lanjutan, bukan dipaksa masuk sesi ini.
+**Biaya:** nol (ditunda dengan alasan tercatat, bukan dikerjakan).
 
 ---
 
@@ -234,6 +538,58 @@ mengharapkan sebaliknya. Nilainya justru dari prediksi itu — jadi pra-registra
 * deskriptor druggability pocket (butuh fpocket/CASTp)
 * kurasi "maximal curation" Landrum untuk label BindingNet Arm B/C
 * struktur LP-PDBBind (lisensi), Binding MOAD (unduh manual)
+
+### REFACTOR TERPUSAT 2026-10-13: `paired_r2_comparison` di `stats_common.py`
+
+Setelah kelas kesalahan yang SAMA muncul 3x dalam satu sesi (item 6 MMP: bandingkan dua CI tumpang-tindih
+tanpa uji berpasangan; item 7 famili protein: `r2_rows` membelah varian nyaris-nol jadi dR2 +5,8e16;
+item 5 activity cliffs: `if champ_cliff > struct_cliff` tanpa uji signifikansi sama sekali) --
+alih-alih menambal lagi di tempat ke-4/5/6, logikanya disatukan jadi SATU fungsi teruji:
+`guidance/uncertainty_a1/stats_common.py::paired_r2_comparison` (+ `r2_rows` dipindah ke sana sebagai
+rumah kanonik, 9 pemanggil lama tetap seperti semula -- lihat di bawah).
+
+**Yang diretrofit (aman, diverifikasi):**
+- `activity_cliffs.py::stratum_r2_comparison` -> wrapper tipis di atas fungsi baru. Belum pernah
+  dijalankan dengan hasil nyata (masih di queue), jadi nol risiko mengubah angka tercatat; diverifikasi
+  dengan data sintetis identik sebelum/sesudah.
+- `protein_family_stratification.py`'s tabel CONFIRMATORY -> diverifikasi **byte-exact**: disimpan
+  hasil sebelum refactor, jalankan ulang, dibandingkan field demi field (n, n_target_clusters,
+  structure_r2, ligand_r2, d_r2, ci95, boot_p, underpowered) -- **nol perbedaan nilai**, hanya field
+  `degenerate` baru ditambahkan (penambahan skema, bukan perubahan nilai).
+
+**Yang SENGAJA TIDAK diretrofit** (mengikuti kebijakan tertulis `stats_common.py` sendiri: angka yang
+sudah dikutip di TASKS.md tidak disentuh untuk manfaat kebersihan kode semata tanpa verifikasi
+byte-exact menyeluruh): `novelty_tiers.py`, `representation_ladder.py`, `noise_ceiling.py`,
+`label_harmonisation.py`, `scaffold_audit.py`, `compare_vs_structure.py` -- semua `r2_rows`-nya tetap
+seperti semula. Risiko bug yang sama di sana dinilai rendah (strata mereka beroperasi di seluruh test
+set atau grup besar, bukan famili 1-2 target) tapi tidak diaudit penuh dalam pass ini.
+
+**AUDIT KEAMANAN (baca-saja) 2026-10-14 -- verifikasi, bukan lagi asumsi**: dibaca langsung tiga dari
+enam skrip yang sengaja tidak diretrofit.
+- `scaffold_audit.py`: TIDAK ada bug. Perbandingan seen-vs-unseen-scaffold memakai bootstrap TIDAK
+  berpasangan SECARA SENGAJA, dan komentarnya sendiri menjelaskan kenapa benar: "the subsets are
+  DIFFERENT complexes, so each is resampled over its own target clusters and the two draws are
+  independent" -- beda dari kasus model-A-vs-model-B pada baris yang SAMA (itu yang butuh berpasangan).
+- `label_harmonisation.py`: TIDAK ada bug. `point = r2_rows(pk_adj,p_,all_rows) - r2_rows(pk_adj,lp_,all_rows)`
+  dan bootstrap-nya `[r2_rows(...,d) - r2_rows(...,d) for d in draws]` -- draws YANG SAMA memberi makan
+  kedua suku di setiap resample, pola berpasangan yang benar, sudah seperti itu dari awal.
+- `noise_ceiling.py`: tidak ditemukan perbandingan model-vs-model (subtraksi dua R2) di jalur yang
+  diperiksa -- hanya R2 tunggal per model dengan CI, tidak ada pasangan untuk salah berpasangan.
+Kesimpulan: keputusan "tidak retrofit" aman, dikonfirmasi lewat pembacaan langsung, bukan dugaan.
+
+**Bonus temuan saat verifikasi byte-exact**: tabel DESKRIPTIF `protein_family_stratification.py` (yang
+TIDAK diretrofit, cuma dibandingkan sebagai kontrol) ternyata **nondeterministik dari sebelumnya** --
+kode yang SAMA dijalankan dua kali menghasilkan URUTAN baris berbeda, murni dari iterasi `set` Python
+yang tidak stabil antar proses (`{f for f in fam if f != 'no_annotation'}`, bergantung
+`PYTHONHASHSEED`). Bukan bug yang saya buat, tapi ketahuan karena saya memverifikasi byte-exact alih-alih
+cuma percaya refactor-nya benar. Diperbaiki dengan secondary sort key (nama famili) sehingga tie-break
+deterministik -- diverifikasi 2x run berurutan sekarang identik.
+
+8 tes baru untuk `paired_r2_comparison`/`r2_rows` di `test_stats_common.py`, memaku: hitungan tangan di
+stratum sehat, guard degenerate, kasus underpowered, properti BERPASANGAN (bukan dua bootstrap
+independen), dan resample individual yang mendarat di subset degenerate tidak merusak CI keseluruhan.
+
+---
 
 ### INFRASTRUKTUR — SELESAI, tidak perlu disentuh
 7 suite / 91 tes (`python guidance/run_tests.py`), pre-commit hook terpasang, agregator multi-seed dengan
@@ -343,6 +699,31 @@ sitasi lengkap ada di `guidance/RESEARCH_PROGRAM.md` (1.241 baris, Part I-VIII).
 4. **Sambungan dari audit informasi ke kegagalan gradien guidance** -- subjek tesis sebenarnya, dan
    tidak satu pun paper yang men-scoop bagian lain membahasnya.
 5. **Ternary (1.58-bit) QAT pada GNN afinitas 3D.**
+
+**TAMBAHAN 2026-10-14: RQ2 (kontrol positif) diperiksa literatur -- MEKANISMENYA terscoop, BUKAN
+framing diagnostiknya.**
+
+Pencarian terarah (WebSearch extended) menemukan **BoKDiff** (Khodabandeh Yalabadi, Yazdani-Jahromi &
+Garibay, arXiv:2501.15631) -- diverifikasi via abstrak: best-of-K/best-of-N SELECTION dari kandidat
+diffusion SBDD (dibangun di atas DecompDiff), diranking skor gabungan QED+SA+Vina, TANPA fine-tuning.
+Mereka secara eksplisit mengklaim **"first application of Best-of-K alignment and Best-of-N sampling to
+SBDD."** Itu persis MEKANISME yang dipakai `vina_rerank`: oversample pool, ranking berdasar skor Vina,
+ambil yang terbaik. **Klaim keunggulan atas mekanisme reranking-berbasis-Vina untuk diffusion SBDD TIDAK
+BISA dipertahankan** -- BoKDiff lebih dulu, harus disitir bukan diklaim sebagai metode baru.
+
+**Yang diverifikasi TIDAK ada di BoKDiff** (dicek eksplisit via WebFetch terhadap abstraknya): (1) tidak
+ada perbandingan terhadap guidance GRADIEN dari surrogate afinitas TERLATIH pada generator dan pocket
+yang SAMA; (2) tidak ada framing sebagai KONTROL POSITIF untuk memvalidasi bahwa harness evaluasi mampu
+mendeteksi perbaikan; (3) tidak ada dekomposisi M1 (sinyal tak informatif) vs M2 (mekanisme salah) vs M3
+(objektif bisa dicurangi) untuk MENJELASKAN kegagalan guidance yang sudah ada.
+
+**Klaim yang bisa dipertahankan, dipersempit jujur**: bukan "kami menemukan reranking berbasis Vina
+untuk diffusion SBDD" (BoKDiff lebih dulu, disitir sebagai itu) -- tapi **"memakai reranking (teknik
+yang sudah ada) sebagai instrumen DIAGNOSTIK untuk mengisolasi apakah kegagalan guidance gradien berasal
+dari sinyal surrogate atau dari mekanisme gradien itu sendiri, lewat perbandingan langsung di generator
+dan pocket yang sama."** Itu kontribusi metodologis sempit (framing + dekomposisi), bukan teknik
+generasi baru. **Dipindah dari "Tier 1,5 belum diaudit" ke Tier 2** (teknik established, dipakai untuk
+tujuan diagnostik yang berbeda dari tujuan asli BoKDiff) -- dengan BoKDiff WAJIB disitir di tesis.
 
 **TIER 2 -- replikasi + rigor. Berharga, JANGAN sebut baru.**
 Temuan Volkov di split leakage-controlled target-disjoint, diperluas dengan kedua marginal dan

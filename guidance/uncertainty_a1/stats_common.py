@@ -57,3 +57,93 @@ def cluster_bootstrap_ci(stat_fn, groups, b, seed, levels=(2.5, 97.5)):
         boot[i] = stat_fn(np.concatenate([groups[k] for k in pick]))
     ci = [float(np.percentile(boot, levels[0])), float(np.percentile(boot, levels[1]))]
     return float(point), ci, boot
+
+
+def r2_rows(y, p, rows):
+    """R2 on a row subset, against the SUBSET's own mean (not the global mean) -- the formulation used
+    everywhere in this project a per-stratum R2 is reported (novelty_tiers.py's tiers, noise_ceiling.py's
+    headroom, representation_ladder.py's blocks). Returns NaN, not an error, for a subset with literally
+    zero variance (denom <= 0) -- see paired_r2_comparison below for the case this alone does not catch.
+
+    Canonical home as of 2026-10-13: previously defined independently in
+    guidance/cheminformatics/compare_vs_structure.py (byte-identical formula; that module now imports
+    this one instead of keeping its own copy). guidance/cheminformatics/label_harmonisation.py,
+    scaffold_audit.py, representation_ladder.py, noise_ceiling.py and novelty_tiers.py each have their
+    OWN already-reported numbers riding on this exact formula and were deliberately NOT retrofitted to
+    import from here -- this module's own policy (see the file docstring) is that an already-reported
+    result is not touched for a refactor-only benefit without a rerun verifying byte-for-byte
+    equivalence, and auditing five scripts' worth of already-cited TASKS.md numbers was out of scope for
+    this pass. New callers should import from here, not redefine it a tenth time."""
+    yy, pp = y[rows], p[rows]
+    denom = ((yy - yy.mean()) ** 2).sum()
+    if denom <= 0:
+        return np.nan
+    return 1.0 - ((yy - pp) ** 2).sum() / denom
+
+
+def paired_r2_comparison(y, pred_a, pred_b, groups, b, seed, min_clusters=10,
+                         degenerate_std_fraction=0.01):
+    """dR2 = R2(pred_a) - R2(pred_b) on a stratum (groups' union), with a target-clustered bootstrap CI
+    computed PAIRED: the SAME resampled rows feed both R2 terms in every draw, so the CI is about the
+    DIFFERENCE, not an eyeballed comparison of two separate marginal CIs.
+
+    Written after that exact mistake was made and caught twice in one session (both initially compared
+    two independently-bootstrapped point estimates / marginal CIs instead of this): once in
+    guidance/cheminformatics/matched_molecular_pairs.py (sign-agreement of two models, compared via two
+    separate CIs before being fixed to a paired bootstrap on the identical matched pairs), and again,
+    more plainly, in guidance/cheminformatics/activity_cliffs.py (`if champ_cliff > struct_cliff` with no
+    significance test at all). Both call sites now reuse this function instead of hand-rolling the
+    pattern a third and fourth time.
+
+    Also guards a SECOND, independent bug found the same session
+    (guidance/cheminformatics/protein_family_stratification.py): r2_rows' own `denom <= 0` guard only
+    catches EXACT zero variance, and a stratum with nonzero-but-near-duplicate y values (measured case:
+    variance 1.13e-16) survives it and blows up to values like +5.8e16, which is division by a number
+    indistinguishable from zero, not a finding. Any stratum, or any individual bootstrap resample, whose
+    local y-std falls below `degenerate_std_fraction` of y's GLOBAL std (computed over the full array
+    passed as `y`, every time -- never just the stratum) is treated as degenerate: reported explicitly
+    via the `degenerate` flag, never silently returned as a finite-looking number.
+
+    `groups`: row-index arrays already restricted to the stratum under test, one array per target
+    cluster (e.g. target_groups(target[rows]) with rows re-mapped to absolute indices, exactly as every
+    existing caller already builds for cluster_bootstrap_ci). Kept as `groups` rather than
+    `target`+`rows` so this module stays dependency-free of how any particular caller defines "target".
+
+    Returns a dict: n, n_target_clusters, r2_a, r2_b, d_r2, ci95, boot_p, underpowered, degenerate,
+    local_std. `underpowered` is True whenever no CI was computed, whether the cause was too few target
+    clusters OR degenerate variance OR every bootstrap resample landing on a degenerate/non-finite
+    subset -- `degenerate` and the `note` field (when present) distinguish which."""
+    all_rows = np.concatenate(groups) if len(groups) else np.array([], dtype=int)
+    n, n_clusters = len(all_rows), len(groups)
+    degenerate_std = degenerate_std_fraction * float(y.std())
+    local_std = float(y[all_rows].std()) if n else 0.0
+
+    base = dict(n=int(n), n_target_clusters=int(n_clusters), r2_a=None, r2_b=None, d_r2=None,
+               ci95=None, boot_p=None, underpowered=True, degenerate=False, local_std=local_std)
+    if n == 0 or local_std < degenerate_std:
+        base['degenerate'] = True
+        return base
+
+    r2_a, r2_b = r2_rows(y, pred_a, all_rows), r2_rows(y, pred_b, all_rows)
+    base.update(r2_a=float(r2_a), r2_b=float(r2_b), d_r2=float(r2_a - r2_b))
+    if n_clusters < min_clusters:
+        return base
+
+    boot = []
+    for pick in cluster_bootstrap_indices(n_clusters, b, seed):
+        dr = np.concatenate([groups[k] for k in pick])
+        if float(y[dr].std()) < degenerate_std:
+            continue
+        v = r2_rows(y, pred_a, dr) - r2_rows(y, pred_b, dr)
+        if np.isfinite(v):
+            boot.append(v)
+    if not boot:
+        base['note'] = 'every bootstrap resample was degenerate or non-finite'
+        return base
+
+    boot = np.array(boot)
+    lo, hi = np.percentile(boot, [2.5, 97.5])
+    pval = 2.0 * min((boot <= 0).mean(), (boot >= 0).mean())
+    pval = min(1.0, max(pval, 1.0 / (len(boot) + 1)))
+    base.update(ci95=[float(lo), float(hi)], boot_p=float(pval), underpowered=False)
+    return base

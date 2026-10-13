@@ -1,0 +1,151 @@
+{
+  "q": 2.1960363574523925,
+  "alpha": 0.1,
+  "B": 2000,
+  "boot_seed": 20260925,
+  "overall": {
+    "n": 11855,
+    "n_targets": 127,
+    "underpowered": false,
+    "point": 0.8952340784479123,
+    "ci95": [
+      0.8569417032163492,
+      0.9253984902133432
+    ],
+    "gate_pass": true
+  },
+  "by_tier": {
+    "novel (<0.35)": {
+      "n": 7577,
+      "n_targets": 79,
+      "underpowered": false,
+      "point": 0.9103866965817606,
+      "ci95": [
+        0.8640311190440697,
+        0.9554301677489178
+      ],
+      "gate_pass": true
+    },
+    "distant (0.35-0.50)": {
+      "n": 2319,
+      "n_targets": 67,
+      "underpowered": false,
+      "point": 0.88745148771022,
+      "ci95": [
+        0.8349301346388683,
+        0.9347789784660364
+      ],
+      "gate_pass": true
+    },
+    "related (0.50-0.70)": {
+      "n": 1526,
+      "n_targets": 51,
+      "underpowered": false,
+      "point": 0.8309305373525557,
+      "ci95": [
+        0.7098814488196153,
+        0.9114694939327507
+      ],
+      "gate_pass": true
+    },
+    "same series (>=0.70)": {
+      "n": 433,
+      "n_targets": 41,
+      "underpowered": false,
+      "point": 0.8983833718244804,
+      "ci95": [
+        0.8181740081224618,
+        0.9561593364612703
+      ],
+      "gate_pass": true
+    }
+  },
+  "by_family": {
+    "PF01327": {
+      "n": 83,
+      "n_targets": 6,
+      "underpowered": true,
+      "point": 0.5180722891566265,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00169": {
+      "n": 76,
+      "n_targets": 3,
+      "underpowered": true,
+      "point": 0.9605263157894737,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00194": {
+      "n": 129,
+      "n_targets": 4,
+      "underpowered": true,
+      "point": 0.7441860465116279,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00775": {
+      "n": 201,
+      "n_targets": 4,
+      "underpowered": true,
+      "point": 0.736318407960199,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF07714": {
+      "n": 226,
+      "n_targets": 4,
+      "underpowered": true,
+      "point": 0.8893805309734514,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00104": {
+      "n": 605,
+      "n_targets": 7,
+      "underpowered": true,
+      "point": 0.9933884297520661,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00064": {
+      "n": 478,
+      "n_targets": 5,
+      "underpowered": true,
+      "point": 0.5899581589958159,
+      "ci95": null,
+      "gate_pass": null
+    },
+    "PF00069": {
+      "n": 3306,
+      "n_targets": 11,
+      "underpowered": false,
+      "point": 0.925589836660617,
+      "ci95": [
+        0.8766737138830162,
+        1.0
+      ],
+      "gate_pass": true
+    },
+    "other_family": {
+      "n": 6751,
+      "n_targets": 83,
+      "underpowered": false,
+      "point": 0.9049029773366909,
+      "ci95": [
+        0.8628916191733551,
+        0.9403479323066702
+      ],
+      "gate_pass": true
+    },
+    "no_annotation": {
+      "n": 0,
+      "n_targets": 0,
+      "underpowered": true,
+      "point": null,
+      "ci95": null,
+      "gate_pass": null
+    }
+  }
+}
