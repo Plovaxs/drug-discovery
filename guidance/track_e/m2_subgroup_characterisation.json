@@ -1,0 +1,16 @@
+{
+  "min_complexes_threshold": 10,
+  "n_targets_total": 127,
+  "n_targets_included": 73,
+  "n_targets_excluded": 54,
+  "n_complexes_total": 11855,
+  "n_complexes_included": 11652,
+  "pct_complexes_covered": 98.29,
+  "median_complexes_included": 39.0,
+  "median_complexes_excluded": 3.0,
+  "pk_mean_included": 6.807,
+  "pk_mean_excluded": 6.017,
+  "pk_sd_included": 1.643,
+  "pk_sd_excluded": 1.748,
+  "pk_mean_difference": 0.79
+}

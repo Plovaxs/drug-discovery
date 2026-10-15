@@ -1,0 +1,60 @@
+{
+  "per_run": [
+    {
+      "run": "armA_s2021",
+      "epochs": 9,
+      "wall_clock_h": 5.72,
+      "thermally_suspended_h": 0.97,
+      "hours_per_epoch": 0.64
+    },
+    {
+      "run": "armA_s2022",
+      "epochs": 9,
+      "wall_clock_h": 5.64,
+      "thermally_suspended_h": 0.92,
+      "hours_per_epoch": 0.63
+    },
+    {
+      "run": "armA_s2023",
+      "epochs": 9,
+      "wall_clock_h": 5.66,
+      "thermally_suspended_h": 0.93,
+      "hours_per_epoch": 0.63
+    },
+    {
+      "run": "armC_s2021",
+      "epochs": 9,
+      "wall_clock_h": 5.88,
+      "thermally_suspended_h": 0.97,
+      "hours_per_epoch": 0.65
+    },
+    {
+      "run": "armC_s2022",
+      "epochs": 14,
+      "wall_clock_h": 9.07,
+      "thermally_suspended_h": 1.57,
+      "hours_per_epoch": 0.65
+    },
+    {
+      "run": "armC_s2023",
+      "epochs": 15,
+      "wall_clock_h": 9.64,
+      "thermally_suspended_h": 1.6,
+      "hours_per_epoch": 0.64
+    }
+  ],
+  "totals": {
+    "armA": {
+      "epochs": 27,
+      "wall_clock_h": 17.02,
+      "thermally_suspended_h": 2.82,
+      "hours_per_epoch": 0.63
+    },
+    "armC": {
+      "epochs": 38,
+      "wall_clock_h": 24.59,
+      "thermally_suspended_h": 4.14,
+      "hours_per_epoch": 0.65
+    }
+  }
+}

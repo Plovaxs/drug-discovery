@@ -1,0 +1,76 @@
+{
+  "n_baseline": 597,
+  "n_reranked": 600,
+  "metrics": {
+    "vina_dock": {
+      "baseline_mean": -6.813,
+      "baseline_sd": 10.079,
+      "reranked_mean": -8.068,
+      "reranked_sd": 2.66,
+      "mannwhitney_p": 3.065854290287219e-10,
+      "wilcoxon_paired_p": 1.9073486328125e-06,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "sa": {
+      "baseline_mean": 0.601,
+      "baseline_sd": 0.122,
+      "reranked_mean": 0.572,
+      "reranked_sd": 0.113,
+      "mannwhitney_p": 3.3436024200480605e-05,
+      "wilcoxon_paired_p": 8.20159912109375e-05,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "ra_score": {
+      "baseline_mean": 0.435,
+      "baseline_sd": 0.386,
+      "reranked_mean": 0.353,
+      "reranked_sd": 0.358,
+      "mannwhitney_p": 6.0579318815741525e-05,
+      "wilcoxon_paired_p": 2.6702880859375e-05,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "qed": {
+      "baseline_mean": 0.449,
+      "baseline_sd": 0.185,
+      "reranked_mean": 0.462,
+      "reranked_sd": 0.187,
+      "mannwhitney_p": 0.3091254533566402,
+      "wilcoxon_paired_p": 0.15364646911621094,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "ligand_efficiency": {
+      "baseline_mean": -0.34,
+      "baseline_sd": 0.749,
+      "reranked_mean": -0.369,
+      "reranked_sd": 0.109,
+      "mannwhitney_p": 0.7901977025183363,
+      "wilcoxon_paired_p": 0.7561664581298828,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "heavy_atoms": {
+      "baseline_mean": 21.323,
+      "baseline_sd": 9.057,
+      "reranked_mean": 23.095,
+      "reranked_sd": 8.364,
+      "mannwhitney_p": 0.00020624935401923226,
+      "wilcoxon_paired_p": 0.000209808349609375,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    },
+    "pb_valid": {
+      "baseline_mean": 0.551,
+      "baseline_sd": 0.498,
+      "reranked_mean": 0.582,
+      "reranked_sd": 0.494,
+      "mannwhitney_p": 0.2860458480970737,
+      "wilcoxon_paired_p": 0.20878013779458238,
+      "n_pockets_paired": 20,
+      "test_quoted_in_thesis": "Wilcoxon (paired by pocket)"
+    }
+  }
+}

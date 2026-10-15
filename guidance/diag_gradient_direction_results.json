@@ -1,0 +1,26 @@
+{
+  "n_pockets": 20,
+  "n_samples": 16,
+  "checkpoints": {
+    "./guidance_models/affinity_egnn_lpsplit.pt": {
+      "n_atoms": 23202,
+      "mean_cos_toward_contact": -0.018979281007592653,
+      "ci95": [
+        -0.04615987248115752,
+        0.008415549194277415
+      ],
+      "frac_pointing_toward": 0.4847426945952935,
+      "random_direction_control_mean_cos": 0.0026027267515214103,
+      "random_ci95": [
+        -0.0037571573861358747,
+        0.009483492321511
+      ],
+      "mean_cos_near_half": 0.03416819572137246,
+      "mean_cos_far_half": -0.07212675773655777,
+      "median_nn_distance_A": 3.5743669271469116,
+      "mean_grad_magnitude": 0.0010532660292224786,
+      "finite_difference_mean_score_change_along_+grad": 0.001180460552374522,
+      "finite_difference_frac_increasing": 0.809375
+    }
+  }
+}

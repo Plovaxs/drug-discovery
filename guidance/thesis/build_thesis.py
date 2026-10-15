@@ -49,9 +49,39 @@ ROMAN = {'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 
 
 
 # ------------------------------------------------------------------------------------------------------- parsing
+def check_markup_balance(files):
+    """Fail fast on unbalanced block markup, BEFORE anything is parsed or rendered.
+
+    An orphaned `@endtab` does not crash the parser: it is simply tolerated, and the surrounding
+    content can be swallowed or misplaced without any error. That is the worst failure mode available
+    here, because the build then succeeds and produces a document that is quietly missing something.
+    This check exists because exactly that was introduced by hand while editing an appendix, and was
+    caught by counting tags rather than by anything the build itself reported.
+    """
+    problems = []
+    for f in files:
+        name = os.path.basename(f)
+        depth, opened_at = 0, None
+        for ln_no, ln in enumerate(open(f, encoding='utf-8'), 1):
+            if ln.startswith('@tab '):
+                if depth:
+                    problems.append(f'{name}:{ln_no}: "@tab" opened while the table from line {opened_at} is still open')
+                depth, opened_at = depth + 1, ln_no
+            elif ln.startswith('@endtab'):
+                depth -= 1
+                if depth < 0:
+                    problems.append(f'{name}:{ln_no}: "@endtab" with no matching "@tab"')
+                    depth = 0
+        if depth:
+            problems.append(f'{name}: table opened at line {opened_at} is never closed with "@endtab"')
+    if problems:
+        raise SystemExit('markup balance check failed:\n  ' + '\n  '.join(problems))
+
+
 def parse_sources():
     blocks, abstract, abbrevs = [], None, []
     files = sorted(glob.glob(os.path.join(HERE, 'chapters', '*.txt')))
+    check_markup_balance(files)
     for f in files:
         lines = open(f, encoding='utf-8').read().split('\n')
         i = 0
@@ -268,6 +298,7 @@ class Builder:
                 self.cited.add(k); nums.append(self.cite_no[k])
             return ', '.join(f'[{n}]' for n in sorted(nums))
         text = re.sub(r'\[(@[^\]]+)\]', cite, text)
+        text = re.sub(r'\{gitstate\}', lambda m: git_state(), text)
         text = re.sub(r'\{(fig|tab|eq):([^}]+)\}', lambda m: self.xref[m.group(1) + ':' + m.group(2)], text)
         return text
 
@@ -479,9 +510,15 @@ class Builder:
         # double space after list handled by after=12
 
     def table(self, num, key, cap, rows, note):
+        # The label and caption are separated by a tab. The hanging indent must be wide enough for the
+        # widest label and must carry an EXPLICIT tab stop, exactly as figure() does. Without both, a label
+        # wider than the indent (e.g. "Table E.1", whose "E" is wider than a digit) leaves the tab nowhere
+        # to advance to, and it collapses to zero width, so label and caption touch ("Table E.1Test-set...").
+        # This silently affected all 7 Appendix E tables while the 66 numeric-chapter tables rendered fine.
         p = self.doc.add_paragraph(); add_runs(p, f'Table {num}\t' + self.resolve(cap), 11)
-        fmt(p, WD_ALIGN_PARAGRAPH.CENTER, 1.0, before=18, after=8, keep_next=True, left=0.6, first=-0.6)
+        fmt(p, WD_ALIGN_PARAGRAPH.CENTER, 1.0, before=18, after=8, keep_next=True, left=0.85, first=-0.85)
         p.paragraph_format.right_indent = Inches(0.0)
+        p.paragraph_format.tab_stops.add_tab_stop(Inches(0.85))
         ncol = len(rows[0])
         t = self.doc.add_table(rows=len(rows), cols=ncol); t.style = 'Table Grid'; t.alignment = WD_TABLE_ALIGNMENT.CENTER
         t.autofit = False
@@ -658,12 +695,23 @@ def compute_pages(pdf, toc, tabs, figs):
     for kind, lst in (('tab', tabs), ('fig', figs)):
         for num, cap in lst:
             label = 'Table' if kind == 'tab' else 'Figure'
-            # match the caption's own distinctive wording, not just "<label> <num>" (which an inline
-            # cross-reference like "{tab:key} shows ..." also resolves to, on an earlier page) and not
-            # a literal trailing space (the tab character between the number and the caption is not
-            # always rendered as whitespace by pdftotext)
-            needle = norm(f'{label} {num}' + cap_prefix(cap))
-            i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), None)
+            # Match the caption's own distinctive wording, not just "<label> <num>": an inline
+            # cross-reference ("a row of Table C.1, for example") resolves to the same "<label> <num>"
+            # on an EARLIER page, and silently wins the search.
+            #
+            # The separator between the number and the caption is a tab, which pdftotext may render as
+            # one space, several spaces, or nothing at all depending on the tab stop. So the separator
+            # must be matched as OPTIONAL whitespace, never assumed. An earlier version concatenated the
+            # two with no separator at all, which matched only captions whose tab had collapsed; every
+            # correctly-spaced caption fell through to the "<label> <num>" fallback and inherited the
+            # page of its first prose mention (this is what put Table C.1 on page 40 instead of 192).
+            pat_cap = re.compile(re.escape(f'{label} {num}') + r'\s*' + re.escape(cap_prefix(cap)))
+            i = next((i for i in range(body_start, len(raw)) if pat_cap.search(pages[i])), None)
+            if i is None:
+                # Last resort: the bare label. Prefer a page where it is NOT part of a running sentence,
+                # i.e. where it starts a line, which is how a caption appears and a cross-reference does not.
+                pat_start = re.compile(r'(?:^|\n)\s*' + re.escape(f'{label} {num}') + r'\b')
+                i = next((i for i in range(body_start, len(raw)) if pat_start.search(raw[i])), None)
             if i is None:
                 needle = f'{label} {num}'
                 i = next((i for i in range(body_start, len(raw)) if needle in pages[i]), body_start)
@@ -673,7 +721,168 @@ def compute_pages(pdf, toc, tabs, figs):
     return res, n
 
 
+def git_state():
+    """Commit and working-tree cleanliness AT BUILD TIME, substituted into the text via {gitstate}.
+
+    A hand-written commit hash in the reproducibility appendix goes stale the moment any source file is
+    edited, and then silently misstates which code produced the document. Emitting it from the build
+    removes that failure mode: the claim cannot drift from the artefact it describes.
+    """
+    root = os.path.dirname(os.path.dirname(HERE))
+    def g(*a):
+        r = subprocess.run(['git', '-C', root] + list(a), capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else ''
+    commit = g('rev-parse', 'HEAD')
+    if not commit:
+        return 'not a git checkout at build time'
+    dirty = [ln for ln in g('status', '--porcelain').splitlines() if ln.strip()]
+    s = f'commit `{commit[:12]}`'
+    if dirty:
+        s += f', built from a working tree with {len(dirty)} uncommitted change(s)'
+    else:
+        s += ', working tree clean'
+    return s
+
+
+def verify_output(pdf, tabs, figs):
+    """Post-build checks for rendering faults that are invisible in the .docx but corrupt the PDF.
+
+    Both guard real bugs that shipped silently in an earlier build and were found only by reading the
+    rendered PDF, not the source:
+      1. A caption whose label touches its text ("Table E.1Test-set ..."), caused by a tab with no tab
+         stop wide enough to advance into.
+      2. A List-of-Tables/Figures page number pointing at a prose cross-reference instead of the real
+         caption, caused by a caption-matching pattern that assumed a particular separator.
+    Returns a list of human-readable problems; empty means clean.
+    """
+    pages = pdf_pages(pdf)
+    all_lines = [ln for p in pages for ln in p.split('\n')]
+    problems = []
+    for kind, lst in (('Table', tabs), ('Figure', figs)):
+        for num, cap in lst:
+            # Only LINE-INITIAL occurrences are captions. An occurrence inside a sentence is a prose
+            # cross-reference ("Figure 8.5, which shows ...") and must not be checked for spacing, or the
+            # trailing comma reads as a missing-space fault.
+            lab = re.escape(f'{kind} {num}')
+            want = cap_prefix_for_check(cap)
+            if not want:
+                continue
+            # Identify the caption line by its OWN WORDING, never by position: prose often wraps so that a
+            # cross-reference starts a line ("Figure 5.1). The 24 comparisons ..."), which position alone
+            # cannot distinguish from a caption. Allow the label and text to touch here, since detecting
+            # exactly that fault is the point of the spacing check below.
+            pat_id = re.compile(r'\s*' + lab + r'\s*' + re.escape(want[:14]), re.I)
+            cap_lines = [ln for ln in all_lines if pat_id.match(ln) and '....' not in ln]
+            if not cap_lines:
+                problems.append(f'{kind} {num}: no caption line found in the PDF')
+                continue
+            # The label must be separated from the caption text by whitespace.
+            if any(re.match(r'\s*' + lab + r'\S', ln) for ln in cap_lines):
+                problems.append(f'{kind} {num}: label touches caption text (missing tab stop)')
+    problems += _verify_list_pages(pages)
+    problems += _verify_charset(pages)
+    return problems
+
+
+# Characters that legitimately appear in this document: typographic punctuation, maths and the Greek
+# and accented letters the text actually uses. Anything outside this set in the rendered PDF is a
+# transcription accident (a stray CJK character once reached the PDF this way), not a symbol choice.
+ALLOWED_NON_ASCII = set(
+    '–—‘’“”„…′″·•°±×÷≈≠≤≥→←↔∞√∑∏∫∂∇'
+    'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρςστυφχψω'
+    'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝàáâãäåæçèéêëìíîïñòóôõöøùúûüýÿŷıŁłŠšŽžĆćČčĐđ'
+    '−‐‑‒⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾₀₁₂₃₄₅₆₇₈₉ÅΩµ§¶†‡©®™€£¥'
+    '∈∉⊂⊆∪∩∅∀∃¬∧∨⟨⟩‖'
+    '̀́̂̃̄̆̇̈̊̌    ﬁﬂ'
+)
+
+
+def _verify_charset(pages):
+    """Catch characters that cannot have been intended, e.g. a CJK glyph typed by accident mid-sentence.
+
+    A build will happily render such a character, and proofreading 236 pages by eye will not reliably
+    find one, so it is checked mechanically.
+    """
+    bad = {}
+    for pi, p in enumerate(pages):
+        for ch in p:
+            if ord(ch) > 127 and ch not in ALLOWED_NON_ASCII:
+                bad.setdefault(ch, pi + 1)
+    return [f'unexpected character {ch!r} (U+{ord(ch):04X}) first seen on PDF page {pg}'
+            for ch, pg in sorted(bad.items(), key=lambda kv: kv[1])]
+
+
+def _verify_list_pages(pages):
+    """Every List-of-Tables / List-of-Figures entry must point at the page where that caption actually is.
+
+    This was a real, shipped fault: the page resolver matched a prose cross-reference instead of the
+    caption and listed Table C.1 on page 40 when it is on page 169. It was found by hand; checking it by
+    hand after every edit is not reliable, so the check runs on every build.
+    """
+    try:
+        ch1 = next(i for i, p in enumerate(pages) if re.search(r'^\s*CHAPTER I\s*$', p, re.M))
+    except StopIteration:
+        return ['could not locate CHAPTER I to anchor page numbering']
+
+    def actual_page(label, num, cap_word):
+        pat = re.compile(r'\s*' + re.escape(f'{label} {num}') + r'\s+' + re.escape(cap_word[:12]), re.I)
+        for i, p in enumerate(pages):
+            for ln in p.split('\n'):
+                if pat.match(ln) and '....' not in ln:
+                    return i - ch1 + 1
+        return None
+
+    listed = {}
+    for p in pages[:ch1]:
+        for ln in p.split('\n'):
+            m = re.match(r'\s*([A-Z0-9]+\.[0-9]+)\s+(.{6,}?)\.{4,}\s*(\d+)\s*$', ln)
+            if m:
+                listed.setdefault(m.group(1), (m.group(2).strip(), int(m.group(3))))
+    out = []
+    for num, (cap, pg) in sorted(listed.items()):
+        for label in ('Table', 'Figure'):
+            a = actual_page(label, num, cap)
+            if a is not None:
+                if a != pg:
+                    out.append(f'{label} {num}: listed on p.{pg} but its caption is on p.{a}')
+                break
+    return out
+
+
+def cap_prefix_for_check(cap, n=24):
+    """First few plain words of a caption, with markup and cross-reference braces removed."""
+    cut = len(cap)
+    for ch in '{[':
+        p = cap.find(ch)
+        if p != -1:
+            cut = min(cut, p)
+    return re.sub(r'[*^_]', '', cap[:cut]).strip()[:n]
+
+
+def check_numbers_against_sources():
+    """Run the quoted-number check before building, so a drifted figure fails in seconds, not after a
+    full two-pass build. Skipped (with a notice, never silently) if a result file is absent, since the
+    chapters must stay buildable on a checkout that does not carry every large intermediate."""
+    try:
+        from check_numbers_against_sources import check
+    except ImportError:
+        print('number check: checker not importable, skipped')
+        return
+    checked, problems = check()
+    missing = [p for p in problems if 'cannot read' in p]
+    real = [p for p in problems if 'cannot read' not in p]
+    if missing:
+        print(f'number check: {len(missing)} source file(s) unavailable, those claims skipped')
+    if real:
+        print(f'\nNUMBER CHECK FAILED ({len(real)} claim(s) disagree with their source):')
+        for p in real:
+            print('  -', p)
+        raise SystemExit(1)
+    print(f'number check: {checked} quoted values match their source files -- OK')
+
+
 def main():
+    check_numbers_against_sources()
     print('pass 1 ...', flush=True)
     bld, unused = build_docx(None)
     pdf = to_pdf(OUT_DOCX)
@@ -692,6 +901,13 @@ def main():
         print('remaining differences after pass 3:', sum(1 for k in pages2 if pages2[k] != pages3[k]))
     print(f'PDF pages: {n2}; references cited: {len(bld.cited)}; unused reference keys: {unused}')
     words = sum(len(re.findall(r"\w+", b[1])) for b in bld.blocks if b[0] == 'para')
+    problems = verify_output(pdf, tabs, figs)
+    if problems:
+        print(f'\nBUILD VERIFICATION FAILED ({len(problems)} problem(s)):')
+        for p in problems:
+            print('  -', p)
+        raise SystemExit(1)
+    print('build verification: captions spaced, caption pages resolve to real captions -- OK')
     print('done ->', OUT_DOCX, pdf)
 
 

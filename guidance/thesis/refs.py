@@ -4,6 +4,7 @@ sequentially in alphabetical order by first-author surname; cited in text as [@k
   pm  = PubMed record retrieved and checked (authors/volume/pages/DOI)
   src = checked against the source document text/page during this project
   kn  = bibliographic details from the author's general knowledge, NOT tool-verified -- complete before submission
+  xr  = Crossref (or arXiv) record retrieved and checked during this project: title, authors, venue, volume/pages, DOI
 Italic markup uses *...*."""
 
 REFS = {
@@ -78,11 +79,12 @@ REFS = {
     # --- QSAR controls, activity cliffs, best-of-N selection (added 2026-10-15, item 9 rebuild) -------------------------
     # 'kn' = from this project's own literature-search log (author/year/venue), not individually re-verified for this
     # draft; complete DOI/page verification before final submission, following this file's own documented convention.
-    'rucker2007': dict(s=('Rücker', 2007), v='kn', t='C. Rücker, G. Rücker, and M. Meringer, “y-Randomization and its variants in QSPR/QSAR,” *J. Chem. Inf. Model.*, vol. 47, no. 6, pp. 2345–2357, 2007.'),
-    'vantilborg2022': dict(s=('van Tilborg', 2022), v='kn', t='D. van Tilborg, A. Alenicheva, and F. Grisoni, “Exposing the limitations of molecular machine learning with activity cliffs,” *J. Chem. Inf. Model.*, vol. 62, no. 23, pp. 5938–5951, 2022.'),
-    'kwapien2022': dict(s=('Kwapien', 2022), v='kn', t='K. Kwapien, E. Nittinger, J. He, C. Margreitter, A. Voronov, and C. Tyrchan, “Implications of additivity and nonadditivity for machine learning and deep learning models in drug design,” *ACS Omega / J. Chem. Inf. Model.*, 2022.'),
-    'thomas2021': dict(s=('Thomas', 2021), v='kn', t='M. Thomas, R. T. Smith, N. M. O’Boyle, C. de Graaf, and A. Bender, “Comparison of structure- and ligand-based scoring functions for deep generative models: a GPCR case study,” *J. Cheminform.*, vol. 13, art. 39, 2021.'),
-    'bokdiff2025': dict(s=('Khodabandeh Yalabadi', 2025), v='kn', t='N. Khodabandeh Yalabadi, M. Yazdani-Jahromi, and O. Garibay, “BoKDiff: Best-of-K and best-of-N alignment for diffusion-based structure-based drug design,” arXiv:2501.15631, 2025 (preprint).'),
+    'rucker2007': dict(s=('Rücker', 2007), v='xr', t='C. Rücker, G. Rücker, and M. Meringer, “y-Randomization and its variants in QSPR/QSAR,” *J. Chem. Inf. Model.*, vol. 47, no. 6, pp. 2345–2357, 2007, doi: 10.1021/ci700157b.'),
+    'vantilborg2022': dict(s=('van Tilborg', 2022), v='xr', t='D. van Tilborg, A. Alenicheva, and F. Grisoni, “Exposing the limitations of molecular machine learning with activity cliffs,” *J. Chem. Inf. Model.*, vol. 62, no. 23, pp. 5938–5951, 2022, doi: 10.1021/acs.jcim.2c01073.'),
+    'kwapien2022': dict(s=('Kwapien', 2022), v='xr', t='K. Kwapien, E. Nittinger, J. He, C. Margreitter, A. Voronov, and C. Tyrchan, “Implications of additivity and nonadditivity for machine learning and deep learning models in drug design,” *ACS Omega*, vol. 7, no. 30, pp. 26573–26581, 2022, doi: 10.1021/acsomega.2c02738.'),
+    'thomas2021': dict(s=('Thomas', 2021), v='xr', t='M. Thomas, R. T. Smith, N. M. O’Boyle, C. de Graaf, and A. Bender, “Comparison of structure- and ligand-based scoring functions for deep generative models: a GPCR case study,” *J. Cheminform.*, vol. 13, no. 1, 2021, doi: 10.1186/s13321-021-00516-0.'),
+    'mirage2026': dict(s=('Yazdani-Jahromi', 2026), v='xr', t='M. Yazdani-Jahromi, S. Padhi, and I. Garibay, “MIRAGE: Measuring interpolation and redundancy in affinity generalization,” arXiv:2609.14491, 2026 (preprint).'),
+    'bokdiff2025': dict(s=('Khodabandeh Yalabadi', 2025), v='xr', t='A. Khodabandeh Yalabadi, M. Yazdani-Jahromi, and O. Ozmen Garibay, “BoKDiff: Best-of-K diffusion alignment for target-specific 3D molecule generation,” arXiv:2501.15631, 2025 (preprint).'),
 }
 
 

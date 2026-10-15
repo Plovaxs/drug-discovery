@@ -88,7 +88,7 @@ Everything in this chapter so far has used the Stage 0 EGNN of Chapter IV as the
 
 @sub Design
 
-For each of the 60 pocket–seed trials, an unguided pool was oversampled at twice the usual yield (K = 2), reconstructed, and scored once with Vina's *score_only* mode, which has no conformational search and runs in about 0.57 s per molecule. The better-scoring half of each pool was kept. The kept molecules were then evaluated by an independent, full Vina *dock* pass (exhaustiveness 16, identical settings to the baseline and affinity-only conditions of Section IV.5). The number that decides which molecules survive selection (the cheap score-only pass) is therefore never the number later reported as the result (the independent dock pass); this separation is what keeps the comparison non-circular, since a selection criterion and its own evaluation metric being the same quantity would make an improvement definitional rather than informative. A 6-pocket pilot, stratified by the measured per-pocket wall time of the existing 20-pocket runs, was run first; because the pilot and the full run share an output directory and this project's DONE-marker resumability (Section III.7), the pilot's results were reused, not recomputed, when the run was extended to the full 60 trials.
+For each of the 60 pocket–seed trials, an unguided pool was oversampled at twice the usual yield (K = 2), reconstructed, and scored once with Vina's *score_only* mode, which has no conformational search and runs in about 0.57 s per molecule. The better-scoring half of each pool was kept. The kept molecules were then evaluated by an independent, full Vina *dock* pass (exhaustiveness 16, identical settings to the baseline and affinity-only conditions of Section IV.5). The number that decides which molecules survive selection (the cheap score-only pass) is therefore never the number later reported as the result (the independent dock pass), which rules out the strongest form of circularity, in which a selection criterion and its own evaluation metric are the same quantity and an improvement becomes definitional rather than informative. It does not, however, make the two measurements independent, and this limit is load-bearing for how the result may be read: both passes evaluate poses with the *same empirical scoring function*, differing in whether a conformational search is run. Any systematic bias of that scoring function, the preference for larger ligands documented in Section II.3.1 above all, is therefore shared by the selector and the evaluator rather than cancelled between them. The design establishes that the harness can detect a change driven by a genuinely informative signal; it does not establish that the selected molecules are better binders by a measurement independent of Vina. Section VI.5.3 reports exactly the size and synthesizability movement that this shared bias predicts, and the interpretation in Section VI.5.4 is framed accordingly. A 6-pocket pilot, stratified by the measured per-pocket wall time of the existing 20-pocket runs, was run first; because the pilot and the full run share an output directory and this project's DONE-marker resumability (Section III.7), the pilot's results were reused, not recomputed, when the run was extended to the full 60 trials.
 
 @sub Result
 
@@ -98,13 +98,13 @@ For each of the 60 pocket–seed trials, an unguided pool was oversampled at twi
 | Metric | Baseline | Vina-reranked | Test | p |
 | Vina Dock (kcal/mol) | −6.813 ± 10.079 | −8.068 ± 2.660 | Wilcoxon (paired by pocket) | 1.9 × 10⁻⁶ |
 | Per-pocket delta (target-clustered bootstrap, B = 2,000) | — | −1.267, 95% CI [−2.149, −0.740] | — | excludes zero |
-| SA score | 0.601 | 0.572 | KS | 8.2 × 10⁻⁵ |
-| RA-score | 0.435 | 0.353 | KS | 2.67 × 10⁻⁵ |
-| QED | 0.449 | 0.462 | KS | 0.154 |
-| Ligand efficiency (kcal/mol per heavy atom) | −0.340 | −0.369 | KS | 0.756 |
-| PoseBusters pass rate | 0.551 | 0.582 | — | held, did not fall |
-| Heavy atoms | 21.32 ± 9.06 | 23.09 ± 8.36 | Mann–Whitney | 0.0002 |
-@note p-values are two-sided. The confound in the last row is discussed in the same place it is reported, not held back for a later section.
+| SA score | 0.601 | 0.572 | Wilcoxon (paired by pocket) | 8.2 × 10⁻⁵ |
+| RA-score | 0.435 | 0.353 | Wilcoxon (paired by pocket) | 2.67 × 10⁻⁵ |
+| QED | 0.449 | 0.462 | Wilcoxon (paired by pocket) | 0.154 |
+| Ligand efficiency (kcal/mol per heavy atom) | −0.340 | −0.369 | Wilcoxon (paired by pocket) | 0.756 |
+| PoseBusters pass rate | 0.551 | 0.582 | Wilcoxon (paired by pocket) | 0.209 (held, did not fall) |
+| Heavy atoms | 21.32 ± 9.06 | 23.09 ± 8.36 | Wilcoxon (paired by pocket) | 0.0002 |
+@note p-values are two-sided. The analysis computed a pocket-paired Wilcoxon signed-rank test and an unpaired Mann–Whitney test for every metric; the paired value is quoted here because the pocket is the unit of replication, and both are retained in the saved analysis output. Means, standard deviations and p-values are regenerated from the per-molecule result files by `guidance/rq2_table_from_raw.py` rather than assembled by hand (n = 597 baseline, 600 reranked molecules over 20 pockets). The confound in the last row is discussed in the same place it is reported, not held back for a later section.
 @endtab
 
 @sub The confound, disclosed directly

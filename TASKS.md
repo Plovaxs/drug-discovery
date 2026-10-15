@@ -505,6 +505,461 @@ antar arm -- ini belum dikerjakan (n_epochs/val_n per seed konsisten jadi secara
 tapi belum dijalankan). Kalau item 9 (rebuild tesis) perlu klaim perbandingan formal, jalankan uji
 berpasangan itu dulu sebelum menulis kesimpulan kuat di bab hasil.
 
+### 9b. RESPONS AUDIT FORENSIK (85 item) -- dikerjakan 2026-10-15, rebuild ke-2 (228 hlm)
+
+User memberi `Audit_Forensik_Tesis_SBDD_Checklist_Detail_2026.pdf`: 85 item (23 confirmed, 54 risk,
+6 editorial, 2 verification). Yang dikerjakan, yang ditolak, dan yang diserahkan ke user:
+
+**DUA BUG KODE NYATA ditemukan, keduanya di `build_thesis.py`, bukan di naskah:**
+1. **Caption tabel tanpa tab stop** (audit F014/F015 menyebut 2; NYATANYA 7 -- semua tabel Appendix E).
+   `table()` memakai pemisah `\t` tapi tidak pernah `add_tab_stop()`, padahal `figure()` melakukannya.
+   Label "Table E.1" sedikit lebih lebar dari "Table 3.1" sehingga melewati hanging indent 0.6" dan
+   tab-nya kolaps jadi nol -> "Table E.1Test-set...". Diperbaiki: indent 0.6->0.85 + tab stop eksplisit,
+   disamakan dengan figure(). Hasil: 0 caption nempel (dari 7).
+2. **Pencocokan halaman caption salah** (audit F013, hanya menyebut C.1). Akar sebenarnya LEBIH LUAS dan
+   SALING TERKAIT dengan bug 1: `compute_pages()` menyusun needle `f'{label} {num}' + cap_prefix(cap)`
+   TANPA pemisah, jadi hanya cocok untuk caption yang RUSAK-nempel. Untuk 66 caption yang benar, needle
+   gagal lalu jatuh ke fallback `f'{label} {num}'` yang menangkap penyebutan PROSA lebih dulu -- itulah
+   sebabnya Table C.1 tertulis hlm 40 (tempat kalimat "a row of Table C.1, for example") alih-alih 169.
+   **Konsekuensi penting: memperbaiki bug 1 saja akan merusak SEMUA nomor halaman tabel/gambar**, karena
+   fallback yang keliru itu justru yang selama ini "menyelamatkan" caption rusak. Diperbaiki bersama:
+   needle jadi regex `label + \s* + caption_prefix` (pemisah opsional), plus fallback baris-awal.
+   Diverifikasi: **95/95 entri List of Tables/Figures kini cocok dengan halaman caption sebenarnya.**
+
+**PENCEGAHAN REGRESI (baru): `verify_output()` di `build_thesis.py`.** Build sekarang GAGAL KERAS
+(exit 1) kalau ada caption yang labelnya menempel atau caption yang tidak ditemukan. Dikembangkan
+iteratif: versi pertama memberi 25+ false positive karena memeriksa SEMUA kemunculan "Figure 8.5"
+termasuk rujukan prosa berkoma; versi kedua masih 3 false positive karena prosa bisa pecah baris tepat
+di rujukan ("Figure 5.1). The 24..."). Versi final mengidentifikasi caption lewat TEKS CAPTION-nya,
+baru memeriksa spasi -- lolos bersih.
+
+**KALIBRASI KLAIM (P1, inti audit) -- diverifikasi muncul di PDF final:**
+- F023 (kontrol positif tidak ortogonal): Bab VI.5 dulu mengklaim "non-circular" terlalu kuat. Sekarang
+  dinyatakan: dua mode Vina BERBAGI fungsi skor yang sama, jadi biasnya (preferensi ligan besar) ikut
+  dibagi selektor dan evaluator, bukan saling meniadakan. Menyingkirkan sirkularitas definisional, BUKAN
+  menjadikannya pengukuran independen. Abstrak + Bab X disesuaikan.
+- F017/F018 (klaim menyapu): "failure traces to signal rather than mechanism" dipisah per rute --
+  LANGSUNG untuk rute seleksi (mekanisme ditahan, sinyal ditukar), TIDAK LANGSUNG untuk rute gradien
+  (Vina tak differentiable). Bab IX ditambahi peringatan eksplisit bahwa ringkasan tanpa kualifikasi itu
+  mengklaim lebih dari yang dibawa bukti gradien.
+- F020 (null != ekuivalensi): Bab X kini menyatakan tidak ada uji ekuivalensi formal (TOST) yang
+  dijalankan dan tidak ada margin indiferensi yang dipra-deklarasikan; yang didukung desain adalah batas
+  daya ~1,0-1,4 kcal/mol.
+- F021/F072 (docking != binding, trade-off): abstrak kini "predicted docking score", dan trade-off
+  (molekul lebih besar + SA/RA turun signifikan) dinaikkan ke abstrak, tidak dikubur.
+- F027 ("independent" tak terdefinisi): subbab baru di Bab III mendefinisikan operasional -- soal
+  PROVENANS angka, bukan validitas fisik; eksplisit bahwa independen != ortogonal != eksperimental.
+
+**RONDE 2 (user mengirim ulang potongan audit F001-005, F057-064, F072-085) -- rebuild ke-3, 231 hlm.**
+Banyak item yang semula saya tandai "butuh eksperimen baru" ternyata meminta PERNYATAAN SCOPE, bukan
+compute. Dikerjakan:
+- **F057** (norma != arah): Bab V.4 kini menyatakan eksplisit bahwa yang dikorelasikan adalah NORMA,
+  yang tidak membawa arah; frasa "strongest pull" dikoreksi jadi "largest magnitude"; cosine similarity
+  / finite-difference disebut sebagai pengukuran bertanda yang belum dihitung.
+- **F063** (proxy != outcome): dipasang di tempat yang sama, dan diperkuat karena proyek ini PUNYA
+  buktinya sendiri -- checkpoint gradient-alignment memperbaiki diagnostiknya tapi docking tetap null.
+  Dinyatakan: diagnostik tidak boleh diperlakukan sebagai surrogate endpoint.
+- **F059/F060/F061** (Appendix E.5): paragraf limit baru -- n=1 adalah bukti KEBERADAAN bukan laju
+  tipikal; gap kecil kompatibel dengan beberapa dinamika (gradien kecil / arah tak konsisten / dilawan
+  denoiser), jadi noise-overwhelming adalah hipotesis yang tidak ditolak, BUKAN mekanisme yang
+  diisolasi kausal (butuh intervensi pada noise schedule, tidak dijalankan); kanal atom-type tak
+  dipandu langsung tapi bisa berubah lewat kopling posisi, dan pergerakan logit-nya tidak diukur.
+- **F064**: baris kitchen-sink ditandai agregat eksploratif; 2^4=16 arm di luar budget; tidak ada klaim
+  sinergi.
+- **F075/F076**: Bab X kini menyatakan tesis murni komputasional (tidak ada molekul disintesis/diuji)
+  dan bahwa kriteria yang dipakai TIDAK menyentuh ADMET/toksisitas/off-target -- lolos semua cek di
+  tesis ini berarti kandidat untuk triase komputasi lanjutan, bukan "drug-like".
+- **F080**: tabel anggaran komputasi NYATA (Tabel A.1) dari log queue. **Mengungkap hal yang memperkuat
+  temuan**: Arm C dilatih LEBIH LAMA (38 epoch/24,6 jam) daripada Arm A (27 epoch/17,0 jam) pada
+  throughput per-epoch yang sama, tapi hasilnya lebih buruk -> "Arm C kurang training" TERSINGKIR
+  sebagai penjelasan. Dicatat juga di Bab IV.7.
+- **F082**: ditemukan klaim BASI -- appendix mencatat commit `455bbc08...` sebagai "kode yang
+  menghasilkan dokumen ini", padahal HEAD `7e54322` dengan 12 file belum di-commit. Diperbaiki di
+  AKARNYA: token `{gitstate}` baru di `build_thesis.py` menuliskan commit + jumlah perubahan
+  belum-ter-commit SAAT BUILD, jadi klaim itu tidak bisa basi lagi. PDF sekarang jujur menyatakan
+  dirinya dibangun dari working tree yang belum beku, dan meminta tag immutable sebelum submit.
+- **F077**: checklist ternyata SUDAH jujur (clean-checkout ditandai "Not verified"). Ditambah baris
+  baru yang benar-benar terverifikasi: suite tes otomatis 16 suite / 0 gagal.
+- **F085**: diaudit ulang setelah dokumen tumbuh ke 231 hlm -- 95/95 entri daftar tetap cocok.
+
+**RONDE 3 (user: "gas aja, gw izinin semuanya") -- rebuild ke-4, 232 hlm.**
+- **F073 SELESAI (verifikasi DOI lewat Crossref/arXiv).** Kelima sitasi `v='kn'` diverifikasi field demi
+  field. **Menemukan 2 kesalahan nyata**: (1) BoKDiff -- judul yang saya REKONSTRUKSI salah (sebenarnya
+  "BoKDiff: Best-of-K diffusion alignment for target-specific 3D molecule generation") DAN inisial
+  penulis pertama salah (A., bukan N.; Garibay sebenarnya Ozmen Garibay); (2) Kwapien -- venue yang
+  masih ragu ("ACS Omega / JCIM") ternyata ACS Omega 7(30), 26573-26581. Tiga lainnya terkonfirmasi
+  persis seperti ditulis. DOI ditambahkan ke kelimanya. Klaim novelty BoKDiff ("first to apply
+  Best-of-K alignment and Best-of-N sampling to SBDD") terkonfirmasi VERBATIM di abstraknya -- ini
+  penting karena penyempitan klaim novelty RQ2 di Bab VI.5 bersandar padanya.
+  Tier verifikasi baru `v='xr'` ditambahkan ke refs.py. **Sisa entri `v='kn'`: 0.**
+  Appendix B kini MENGUNGKAP koreksi ini, bukan menyerapnya diam-diam -- 2 dari 5 sitasi hasil
+  rekonstruksi ternyata salah, dan hanya lookup registry yang bisa mengungkapnya.
+- **F084 (caption) -- diukur dulu, baru diedit.** Pengecek otomatis pertama menandai 24/33 caption
+  "tanpa n"; setelah diperbaiki (angka yang DIEJA seperti "four targets", dan "835 leakage-safe-split
+  targets" yang tersandung tanda hubung) tinggal 11, dan 10 di antaranya diagram skematik yang n-nya
+  memang tak bermakna. **Premis F084 sebagian besar TIDAK berlaku untuk dokumen ini -- pengecek saya
+  yang lemah, bukan caption-nya.** Hanya 2 caption yang benar-benar kosong dan angkanya bisa
+  diverifikasi dari tabel ringkasan yang diperbaiki (trackA: 8 pocket/29-30 molekul/24 perbandingan;
+  fuquality: 8 checkpoint). Sisanya TIDAK diisi, karena menebak n = menyisipkan angka tak terverifikasi,
+  persis yang didisiplinkan tesis ini.
+- **F074 SELESAI (verifikasi klaim novelty).** Diuji terarah terhadap klaim Bab IV yang paling
+  load-bearing: dekomposisi prior kelas via permutasi label dalam-target. Dua pencarian (sekali lewat
+  kontrol permutasinya sendiri, sekali lewat padanan yang mungkin dipakai literatur -- "per-target
+  mean" / "target-stratified baseline" di PDBbind) **tidak menemukan** studi yang menerapkan kontrol itu
+  pada prediksi afinitas protein-ligan. **Klaim bertahan**, tetap dalam bentuk "we did not find".
+  **Tapi pencarian menemukan karya kontemporer yang konvergen**: MIRAGE (arXiv:2609.14491, Sept 2026,
+  Yazdani-Jahromi/Padhi/Garibay) -- menyimpulkan performa semu prediksi afinitas melacak *family
+  support* historis, bukan kimia ligan; kontrol yang tak bisa mengeksploitasi famili test tetap datar;
+  peringkat model BERBALIK di famili baru; dan mereka mengusulkan pelaporan "excess over a
+  support-insensitive baseline" -- KUANTITAS YANG SAMA dengan yang dicapai dekomposisi kita, lewat
+  konstruksi berbeda (permutasi label vs stratifikasi family support). Disitir di Bab II.4 dan
+  dibahas di Bab IV.8 sebagai KONVERGENSI, bukan presedensi (rilis saat tesis ditulis, mengukur hal
+  berbeda, tidak saling menggantikan). Pencarian ini didokumentasikan di Appendix B supaya bisa
+  diulang pembaca. Refs: 65 (dari 64), nol unused.
+- **Exit criteria audit "angka abstrak cocok dengan tabel" -- DIPERIKSA.** Semua angka desimal di
+  abstrak ditemukan di badan naskah. Penelusuran lintas-bab untuk 10 angka kunci (RQ2, prior kelas,
+  Arm A/C) tidak menemukan varian yang bertentangan. **Satu jebakan keterbacaan ditemukan**: 0,362
+  muncul sebagai DUA kuantitas berbeda (Arm A di Bab IV, dan baseline linier dua-fitur Track E di
+  Bab VIII), dan keduanya muncul di Bab X. Diverifikasi ke `armAC_table.json` bahwa ini KEBETULAN,
+  bukan salah salin -- keduanya benar. Diberi klausa pembeda di Bab X supaya tidak terbaca sebagai
+  angka yang sama.
+- **F083 SELESAI (audit isolasi test-set per run).** Tabel A.4 baru di Appendix A, disusun dari BUKTI
+  bukan asumsi: kriteria seleksi dibaca dari KODE trainer (`best_val_loss` menggerakkan retensi
+  checkpoint dan early stopping di `train_egnn_stage0.py` dan `train_surrogate_arm.py`), dan paparan
+  test set diverifikasi dari LOG (Stage 0: 8 baris `[Test]`, 18 `[Validate]`; 6 run produksi Arm A/C:
+  NOL baris `[Test]`; 5 run A1e: `--skip_test_logging`). Dibedakan tegas antara *selection* (kuantitas
+  yang menentukan checkpoint dipertahankan) dan *exposure* (test dievaluasi sama sekali, meski hanya
+  untuk log) -- menyamakan keduanya adalah cara klaim semacam ini biasanya runtuh. Satu pengecualian
+  yang memang ada DIMASUKKAN ke tabel, bukan disembunyikan: sweep hyperparameter Bab IV.3 memilih
+  konfigurasi berdasar metrik TEST, sudah ditandai optimistis di tempatnya, dan tidak ada hasil
+  guidance yang bergantung padanya.
+- **Pemeriksaan karakter**: ditemukan satu karakter asing (U+51B3) yang tak sengaja masuk saat menulis
+  catatan tabel; dibersihkan. Pemindaian non-ASCII seluruh bab: sisanya simbol ilmiah sah.
+- **CATATAN OPERASIONAL (kesalahan saya, diulang dari awal sesi)**: rebuild tesis memakai CPU, dan CPU
+  adalah bottleneck termal mesin ini. Rebuild berulang sementara DIAG2 berjalan MEMPERLAMBAT DIAG2
+  lewat gerbang termal. Build dihentikan sampai DIAG2 selesai; perubahan teks ditumpuk dulu, baru satu
+  rebuild di akhir.
+- **UPGRADE: audit manual diubah jadi PENJAGA PERMANEN + penjaganya sendiri DIUJI.**
+  `verify_output()` di `build_thesis.py` diperluas dari 2 jadi 4 pemeriksaan, semuanya menjaga bug yang
+  BENAR-BENAR pernah lolos ke PDF: (1) caption nempel; (2) halaman caption salah resolve; (3) **BARU:**
+  setiap entri List of Tables/Figures harus menunjuk halaman caption sebenarnya -- ini audit yang
+  sebelumnya saya jalankan MANUAL dua kali (95/95), sekarang jalan tiap build; (4) **BARU:** karakter
+  tak terduga (daftar izin simbol ilmiah) -- menjaga kecelakaan U+51B3 yang sempat masuk.
+  Build GAGAL KERAS (exit 1) kalau salah satu menyala.
+  **Daftar izin karakter dikalibrasi ke dokumen nyata, bukan ditebak**: uji pertama menandai ⁻ (U+207B),
+  ∈ (U+2208), µ (U+00B5) -- ketiganya SAH, jadi daftar izinnya yang kurang. Setelah dilengkapi: 0 masalah.
+  **Penjaga yang tak pernah berbunyi belum terbukti bekerja**, jadi dibuat
+  `guidance/tests/test_thesis_build_verifier.py` (7 tes): tiap penjaga disuntik kerusakan yang dulu
+  benar-benar terjadi dan HARUS menyala, plus pasangan bersih yang HARUS diam. Termasuk tes regresi
+  untuk false-positive yang sempat membuat versi awal penjaga ini tak terpakai (prosa pecah baris tepat
+  di rujukan: "Figure 5.1). The 24..."). Diuji terhadap PDF yang SUDAH ada, tanpa rebuild -- nol beban
+  CPU tambahan ke DIAG2.
+  Ditemukan juga: runner melaporkan "0 test(s)" untuk suite baru karena menghitung baris `PASS` di
+  stdout sementara unittest menulis ke stderr. Suite yang melapor nol bisa menyamarkan masalah, jadi
+  diikutkan konvensi proyek (cetak `PASS <nama>` + total). Kini melapor 7 dengan benar.
+- **F048 (anggaran tuning baseline) -- DIVERIFIKASI DARI KODE, dan hasilnya MENGUATKAN tesis.**
+  `representation_ladder.py` memberi anggaran IDENTIK ke setiap blok (5 alpha ridge + 1 konfigurasi
+  gradient boosting, dipilih di VAL saja, test diskor sekali), dengan alasan eksplisit di komentarnya:
+  kedua keluarga model dicoba untuk tiap blok supaya sebuah blok tidak dihukum karena kebetulan cocok
+  ke satu regressor. Jadi simetris DI DALAM ladder. Terhadap EGNN memang ASIMETRIS -- tapi asimetrinya
+  BERPIHAK PADA EGNN (EGNN dapat berjam-jam GPU + early stopping; ridge ligand-only cuma 6 fit murah).
+  Ditulis eksplisit di Bab IV.6: keberatan "baseline kurang di-tuning" berjalan ke arah yang salah di
+  sini -- baseline yang DI-TUNING LEBIH BAIK hanya akan MELEBARKAN temuan, bukan mempersempitnya.
+- **F070 (holdout satu famili)**: Appendix E kini membatasi klaim ke "uji generalisasi SATU-FAMILI
+  terkeras yang tersedia di split ini", bukan robustness OOD lintas proteome; ditambah catatan bahwa
+  kinase justru famili paling padat dan homogen (kasus paling menguntungkan bagi model yang belajar
+  regularitas famili), dan bahwa mengulang dengan beberapa famili adalah penguatan yang jelas tapi di
+  luar budget.
+- **F069 (hitungan PLIP bukan bukti binding)**: ditambahkan batas eksplisit -- hitungan bisa naik karena
+  molekul membesar, atom masuk cut-off jarak, atau pose memenuhi kriteria sudut TANPA perbaikan binding.
+  Kenaikan bukan bukti afinitas membaik, penurunan bukan bukti sebaliknya. Dinyatakan bahwa hitungan
+  dipakai sebagai cek OUTCOME ORTOGONAL, bukan ukuran binding, dan tidak ada klaim tesis yang
+  bersandar pada hitungan interaksi saja.
+- **F071 (validitas fisik != dapat diterima secara kimia)**: subbab baru di Bab III -- PoseBusters
+  memeriksa POSE, bukan kewajaran senyawa; tidak memeriksa strain di luar tes geometrik, substruktur
+  promiscuous/PAINS, atau apa pun yang farmakologis. "Valid" di tesis ini SELALU berarti "lolos
+  pemeriksaan yang disebutkan", tidak pernah "layak disintesis atau diuji".
+- **F050 (kritik yang TEPAT terhadap tulisan saya sendiri).** Saya sempat menulis bahwa EGNN mencapai
+  prior kelasnya "lewat rute lebih langsung: arsitektur membaca geometri target 3-D" -- itu klaim
+  MEKANISME, padahal permutasi hanya mengukur BERAPA BANYAK performa yang bertahan, bukan JALUR-nya.
+  Diperbaiki: angka 70%/90% dinyatakan sebagai "control-based share of apparent predictive performance";
+  penjelasan selisihnya ditandai HIPOTESIS, lengkap dengan ablasi yang akan membuktikannya (melatih
+  ulang EGNN dengan kanal protein dibuang/diacak sambil label tetap dipermutasi) yang TIDAK dijalankan.
+  Dicek tidak ada instance lain dari klaim itu di bab lain.
+- **F058 (rentang λ)**: ditambahkan subbab -- λ adalah pengali tak berdimensi atas gradien yang skalanya
+  properti prediktor, jadi "tiga orde besaran" tidak membuktikan regime efektif tercakup. Diikat ke
+  pengukuran nyata: magnitudo gradien ~1e-3, dan jejak Appendix E.5 (pada λ=1 jumlah magnitudo nudge
+  ~9,5 Å sepanjang 1.000 langkah, tapi perpindahan NETO berakhir <0,1 Å). Kuantitas operatifnya adalah
+  perpindahan per-langkah relatif terhadap derau posterior, bukan λ; batas atas ditentukan oleh
+  fragmentasi molekul, bukan penilaian kecukupan.
+- **F046 (pergeseran domain BindingNet) -- menawarkan PENJELASAN TANDINGAN yang tidak bisa disingkirkan
+  desain ini.** Menyamakan jumlah baris TIDAK menyamakan domain: baris BindingNet adalah senyawa yang
+  disejajarkan ke template kristal, sedangkan val/test DAN seluruh data Arm A adalah pose CrossDocked
+  docked-and-minimised. Jadi "augmentasi BindingNet tidak membantu" dan "melatih sebagian di luar domain
+  lebih merugikan daripada manfaat data tambahan" SAMA-SAMA cocok dengan hasilnya, dan itu dua klaim
+  berbeda. Dinyatakan sebagai batas atas apa yang dicapai augmentasi DI BAWAH PROTOKOL INI, bukan sifat
+  sumber datanya.
+- **F067 (RA-score hanya pada molekul yang bisa diskor) -- EFEK SELEKSI STRUKTURAL, bukan sekadar n
+  kecil.** Tesis sudah menandai n=6 di λ=0,3, tapi belum menyatakan masalah yang lebih dalam: RA-score
+  hanya dihitung pada molekul yang terekonstruksi jadi satu fragmen, jadi setiap mean adalah mean ATAS
+  YANG SELAMAT. Itu tidak masalah kalau tingkat kelulusan konstan antar kondisi -- TAPI TIDAK:
+  fragmentasi NAIK bersama kekuatan guidance (0 di λ=0 -> 0,21 di λ=0,3). Jadi subset yang dibandingkan
+  diseleksi secara berbeda OLEH VARIABEL YANG SEDANG DIUJI, dan arah seleksinya bisa ditebak (yang
+  selamat dari guidance kuat adalah yang tahan ditarik pecah). Pergeseran mean RA-score bisa berasal
+  dari BERUBAHNYA MOLEKUL MANA YANG DISKOR, bukan dari molekulnya membaik. Dinyatakan, beserta analisis
+  yang akan membatasinya (beri nilai kasus-terburuk ke yang tak terskor, atau bandingkan hanya molekul
+  yang terskor di SEMUA kondisi) -- tidak dijalankan.
+- **F062 (ESM2 global vs pocket-local)**: sudah dihedge sebelumnya; ditambahkan bahwa perbandingan ini
+  mengubah DUA hal sekaligus (residu mana yang diwakili, DAN bagaimana embedding direduksi jadi vektor
+  tetap), jadi hasilnya membatasi integrasi pocket-restricted YANG INI, bukan nilai fitur protein-LM
+  lokal-pocket secara umum.
+- **F066, F081 -- SUDAH TERTANGANI, tidak perlu diubah.** E2 ditandai "not run"/"untested" di 4 tempat.
+  Checklist reproduktibilitas sudah menyatakan tidak semua ablasi eksploratori mencatat seed, dan
+  protokol dua-tier mewajibkan konfirmasi sebelum sesuatu dilaporkan sebagai temuan.
+- **PRA-REGISTRASI INTERPRETASI DIAG2 ditulis SAAT run baru 9/20** --
+  `guidance/DIAG2_INTERPRETATION_PREREGISTRATION.md`. Mengunci arti tiap kemungkinan hasil SEBELUM
+  angka finalnya ada: CI mengecualikan nol + mean NEGATIF -> menguatkan narasi Bab V; CI mengecualikan
+  nol + mean POSITIF -> **MELEMAHKAN**, frasa "wrong direction" di Bab V/IX/X WAJIB direvisi; CI memuat
+  nol -> konsisten F1 (tak informatif), BUKAN "mendorong menjauh"; kontrol gagal -> hasil utama tidak
+  dilaporkan sama sekali. Ditulis eksplisit bahwa smoke test 1 pocket sudah memberi mean cos +0,087
+  (58% menuju kontak), jadi baris "positif" adalah kemungkinan NYATA -- dicatat sekarang supaya tidak
+  ada godaan mengecilkannya nanti. Ambang final, tidak digeser setelah melihat angka.
+- **F078/F079 (provenance + instruksi akses dataset) SELESAI.** Checksum saja membuktikan dua salinan
+  identik, bukan dari mana asalnya. Tabel provenance baru (A.x) memasangkan tiap artefak turunan dengan
+  SUMBER HULU-nya dan SKRIP PERSIS di repo yang menghasilkannya (`build_split.py`,
+  `build_family_holdout_split.py`, `apply_sequence_leakage_filter.py`,
+  `apply_compound_leakage_filter.py`, `build_bindingnet_index.py`) -- semua diverifikasi ADA sebelum
+  disebut. Catatan: tabel ini DITEGAKKAN TES, bukan cuma didokumentasikan (leakage guard menurunkan
+  ulang hitungan penghapusan dan gagal kalau tak cocok).
+  **Dua batas dinyatakan, tidak disembunyikan**: (1) LISENSI -- tesis TIDAK menyatakan ulang ketentuan
+  lisensi CrossDocked2020/BindingNet/PDB karena TIDAK diverifikasi independen di sesi ini; reproducer
+  wajib memeriksa sendiri sebelum meredistribusi. Skrip dan definisi split milik penulis; data
+  dasarnya tidak. (2) SKALA -- LMDB-nya saja 3,8 GB, jadi reproduksi ujung-ke-ujung itu usaha besar;
+  pembaca yang ingin mengecek SATU angka diarahkan ke skrip per-hasil yang jalan dalam hitungan
+  detik-menit.
+- **Kesalahan saya sendiri, ditangkap sendiri**: penyisipan seksi provenance membuat `@endtab` YATIM
+  (16 `@tab` vs 17 `@endtab`). Terdeteksi lewat pengecekan keseimbangan markup, bukan lewat build yang
+  gagal. Dihapus; kini seimbang di SEMUA bab, parse bersih (578 blok, 48 tabel, 33 gambar).
+- **UPGRADE LANJUTAN: penjaga keseimbangan markup di titik PARSE (bukan setelah build).**
+  Insiden `@endtab` yatim mengungkap sesuatu yang lebih buruk dari sekadar salah ketik: parser
+  MENERIMANYA tanpa protes (parse "berhasil" dengan 48 tabel). Artinya kesalahan markup bisa menelan
+  atau memindahkan konten DIAM-DIAM, dan build tetap sukses -- mode kegagalan terburuk yang mungkin.
+  `check_markup_balance()` baru dipanggil DI AWAL `parse_sources()` dan membatalkan build (SystemExit)
+  untuk: @endtab tanpa pasangan, @tab tak pernah ditutup, dan @tab bersarang. Diuji dua arah: naskah
+  sekarang LOLOS, dan penjaga MENYALA persis pada kerusakan yang saya buat sendiri tadi.
+  Suite tes naik 7 -> 11 (kelas `MarkupBalanceGuard`, 4 tes).
+  **Penjaga build kini 5 kelas**: caption nempel, halaman caption, entri daftar vs halaman caption
+  sebenarnya, karakter tak terduga, keseimbangan markup.
+- **VERIFIKASI ANGKA TERHADAP SUMBER -- MENEMUKAN 2 KESALAHAN DI TULISAN SAYA SENDIRI.**
+  Setelah menemukan drift di tabel anggaran komputasi, semua tabel hasil utama dicek terhadap
+  JSON/CSV sumbernya.
+  1. **Tabel anggaran komputasi (Tabel A.1)**: 4 baris melenceng 0,01 jam karena saya menghitung
+     manual dari timestamp (0,98 vs 0,97; 2,83 vs 2,82; 4,15 vs 4,14). Tidak material untuk kesimpulan
+     apa pun, TAPI angka tesis harus cocok persis dengan skrip yang menurunkannya. Dibuat
+     `guidance/surrogate_data/compute_budget_table.py` + JSON; keempat baris disamakan; catatan tabel
+     diubah jadi "Regenerated by ... not estimated or retyped". Diverifikasi: 0 baris tidak cocok.
+  2. **Tabel RQ2 (Bab VI.5) SALAH MELABELI UJI.** Empat baris (SA, RA-score, QED, ligand efficiency)
+     ditulis memakai "KS", padahal `task_f_analysis.json` TIDAK PERNAH menghitung uji KS sama sekali --
+     hanya Mann-Whitney dan Wilcoxon berpasangan. Nilai p yang dikutip BENAR (itu nilai Wilcoxon
+     berpasangan), label ujinya yang salah. Ini jenis kesalahan yang akan memalukan di sidang
+     ("Anda bilang KS, tapi skrip Anda tidak pernah menghitungnya"). Diperbaiki jadi
+     "Wilcoxon (paired by pocket)"; catatan tabel kini menjelaskan kedua uji dihitung dan mengapa yang
+     berpasangan yang dikutip (pocket adalah unit replikasi).
+  **Yang TIDAK salah, diverifikasi ulang dari data mentah** (`honest_eval.csv`, 597 + 600 molekul):
+  heavy atoms 21,323±9,057 vs 23,095±8,364 MW p=0,000206; vina_dock -6,813±10,079 vs -8,068±2,660;
+  ligand efficiency -0,340 vs -0,369. SEMUA cocok persis dengan yang tertulis. Tabel Arm A/C juga
+  cocok sempurna dengan `armAC_table.json` (mean, CI, dan ketiga nilai seed tiap arm).
+- **SAPUAN VERIFIKASI ANGKA DILANJUTKAN -- 3 KESALAHAN LAGI DI TABEL REPRESENTATION LADDER.**
+  3. **Label model ECIF-raw SALAH**: ditulis "gradient-boosted tree", padahal JSON mencatat
+     `ridge(a=1000.0)` menang di validasi untuk blok itu. (ecif_norm, plip_* memang hgb -- itu benar.)
+  4. **Dimensi ECIF ditulis "varies"**, padahal angkanya pasti: 72.
+  5. **Baris ligand MENCAMPUR SUMBER**: tabel ladder seharusnya melaporkan angka ladder, tapi barisnya
+     memuat 0,3531 yang berasal dari skrip LAIN (`ligand_only_results.json`), sedangkan ladder sendiri
+     menghitung 0,3534 untuk blok yang sama. BUKAN kesalahan angka -- keduanya benar dan selisihnya
+     cuma detail fitting (ladder me-refit di dalam grid alpha-nya sendiri) -- tapi tabel jadi mengklaim
+     sesuatu yang bukan isinya. Diperbaiki: tabel kini melaporkan 0,3534 (angka ladder), dan catatan
+     tabel menjelaskan mengapa 0,3531 yang dipakai di seluruh tesis sebagai "ligand-only ceiling"
+     (skrip itu juga sumber baseline heavy-atom dan ECFP yang dikutip berdampingan, dan ia yang jadi
+     `power.floor_r2` di analisis daya).
+  Diverifikasi ulang: ketujuh baris ladder kini cocok dengan JSON pada R2, dimensi, DAN keluarga model.
+  Angka lain yang DICEK dan BENAR: activity cliffs (2.856 pasangan cliff, 344 senyawa, 4.050.366
+  pasangan diperiksa, n_test 11.855) dan heavy_atoms 0,3069 -- semuanya cocok sumbernya.
+
+  **POLA YANG MUNCUL dari seluruh sapuan ini: SEMUA kesalahan ada di tabel yang saya susun MANUAL
+  (anggaran komputasi, RQ2, ladder); tabel yang disalin dari keluaran terstruktur (Arm A/C vs
+  armAC_table.json) bersih sempurna.** Ini persis argumen yang dibuat tesis ini sendiri soal angka
+  yang diketik tangan, didemonstrasikan pada penulisnya.
+- **UPGRADE SISTEMATIS: `guidance/thesis/check_numbers_against_sources.py`.** Pola "semua kesalahan
+  ada di tabel manual" menuntut respons sistematis, bukan pemeriksaan sekali jalan. Berkas ini
+  memasangkan 22 angka yang dikutip tesis dengan FILE SUMBER + path persisnya (ladder R2 per blok,
+  ligand-only ceiling, heavy-atom baseline, activity cliffs, Arm A/C, subgroup M2, anggaran komputasi).
+  Dipanggil DI AWAL `build_thesis.py main()` -> angka yang melenceng gagal dalam hitungan detik, bukan
+  setelah build dua-pass 4 menit. Kalau file sumber tak ada (checkout tanpa intermediate besar),
+  klaim itu DILEWATI dengan pemberitahuan, tidak pernah diam-diam.
+  **Versi pertama pemeriksa ini TERLALU LEMAH dan saya menangkapnya dengan mengujinya.** Ia cuma
+  menanyakan "apakah angka ini ada di suatu tempat di bab itu" -- jadi saat saya sengaja merusak satu
+  sel tabel (0,2889 -> 0,9999), ia TETAP LOLOS, karena angka yang sama masih muncul di prosa
+  sekitarnya. Diperkuat: klaim tabel kini wajib cocok DI BARIS YANG SAMA dengan label barisnya.
+  Diuji ulang dua arah: lolos pada naskah sekarang, MENYALA pada sel tunggal yang dirusak.
+- **KESALAHAN SAYA LAGI, ditangkap suite penuh**: suite tes baru saya LOLOS saat dijalankan sendiri
+  (`--pattern`) tapi GAGAL saat suite penuh dijalankan. Sebabnya nyata, bukan flaky: runner memakai
+  `sys.executable` = env conda `drugdisc`, yang TIDAK punya python-docx, sedangkan `build_thesis`
+  mengimpornya. Jadi suite saya error di sana. Diperbaiki dengan konvensi SKIP_EXIT=2 proyek ini
+  (sama seperti `test_lp_split_loader.py` yang skip kalau split JSON tak ada).
+  **Konsekuensi yang HARUS dinyatakan, bukan disembunyikan**: suite penjaga tesis ini sekarang
+  DILEWATI di env utama, dan runner sendiri memperingatkan "a skipped suite is not a passing suite".
+  Ia hanya benar-benar berjalan (a) saat tesis dibangun, dan (b) saat dijalankan dengan interpreter
+  yang punya python-docx (`python3`). Status penuh sekarang: **16 passed, 0 failed, 1 skipped**
+  (dengan `python3`: 13 tes penjaga semuanya lolos).
+  Pelajaran: "lolos saat diuji sendiri" bukan "lolos di suite" -- persis kelas kesalahan yang
+  integrasi ada untuk menangkapnya.
+- **TABEL RQ2 (hasil terpenting tesis) KINI DITURUNKAN DARI DATA MENTAH, bukan dirakit tangan.**
+  `guidance/rq2_table_from_raw.py` menghitung ulang seluruh tabel dari 597+600 CSV per-molekul
+  (mean, sd, Mann-Whitney DAN Wilcoxon berpasangan per pocket) -> `rq2_table.json`. Seluruh nilai
+  tesis TERVERIFIKASI cocok: sa 0,601/0,572; ra_score 0,435/0,353; qed 0,449/0,462; pb_valid
+  0,551/0,582; vina_dock -6,813/-8,068; heavy_atoms 21,32/23,09. Hanya label uji yang tadi salah.
+  Dua ketidakkonsistenan internal sekalian dirapikan: (a) baris heavy atoms memakai Mann-Whitney
+  sementara lima baris lain Wilcoxon berpasangan, padahal catatan tabel saya SENDIRI berargumen
+  pocket adalah unit replikasi -- disamakan ke Wilcoxon (p tetap 0,0002); (b) baris PoseBusters cuma
+  menulis "held, did not fall" tanpa angka -- kini memuat p = 0,209.
+  8 klaim RQ2 ditambahkan ke manifest penjaga: **30 angka dijaga otomatis** (dari 22).
+- **Penjaga angka diperkuat LAGI setelah gagal palsu**: ia melaporkan 2 ketidakcocokan pada nilai
+  negatif, padahal naskah benar -- naskah memakai minus tipografis (U+2212), formatter menghasilkan
+  hyphen ASCII. Dinormalkan. Diuji ulang: lolos bersih, dan TETAP menyala saat satu sel dirusak.
+- **F057 SELESAI 2026-10-16 02:04 -- HASIL MENGOREKSI NASKAH, SESUAI PRA-REGISTRASI.**
+  DIAG2 (`guidance/diag_gradient_direction.py`), 20 pocket x 16 sampel = **23.202 atom-state**,
+  bootstrap klaster-pocket B=2000. Hasil -> `guidance/diag_gradient_direction_results.json`.
+  **Kontrol lolos lebih dulu** (wajib, sesuai pra-registrasi): arah acak +0,0026 CI[-0,0038,+0,0095]
+  (memuat nol, seperti seharusnya); beda-hingga mean +0,0012 dengan **80,9% state naik** -> konvensi
+  tanda terkonfirmasi empiris. Bahwa 80,9% bukan 100% DILAPORKAN apa adanya, tidak dihaluskan.
+  **HASIL UTAMA: arah gradien TIDAK DAPAT DIBEDAKAN DARI ACAK.** mean cos = **-0,019**,
+  CI95 **[-0,046, +0,008] MEMUAT NOL**; 48,5% atom didorong menuju kontak terdekat (= kebetulan).
+  **Verdict = baris 3 tabel pra-registrasi**: konsisten dengan F1 (sinyal tak informatif),
+  dan TIDAK melisensikan klaim lebih kuat bahwa guidance mendorong atom MENJAUHI kontak.
+  **KONSEKUENSI: frasa "wrong direction" DITARIK dari naskah.** Diperbaiki di 5 tempat: Bab V.4
+  (seksi hasil baru + penarikan eksplisit), tabel mastersum Bab III, tabel objmap Bab I, Bab IX
+  (butir bukti iii), Bab X (kesimpulan 4), dan abstrak. Alasannya dinyatakan: NORMA tidak membawa
+  arah; saat arah diukur langsung, ia ABSEN, bukan TERBALIK.
+  **Pilot 1-pocket memberi +0,087 dan TIDAK bertahan di 20 pocket** -- persis alasan pilot tidak
+  pernah dilaporkan sebagai hasil, dan alasan kemungkinan "positif" ditulis eksplisit di pra-registrasi
+  sebelum angkanya ada.
+  Sekunder (dideklarasikan deskriptif, bukan penentu): paruh dekat +0,034 vs paruh jauh -0,072,
+  median jarak kontak 3,57 A -- ada pola bergantung jarak, tapi agregatnya tetap tak terbedakan dari acak.
+- **BUILD FINAL: 245 halaman** (dari 148 di awal sesi), 65 referensi, 0 unused, semua penjaga lolos,
+  47 angka terverifikasi otomatis terhadap file sumber.
+
+- **(catatan lama) F057 dijalankan**: `guidance/diag_gradient_direction.py` (DIAG2) -- proyeksi BERTANDA gradien
+  terhadap vektor menuju atom pocket terdekat, 20 pocket x 16 sampel, bootstrap klaster-pocket B=2000,
+  di bawah gerbang termal. Dua kontrol built-in: (a) arah acak harus ~0; (b) uji beda-hingga melangkah
+  sepanjang +grad harus MENAIKKAN skor model (validasi konvensi tanda secara empiris, bukan dari baca
+  kode). Smoke test: kontrol acak -0,011 (OK), beda-hingga 100% naik (OK) -> konvensi tanda
+  TERKONFIRMASI (`guided_sampling.py` menambahkan grad ke posisi, jadi cos>0 = didorong MENUJU kontak).
+  Hasil awal 1 pocket: mean cos +0,087, 58% mengarah ke kontak -- **arah POSITIF, bukan negatif**.
+  Kalau bertahan di 20 pocket, ini menghaluskan narasi Bab V: magnitudo terbesar memang di atom jauh,
+  tapi arahnya rata-rata tetap sedikit menuju pocket. HARUS dilaporkan apa adanya, termasuk kalau
+  melemahkan cerita yang sudah ditulis.
+
+**REKAPITULASI TERHADAP 85 ITEM AUDIT (per 2026-10-15, sebelum build final):**
+
+*Diubah di naskah/kode sesi ini (34 item):* F013, F014, F015, F017, F018, F019, F020, F021, F023,
+F027, F046, F048, F050, F057(teks; eksperimennya berjalan), F058, F059, F060, F061, F062, F063, F064,
+F065, F067, F069, F070, F071, F072, F073, F074, F080, F082, F083, F084, F085.
+
+*Diperiksa, SUDAH tertangani naskah lama, sengaja tidak diubah (6):* F016 (abstrak ditulis ulang di
+ronde 1), F052 (CD38 sudah didisklos sebagai diskrepansi nyata), F066 (E2 ditandai "not run" di 4
+tempat), F068 (pembalikan tanda PLIP sudah dilaporkan sebagai peringatan selective reporting),
+F077 (checklist sudah jujur menandai clean-checkout "Not verified"; ditambah baris suite tes),
+F081 (seed eksploratori sudah didisklos; protokol dua-tier mewajibkan konfirmasi).
+
+*Milik user, TIDAK BOLEH saya isi (12):* F001-F012 -- nama, NIM, gelar, tanggal sidang, copyright,
+pembimbing, pernyataan orisinalitas, formulir publikasi, formulir pembimbing, laporan similarity,
+dedication, acknowledgments. Izin "gas, semuanya" TIDAK memberi saya datanya, dan ini halaman
+pernyataan bertanda tangan.
+
+*Butuh komitmen komputasi/pengemasan baru, BELUM dikerjakan (sisanya, ~33):* sebagian besar blok
+STATISTIK (F029-F045) meminta analisis ULANG atau sensitivitas tambahan (family-cluster bootstrap,
+publikasi semua effect size per-target, definisi family untuk koreksi BH, dll.), plus F078/F079
+(manifest provenance + instruksi akses dataset, butuh kerja pengemasan rilis), F053/F054 (AlphaFold),
+F051 (perbesar sampel ChEMBL). **Catatan jujur: sebagian item blok statistik kemungkinan sudah
+dipenuhi rigor naskah yang ada (Bab III.6 punya seksi unit of analysis, target-clustered bootstrap,
+BH, status pra-registrasi, analisis daya), tapi saya TIDAK memverifikasinya satu per satu, jadi tidak
+saya klaim selesai.**
+
+*Verifikasi lanjutan (dilakukan setelah menulis catatan di atas, karena "kemungkinan sudah dipenuhi
+tapi belum diperiksa" persis jenis klaim yang audit ini ada untuk mencegahnya).* Empat item paling
+konsekuensial dari blok statistik DIPERIKSA LANGSUNG di naskah dan semuanya memang sudah tertangani:
+- **F029** (unit analisis): ada subbab khusus "Units of analysis" di Bab III.6 yang menyebut eksplisit
+  bahwa mencampur level akan menyalahsajikan jumlah bukti independen, lalu mendefinisikan atom ->
+  molekul -> pocket -> target.
+- **F032** (pasangan Wilcoxon): Bab III.6 menyatakan "Wilcoxon signed-rank tests (paired by pocket)".
+- **F041** (hierarki bootstrap): dinyatakan bahwa klaster target adalah unit independen yang tepat
+  "whenever several complexes or molecules of the same pocket are compared", plus subbab
+  "Target-clustered statistics for predictor comparisons".
+- **F030** (definisi keluarga untuk koreksi gabungan 48 uji): Appendix E.6 mendefinisikan keluarga
+  secara eksplisit -- SATU variabel outcome per pool -- dan MENGECUALIKAN uji hitungan-interaksi PLIP
+  dengan alasan (mengukur kuantitas berbeda, dilaporkan terpisah), dengan Tabel E.7 mendaftar setiap
+  sumber yang masuk pool.
+Verifikasi dilanjutkan ke empat item lagi, semuanya juga sudah tertangani:
+- **F035** (status pra-registrasi): ada subbab khusus "Pre-registration status of each route" yang
+  membagi tiap rute ke 4 kategori bukti (pre-registered / planned / post hoc / follow-up).
+- **F034** (null underpowered): detectable shift dinyatakan (~1-1,4 kcal/mol), dan Bab X kini menambah
+  pernyataan bahwa tidak ada uji ekuivalensi formal yang dijalankan.
+- **F043** (target-disjoint != bebas semua kebocoran): Bab X kini menyatakan split ini LEBIH MUDAH
+  daripada leave-superfamily-out, plus overlap scaffold 40,1%.
+- **F042** (bahasa "0/48"): ditangani SANGAT baik di naskah lama -- klaim 0/48 disertai p mentah
+  minimum (0,0306), p terkoreksi minimum (0,525), DAN catatan bahwa satu hit nominal itu cocok dengan
+  ~2,4 positif palsu yang diharapkan secara kebetulan. Tidak ada klaim probabilistik atas hipotesis.
+  Ditemukan juga penanganan keluarga koreksi yang lebih halus dari yang diminta F030: tier eksploratori
+  DIKECUALIKAN dari pool bersama follow-up konfirmatorinya sendiri, "would double-count one question".
+
+- **F031** (KS pada grup yang tumpang tindih): ditangani TELADAN di naskah lama -- Bab VI menyatakan
+  sendiri bahwa grup terpilih dan pool tumpang tindih BY CONSTRUCTION, bahwa "a two-sample test is not
+  strictly valid on overlapping groups", dan bahwa p-value-nya harus dibaca sebagai deskripsi jarak
+  distribusi, bukan tingkat signifikansi eksak. Plus argumen mengapa itu tidak menjelaskan polanya
+  (kontrol random-subset dan scrambled-filter punya struktur tumpang tindih IDENTIK dan tidak
+  menunjukkan pergeseran sebanding).
+- **F039** (varians antar-seed): didisklos di Bab IX -- "seed variance of the guidance predictors was
+  therefore not measured".
+- **F038 (subgroup M2) -- CELAH NYATA, DITUTUP DENGAN PENGUKURAN, bukan kaveat.** Naskah menyatakan
+  aturan inklusi (>=10 kompleks -> 73 dari 127 target) tapi TIDAK pernah membandingkan subgrup itu
+  dengan test set penuh. Dihitung dari anchor table (skrip baru
+  `guidance/track_e/m2_subgroup_characterisation.py` + JSON, supaya angkanya dapat diturunkan ulang):
+  73 target itu memuat **11.652 dari 11.855 kompleks (98,3%)**, jadi cakupan datanya hampir penuh
+  meski cuma 57% target. TAPI yang dikecualikan BUKAN sampel acak: median 3 kompleks (vs 39), dan
+  **pK mean 6,017 vs 6,807 -- sistematis 0,79 unit LEBIH RENDAH** (sd setara, 1,75 vs 1,64).
+  Ditulis di Bab VIII berikut arah biasnya: mengecualikan target berafinitas terlemah justru membuang
+  bagian rentang di mana metrik peringkat paling berpeluang gagal, jadi M2 diukur dalam kondisi yang
+  sedikit MENGUNTUNGKAN model yang dibandingkan.
+
+**BLOK STATISTIK (F029-F045) KINI TUNTAS DIPERIKSA SELURUHNYA -- 17 item, satu per satu:**
+- *Sudah tertangani naskah lama (15)*: F029 (subbab Units of analysis), F030 (satu outcome per pool,
+  + eksklusi yang lebih halus: tier eksploratori tak dipool dengan konfirmatorinya sendiri), F031
+  (Bab VI menyatakan sendiri uji dua-sampel tak valid pada grup tumpang tindih, plus argumen kontrol),
+  F032 (paired by pocket), F033 (44 interval kepercayaan mendampingi p-value), F034 (detectable shift),
+  F035 (subbab status pra-registrasi, 4 kategori), F036 (Bab VIII.1.2 "Premise checks that changed the
+  plan" -- "Four measurements made BEFORE training", jadi audit bukan tuning pasca-hasil), F037
+  (diakui fold/famili bisa dibagi, DAN diuji langsung lewat family-holdout Appendix E.3.2), F039
+  (varians seed didisklos tak diukur), F040 (PLIP outcome berbeda, tak dipool), F041 (klaster target),
+  F042 (0/48 disertai p mentah/terkoreksi minimum + ekspektasi ~2,4 positif palsu), F043 (diperkuat
+  sesi ini), F045 (kebocoran 423 baris/123 senyawa terdokumentasi + ditegakkan di kode).
+- *Celah NYATA ditemukan dan ditutup sesi ini (2)*: **F038** (subgroup M2 -- ditutup dengan PENGUKURAN
+  + skrip reproduksi, lihat di atas) dan **F044** (atribusi split artefact -- naskah menyebut dua
+  perubahan split tapi mengatribusikan bersama; kini dinyatakan eksplisit bahwa split berubah dalam
+  LEBIH DARI SATU hal sekaligus, bahwa desain ini tidak memisahkannya, dan bahwa split antara yang
+  hanya memperbaiki tumpang-tindih validasi sambil mempertahankan test 27-pocket akan dibutuhkan untuk
+  mengapportionkannya -- tidak dibangun. Daftar "Two limits" dinaikkan jadi "Three limits").
+
+**TIDAK DIKERJAKAN, sengaja, dengan alasan:**
+- F001-F012 (nama, NIM, gelar, tanggal sidang, pembimbing, tanda tangan, similarity report, dedication,
+  acknowledgments): milik user. TIDAK boleh saya isi/karang.
+- F073/F074 (verifikasi DOI satu per satu, novelty search independen): butuh lookup eksternal; 5 sitasi
+  baru sudah ditandai `v='kn'` di refs.py.
+- F077 (clean-room reproducibility run): butuh environment terpisah, keputusan scoping tersendiri.
+- Banyak P2 RISK meminta ANALISIS/EKSPERIMEN BARU (F025 signed projection gradien, F037 family-cluster
+  bootstrap, F049 publikasi semua effect size, F057 cosine similarity, F060 trace puluhan molekul,
+  F065 audit varians residual). Ini komitmen komputasi baru, BUKAN perbaikan teks -- tidak dilepas
+  sepihak; perlu keputusan scoping eksplisit lebih dulu.
+
 ### 9. Penulisan tesis (satu rebuild di akhir, jangan tiap perubahan) -- SELESAI 2026-10-15 19:58
 
 **Rebuild dieksekusi SEKALI, sesuai rencana.** Output: `Thesis_Coupled_Guidance_SBDD.docx/.pdf`,
