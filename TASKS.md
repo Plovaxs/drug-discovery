@@ -442,7 +442,7 @@ sama dengan "aggregator melaporkan sd `undefined` di n=1, bukan `0.0000`".
 tidak ada |dR2| meledak di hasil nyata. **Biaya:** CPU saja, ~3,7 detik untuk B=2000 -- dijalankan
 `nice -19` paralel tanpa bersaing sumber daya dengan RQ2 yang sedang berjalan.
 
-### 8. Arm A + Arm C (produksi) -- DIANTRIKAN 2026-10-13, ~32 jam gabungan, dikonfirmasi user
+### 8. Arm A + Arm C (produksi) -- SELESAI 2026-10-15 19:40 (DIANTRIKAN 2026-10-13, ~32 jam gabungan, dikonfirmasi user)
 **Apa:** Arm A (20.000 CD, 3 seed). Arm C produksi, WAJIB pakai `bindingnet_v1_clean.csv`.
 **Catatan:** pertanyaannya sudah diperbaiki — bukan "apakah R2 naik" tapi "apakah data BN menutup jarak
 ke model ligand-only, dan apakah ia melampaui prior kelas 0.2468". Baseline ligand-only jadi komparator
@@ -472,15 +472,99 @@ jadi dua panggilan itu akan menghasilkan DUA FILE IDENTIK yang masing-masing dib
 seolah hanya memuat satu arm. Diganti satu panggilan `armAC_aggregate` -> `armAC_table.json`.
 **Biaya:** GPU, ~16 jam per arm (32 jam gabungan).
 
-### 9. Penulisan tesis (satu rebuild di akhir, jangan tiap perubahan)
-Urutan: (a) Bab IV seksi baru: audit sumber informasi + noise ceiling + dekomposisi prior kelas;
-(b) Bab X revisi kesimpulan (1) — argumen "kegagalan bukan karena akurasi rendah: Pearson 0.58-0.65"
-sekarang BOCOR, karena model tanpa input protein mencapai korelasi yang sama; (c) abstrak satu kalimat;
-(d) limitasi: gray zone 50-90% identitas (Mattsson et al. bilang identitas sekuens tidak cukup sampai
-0.2), split per-target lebih mudah dari leave-superfamily-out, overlap scaffold 40,1%, label campuran
-Kd/Ki/IC50 yang komposisinya bergeser antar split; (e) sitasi wajib yang hilang: Volkov 2022, Mattsson
-2026, Graber 2025, Bret 2026, van Tilborg 2022, Deng 2023, Hernandez-Garrido 2023, Landrum 2024,
-Rucker 2007, Seitzer 2022, Wallace 2023, Gao 2022, Thomas 2021, PLIP; LALU rebuild PDF/DOCX SEKALI.
+**HASIL -- SELESAI 2026-10-15 19:40, 6 run training (3 seed Arm A + 3 seed Arm C), queue sekarang IDLE
+(25/25 langkah). File:** `guidance/surrogate_data/armAC_table.json`.
+
+| arm | komposisi | n seed | val R2 per seed | mean | CI95 |
+|---|---|---|---|---|---|
+| **Arm A** | 20.000 baris CD murni | 3 | 0,351 / 0,344 / 0,391 (best epoch 4 ketiganya) | **0,362** | [0,299, 0,425] |
+| **Arm C** | 6.000 CD + 14.000 BN, pool BERSIH (filter leakage) | 3 | 0,271 / 0,292 / 0,253 (best epoch 4/9/10) | **0,272** | [0,224, 0,320] |
+| Arm B-match (pembanding lama, SAMA komposisi TANPA filter) | | 3 | 0,298 / 0,254 / 0,283 | 0,278 | [0,223, 0,334] |
+
+**Menjawab pertanyaan pra-registrasi item ini ("apakah data BN menutup jarak ke ligand-only, dan apakah
+ia melampaui prior kelas 0,2468")**: TIDAK jelas melampaui. Pembanding yang sudah ada: ligand-only ridge
+desc_ridge = 0,3531 (A2.4), prior kelas (y-randomisasi dalam-target) = 0,2468.
+- **Arm C (arm produksi BN yang jadi fokus pertanyaan) CI95 [0,224, 0,320] TIDAK melewati ligand-only
+  (0,3531) sama sekali, dan batas bawahnya (0,224) ada DI BAWAH titik estimasi prior kelas (0,2468)** --
+  artinya Arm C tidak bisa dibedakan secara meyakinkan dari prior kelas semata tanpa uji formal, apalagi
+  dari ligand-only.
+- **Arm A (CrossDocked murni, jumlah baris SAMA dengan Arm C) justru mean-nya lebih tinggi** (0,362 vs
+  0,272) dan CI-nya [0,299, 0,425] baru menyentuh ligand-only di ujung bawah -- menambah data BindingNet
+  (bahkan yang sudah bersih dari kebocoran) TIDAK terlihat membantu dibanding sekadar memakai lebih
+  banyak CrossDocked pada jumlah baris yang sama.
+- **Arm C vs Arm B-match (efek filter leakage semata, komposisi identik)**: 0,272 vs 0,278, CI tumpang
+  tindih besar -- filter kebocoran senyawa (buang 423/124.973 baris) TIDAK menggeser performa secara
+  terlihat. Kabar baik metodologis: temuan Arm B sebelumnya tidak banyak digelembungkan oleh kebocoran
+  itu, meski tetap benar secara prinsip untuk dibersihkan.
+
+**Disclosure wajib sebelum dipakai di tesis**: perbandingan di atas murni DESKRIPTIF (titik estimasi +
+CI marginal per arm, N=3 seed per arm) -- BUKAN uji signifikansi berpasangan. Mengikuti disiplin proyek
+ini sendiri ([[project_paired_comparison_pitfall]]), klaim "Arm A > Arm C" tidak boleh dinyatakan sebagai
+signifikan tanpa `paired_r2_comparison` (stats_common.py) dijalankan di atas BARIS EVALUASI yang sama
+antar arm -- ini belum dikerjakan (n_epochs/val_n per seed konsisten jadi secara teknis bisa dipasangkan,
+tapi belum dijalankan). Kalau item 9 (rebuild tesis) perlu klaim perbandingan formal, jalankan uji
+berpasangan itu dulu sebelum menulis kesimpulan kuat di bab hasil.
+
+### 9. Penulisan tesis (satu rebuild di akhir, jangan tiap perubahan) -- SELESAI 2026-10-15 19:58
+
+**Rebuild dieksekusi SEKALI, sesuai rencana.** Output: `Thesis_Coupled_Guidance_SBDD.docx/.pdf`,
+**226 halaman** (naik dari 148), **64 referensi tersitasi, nol unused, nol KeyError**. Build berhasil
+pass pertama coba (make_figures.py bersih, build_thesis.py 2-pass bersih).
+
+**Judul diganti** (lihat [[project_thesis_document]] -- keputusan user 2026-10-15, tesis belum
+terdaftar resmi, "judul ngikut hasil"): dari "Coupled Affinity-Synthesizability Guidance for..."
+(menyiratkan metode baru yang berhasil, tidak sesuai hasil) menjadi **"Diagnosing Guidance Failure in
+Diffusion-Based Structure-Based Drug Design: A Leakage-Safe, Falsification-Driven Study"**.
+
+**Yang ditambahkan (bab mana, bukan sekadar daftar poin):**
+- **Bab IV** (bab terbesar yang ditambah): 4 seksi baru sebelum "Summary of the Chapter" --
+  (1) audit sumber informasi 8-blok (ladder representasi: ligand-only 0,353 vs EGNN 0,342/0,344,
+  pocket-only 0,289, ecif raw/norm confound, PLIP typed-interaction collapse ke proksi ukuran R²
+  0,08->0,32); (2) studi komposisi data BindingNet (Arm A 0,362 vs Arm C 0,272, filter kebocoran
+  senyawa sebelum bukan sesudah run produksi); (3) dekomposisi prior kelas (y-randomisasi
+  dalam-target: 70% deskriptor, 90% EGNN sendiri, jendela daya 0,22 lebih sempit dari 1 CI);
+  (4) diagnosa kegagalan via activity cliffs + MMP + stratifikasi famili protein (semua null/tidak
+  signifikan, memperkuat temuan prior kelas). Summary of the Chapter ditulis ulang total.
+- **Bab VI** (Track C): seksi baru "A Positive Control" -- hasil RQ2 lengkap (tabel, confound ukuran
+  didisclose langsung di tabel yang sama, interpretasi F1/F2/F3, sitasi wajib BoKDiff + Thomas 2021).
+- **Bab I**: problem statement, related work, objmap table (+3 baris baru), summary of results,
+  organization -- semua diperbarui memasukkan RQ2 + audit representasi.
+- **Bab II**: subbab baru "QSAR Controls" (Rucker/van Tilborg/Kwapien), tabel positioning +baris
+  BoKDiff, "this thesis" row diperbaiki (PLIP dulu "designed, not tested" sekarang "tested, Ch IV.6").
+- **Bab III**: subbab baru "Three candidate mechanisms for a guidance failure" -- memformalkan
+  kerangka F1 (sinyal tak informatif) / F2 (mekanisme salah) / F3 (objektif bisa dicurangi).
+  **PENTING: diberi label F1/F2/F3, BUKAN M1/M2/M3** -- Bab VIII (Track E) SUDAH memakai M1/M2/M3
+  untuk nama metrik lain (pooled R², within-target Spearman, korelasi heavy-atom) sejak sebelum
+  sesi ini; dicek via grep SEBELUM nulis bab lain yang memakai kerangka ini, tabrakan dihindari.
+- **Bab IX** (Diskusi): paragraf "Consistent" di "Grading the explanations" ditulis ulang -- klaim
+  lama "bukti sebab-bersama bersifat tidak langsung" sekarang diganti karena RQ2 memberi bukti
+  LANGSUNG. Tabel grand & ces +baris positive control. Tensi BADGER diperkuat (harness terbukti
+  sensitif, jadi bukan itu penyebab diskrepansi). +2 methodological finding baru.
+- **Bab X** (Kesimpulan): kesimpulan (1) dikualifikasi (Pearson 0,58-0,65 argumen BOCOR, sesuai
+  rencana lama); kesimpulan (2) ditulis ulang total (positive control jadi temuan tunggal terpenting);
+  (4)(5) diperluas + (5a)(5b) baru (prior kelas, BindingNet); Contributions 5->8 poin; Limitations
+  +gray zone scaffold 40,1% + batas positive control (hanya selection-based, bukan gradient).
+- **Abstrak**: ditulis ulang, sekarang menyebut RQ2 dan audit representasi sebagai temuan inti.
+- **refs.py**: +5 sitasi baru (rucker2007, vantilborg2022, kwapien2022, thomas2021, bokdiff2025),
+  ditandai `v='kn'` (dari log riset proyek, belum diverifikasi DOI individual -- SEBELUM submit
+  resmi, verifikasi dulu sesuai konvensi refs.py sendiri).
+
+**Yang DIKECUALIKAN dari rebuild ini, sengaja**: suite ketidakpastian A1-A1g, ternary QAT, dan
+pengecekan ekuivariansi (Zhou 2026) TIDAK dimasukkan -- itu benang riset terpisah (bukan tentang
+guidance), rencana item 9 yang lama (ditulis sebelum sesi ini) juga tidak pernah menyebutkannya.
+Kalau nanti mau dimasukkan, itu keputusan scoping baru yang perlu dikonfirmasi eksplisit, bukan
+diasumsikan.
+
+**Belum dikerjakan dari rencana lama (poin e)**: beberapa sitasi yang disebut di rencana lama
+(Mattsson 2026, Bret 2026, Deng 2023, Hernandez-Garrido 2023, Landrum 2024, Seitzer 2022, Wallace
+2023, Gao 2022) TIDAK ditambahkan sesi ini -- tidak ada detail bibliografi yang cukup tersimpan di
+TASKS.md/memory untuk mengutipnya tanpa risiko fabrikasi. Kalau dibutuhkan, cari dulu detail lengkapnya
+sebelum menambah entri refs.py.
+
+**Verifikasi dijalankan sebelum build** (bukan sesudah, supaya build pertama bersih): semua key tabel
+{tab:x} dicek match dengan definisi @tab x (45=45, nol hilang); semua sitasi [@key] dicek ada di
+refs.py (nol undefined); sintaks markup dicek konsisten (tidak ada `@{` yang salah tempat tertinggal
+dari draf Bab I/II Week 5 yang terpisah).
 
 ### 10. RQ4 — conformal-gated guidance -- DISELESAIKAN 2026-10-13 (tanpa GPU, lewat pra-registrasi)
 **Apa:** terapkan gradien guidance / terima kandidat rejection-sampling HANYA di tempat interval conformal

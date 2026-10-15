@@ -39,8 +39,8 @@ FONT = 'Times New Roman'
 TEXT_W = 8.27 - 1.5 - 1.0          # A4 width minus margins (in)
 
 META = dict(
-    title_lines=['COUPLED AFFINITY-SYNTHESIZABILITY GUIDANCE FOR', 'TARGET-CONDITIONAL MOLECULAR DIFFUSION IN', 'STRUCTURE-BASED DRUG DESIGN'],
-    title_inline='Coupled Affinity-Synthesizability Guidance for Target-Conditional Molecular Diffusion in Structure-Based Drug Design',
+    title_lines=['DIAGNOSING GUIDANCE FAILURE IN DIFFUSION-BASED', 'STRUCTURE-BASED DRUG DESIGN: A LEAKAGE-SAFE,', 'FALSIFICATION-DRIVEN STUDY'],
+    title_inline='Diagnosing Guidance Failure in Diffusion-Based Structure-Based Drug Design: A Leakage-Safe, Falsification-Driven Study',
     name='[[STUDENT NAME]]', sid='[[STUDENT IDENTIFICATION NUMBER]]', when='[[MONTH, YEAR OF THE DEFENSE]]',
     degree='[[MAGISTER — academic degree as listed in the student handbook]]',
     advisor='[[Your Advisor Name]]',

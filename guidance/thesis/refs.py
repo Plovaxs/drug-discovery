@@ -75,6 +75,14 @@ REFS = {
     # --- statistics --------------------------------------------------------------------------------------------------
     'benjamini1995': dict(s=('Benjamini', 1995), v='src', t='Y. Benjamini and Y. Hochberg, “Controlling the false discovery rate: A practical and powerful approach to multiple testing,” *J. R. Stat. Soc. B*, vol. 57, no. 1, pp. 289–300, 1995.'),
     'efron1979': dict(s=('Efron', 1979), v='src', t='B. Efron, “Bootstrap methods: Another look at the jackknife,” *Ann. Statist.*, vol. 7, no. 1, pp. 1–26, 1979.'),
+    # --- QSAR controls, activity cliffs, best-of-N selection (added 2026-10-15, item 9 rebuild) -------------------------
+    # 'kn' = from this project's own literature-search log (author/year/venue), not individually re-verified for this
+    # draft; complete DOI/page verification before final submission, following this file's own documented convention.
+    'rucker2007': dict(s=('Rücker', 2007), v='kn', t='C. Rücker, G. Rücker, and M. Meringer, “y-Randomization and its variants in QSPR/QSAR,” *J. Chem. Inf. Model.*, vol. 47, no. 6, pp. 2345–2357, 2007.'),
+    'vantilborg2022': dict(s=('van Tilborg', 2022), v='kn', t='D. van Tilborg, A. Alenicheva, and F. Grisoni, “Exposing the limitations of molecular machine learning with activity cliffs,” *J. Chem. Inf. Model.*, vol. 62, no. 23, pp. 5938–5951, 2022.'),
+    'kwapien2022': dict(s=('Kwapien', 2022), v='kn', t='K. Kwapien, E. Nittinger, J. He, C. Margreitter, A. Voronov, and C. Tyrchan, “Implications of additivity and nonadditivity for machine learning and deep learning models in drug design,” *ACS Omega / J. Chem. Inf. Model.*, 2022.'),
+    'thomas2021': dict(s=('Thomas', 2021), v='kn', t='M. Thomas, R. T. Smith, N. M. O’Boyle, C. de Graaf, and A. Bender, “Comparison of structure- and ligand-based scoring functions for deep generative models: a GPCR case study,” *J. Cheminform.*, vol. 13, art. 39, 2021.'),
+    'bokdiff2025': dict(s=('Khodabandeh Yalabadi', 2025), v='kn', t='N. Khodabandeh Yalabadi, M. Yazdani-Jahromi, and O. Garibay, “BoKDiff: Best-of-K and best-of-N alignment for diffusion-based structure-based drug design,” arXiv:2501.15631, 2025 (preprint).'),
 }
 
 
