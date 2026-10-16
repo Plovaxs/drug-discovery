@@ -18,6 +18,32 @@ Chapter mini-markup (one directive per line, paragraphs separated by blank lines
 """
 import glob
 import os
+
+#: The exact, ordered list of chapter/appendix sources the build reads. Explicit rather than a
+#: bare `glob.glob('chapters/*.txt')`: a blanket glob includes anything placed in the directory,
+#: with no record of what was INTENDED to be there. That is exactly how the orphan-fragment bug
+#: reached a committed PDF -- a generator's leftover intermediate file sat in `chapters/` and the
+#: glob read it as if it were a chapter, with nothing to say it should not have been. An explicit
+#: manifest makes "what the thesis is built from" an auditable, version-controlled fact instead of
+#: a side effect of whatever happens to be in the directory on build day; `check_manifest_matches_
+#: directory()` below still verifies this list against the directory contents, so the manifest and
+#: the directory cannot silently drift apart in either direction.
+CHAPTER_FILES = [
+    '00_abstract.txt',
+    '01_introduction.txt',
+    '02_literature.txt',
+    '03_methodology.txt',
+    '04_predictor_quality.txt',
+    '05_tracks_ab.txt',
+    '06_track_c.txt',
+    '07_track_d.txt',
+    '08_track_e.txt',
+    '09_discussion.txt',
+    '10_conclusion.txt',
+    '11_appendices.txt',
+    '11z_effect_sizes.txt',
+]
+import hashlib
 import re
 import subprocess
 import sys
@@ -161,12 +187,190 @@ def check_section_refs(files):
         raise SystemExit('section-reference check failed:\n  ' + '\n  '.join(sorted(set(problems))))
 
 
+def check_no_orphan_fragments(files):
+    """Fail when a file under chapters/ would attach itself to whatever chapter precedes it,
+    instead of starting one of its own.
+
+    `files = sorted(glob.glob('chapters/*.txt'))` picks up every file in the directory with no
+    exclusion list. A file that opens with `@sec`/`@sub` and never declares its own `@ch`/
+    `@appendix` is not a chapter in its own right: the parser (which carries chapter/section state
+    across files in sorted order, exactly as it does across lines of one file) silently tacks its
+    content onto the end of whichever `@ch`/`@appendix` the previous file in sort order left open.
+
+    This happened for real: `make_chembl_expansion.py` writes a `@sub`-only fragment meant to be
+    copied once into `11_appendices.txt` and then discarded, but the fragment was left sitting in
+    `chapters/` afterward. The glob picked it up a second time, with no heading of its own, and its
+    content silently reappeared as a bogus second copy, numbered "E.7.1", stitched onto the tail of
+    Appendix E -- found by an external reviewer reading the finished PDF, not by anything in this
+    build. Every guard above it (markup balance, inline directives, section references) passed,
+    because none of them check that a file is allowed to open new content in the first place.
+
+    The fix in both directions: `make_chembl_expansion.py` now writes outside `chapters/`
+    (`guidance/thesis/fragments/`), and this guard makes sure a second file like it can never be
+    silently absorbed into the build again, regardless of where anyone's generator happens to save
+    its output.
+    """
+    problems = []
+    for f in files:
+        name = os.path.basename(f)
+        has_own_heading = False
+        for ln in open(f, encoding='utf-8'):
+            if ln.startswith('#'):
+                continue
+            if ln.startswith('@ch ') or ln.startswith('@appendix ') or ln.startswith('@abstract'):
+                has_own_heading = True
+                break
+            if ln.strip():
+                break  # first non-comment, non-blank line is something else -- stop looking
+        if not has_own_heading:
+            problems.append(name)
+    if problems:
+        raise SystemExit('orphan-fragment check failed: these files under chapters/ do not open '
+                         "their own @ch/@appendix, so their content would silently attach to "
+                         'whichever chapter precedes them in sort order instead of being its own '
+                         'chapter: ' + ', '.join(sorted(problems)))
+
+
+def check_manifest_matches_directory(files):
+    """The explicit CHAPTER_FILES manifest and the actual contents of chapters/ must name exactly
+    the same files. A file present on disk but missing from the manifest is the orphan-fragment
+    risk CHAPTER_FILES exists to prevent, reintroduced through a different door (someone adds a
+    file and forgets to list it, rather than a generator leaving one behind); a name present in
+    the manifest but missing on disk means the manifest itself has gone stale. Either direction is
+    reported, not just one."""
+    on_disk = {os.path.basename(f) for f in files}
+    listed = set(CHAPTER_FILES)
+    extra = sorted(on_disk - listed)
+    missing = sorted(listed - on_disk)
+    problems = []
+    if extra:
+        problems.append(f'present in chapters/ but not in CHAPTER_FILES (never read): {extra}')
+    if missing:
+        problems.append(f'listed in CHAPTER_FILES but missing from chapters/: {missing}')
+    if problems:
+        raise SystemExit('manifest check failed: ' + '; '.join(problems))
+
+
+def replace_exactly_once(text, old, new):
+    """`text.replace(old, new, 1)`, except a match count other than exactly 1 is an error instead
+    of a silent no-op or a silent over-replace.
+
+    Written after a real bug of exactly this shape: a one-line fix (renaming "three" to "four" in
+    a sentence naming four targets) was applied with a bare `.replace()` whose target string no
+    longer matched the current text -- the surrounding sentence had already changed since the
+    first attempt -- so the call silently replaced nothing, the fix was believed to have been
+    made, and the error persisted uncaught through a full session until an external review found
+    it by reading the rendered PDF. A bare `str.replace` cannot distinguish "nothing to fix" from
+    "the fix silently failed"; this can, and is intended to replace ad hoc `assert s.count(old)==1`
+    checks scattered through this project's one-off editing scripts with a single, reusable,
+    load-bearing function."""
+    count = text.count(old)
+    if count != 1:
+        raise ValueError(f'replace_exactly_once: expected exactly 1 match for {old[:80]!r}, '
+                         f'found {count}')
+    return text.replace(old, new, 1)
+
+
+#: Minimum body length (characters) before a repeated fingerprint is worth a human's attention.
+#: Below this, two sections sharing a short, generic sentence ("Not applicable." or a one-line
+#: pointer to another section) is an unremarkable, common pattern, not a sign of copy-paste.
+FINGERPRINT_MIN_CHARS = 200
+
+
+def warn_on_duplicate_body_content(blocks):
+    """Flag two differently-titled sections whose BODY TEXT is near-identical -- a class of
+    duplication the title-based guards cannot see by construction, since they key on titles.
+
+    Suggested by an external reviewer after the real orphan-fragment incident: that bug happened
+    to duplicate both the title and the body together, but a hand-edited duplication (copying one
+    subsection's prose into another under a new heading, then drifting only slightly) would carry
+    a different title and slip past every check above this one. Deliberately a WARNING, not a
+    build failure: unlike a verbatim duplicate title, which has no legitimate reason to exist, two
+    sections can legitimately share a long passage on purpose (a boundary condition restated for a
+    reader who skips ahead, a limitation repeated in both a chapter and the conclusion), and a hard
+    failure on every such case would train whoever maintains this build to silence the check rather
+    than read it. Short sections are excluded (see FINGERPRINT_MIN_CHARS) so two one-line sections
+    do not drown real warnings in noise.
+    """
+    label, kind, title = None, None, None
+    sections = []  # (label, kind, title, concatenated body text)
+    buf = []
+    def flush():
+        if title is not None and buf:
+            sections.append((label, kind, title, ' '.join(buf)))
+    for b in blocks:
+        if b[0] in ('chapter', 'appendix'):
+            flush(); buf = []; label, kind, title = b[1], None, None
+        elif b[0] in ('sec', 'sub'):
+            flush(); buf = []; kind, title = b[0], b[1]
+        elif b[0] == 'para':
+            buf.append(b[1])
+    flush()
+
+    seen = {}  # normalised-text fingerprint -> first (label, kind, title) that had it
+    warned = []
+    for lbl, knd, ttl, body in sections:
+        norm = re.sub(r'\s+', ' ', body).strip()
+        if len(norm) < FINGERPRINT_MIN_CHARS:
+            continue
+        fp = hashlib.sha256(norm.encode()).hexdigest()
+        if fp in seen:
+            olbl, okind, otitle = seen[fp]
+            warned.append(f'"{lbl} {ttl}" and "{olbl} {otitle}" have word-for-word identical body '
+                          f'text ({len(norm)} chars) -- probably a duplicated subsection under two '
+                          f'different titles, not two sections that happen to agree')
+        else:
+            seen[fp] = (lbl, knd, ttl)
+    if warned:
+        print(f'\nWARNING: {len(warned)} pair(s) of sections have identical body text under '
+             f'different titles (not a build failure -- read before dismissing):')
+        for w in warned:
+            print('  -', w)
+    return warned
+
+
+def check_no_duplicate_headings(blocks):
+    """No two @sec titles, and no two @sub titles, may repeat verbatim within one @ch/@appendix.
+
+    This is the check that would have caught the real bug (a verbatim-duplicate @sub title within
+    Appendix E) even if the duplicate copy HAD carried a syntactically valid heading of its own --
+    which OrphanFragmentGuard's check does not cover, since that guard only catches a fragment
+    with NO heading at all. The two checks are deliberately independent: this one operates on the
+    already-parsed, already-numbered block list (after chapter/section context has been resolved),
+    not on raw file text, so it still catches a duplicate introduced by copy-pasting a whole
+    well-formed subsection by hand, not only one assembled by a generator's leftover file.
+
+    Scoped to (chapter label, directive kind) rather than globally: a `@sec Design` and an
+    unrelated `@sub Design` nested under a different part of the same chapter are a normal,
+    unremarkable pattern (Chapter VI has exactly this -- the chapter's own top-level design and,
+    separately, "VI.5.1 Design" for its positive-control sub-experiment) and must not be flagged;
+    only an exact title repeated at the SAME level within the SAME chapter is the anomaly."""
+    seen = {}  # (chapter_label, kind) -> {title, ...} already seen in this chapter/appendix
+    problems = []
+    label = None
+    for b in blocks:
+        kind = b[0]
+        if kind in ('chapter', 'appendix'):
+            label = b[1]           # ('chapter'|'appendix', label, title) -- b[1] is the label
+        elif kind in ('sec', 'sub'):
+            title = b[1]           # ('sec'|'sub', title) -- only two elements
+            key = (label, kind)
+            if title in seen.setdefault(key, set()):
+                problems.append(f'{label}: "{title}" appears twice as a {kind}')
+            else:
+                seen[key].add(title)
+    if problems:
+        raise SystemExit('duplicate-heading check failed:\n  ' + '\n  '.join(problems))
+
+
 def parse_sources():
     blocks, abstract, abbrevs = [], None, []
-    files = sorted(glob.glob(os.path.join(HERE, 'chapters', '*.txt')))
+    files = [os.path.join(HERE, 'chapters', name) for name in CHAPTER_FILES]
+    check_manifest_matches_directory(sorted(glob.glob(os.path.join(HERE, 'chapters', '*.txt'))))
     check_markup_balance(files)
     check_inline_directives(files)
     check_section_refs(files)
+    check_no_orphan_fragments(files)
     for f in files:
         lines = open(f, encoding='utf-8').read().split('\n')
         i = 0
@@ -221,6 +425,8 @@ def parse_sources():
                 blocks.append(('tab', key, cap, rows, note)); i += 1; continue
             para.append(ln); i += 1
         flush()
+    check_no_duplicate_headings(blocks)
+    warn_on_duplicate_body_content(blocks)
     return blocks, abstract
 
 
@@ -829,20 +1035,68 @@ def git_state():
     return s
 
 
-def verify_output(pdf, tabs, figs):
+def _verify_no_duplicate_headings_in_pdf(pages, toc):
+    """Independent of every source-level check: count how many times each numbered heading
+    actually appears in the RENDERED PDF body, not in the parsed block list.
+
+    `check_no_duplicate_headings` (in parse_sources) catches a duplicate before any rendering
+    happens, which is cheap and fails fast -- but it can only see what the parser saw. This check
+    instead reads the artefact a reader actually opens, which is the only thing that can catch a
+    duplication introduced anywhere downstream of parsing (in `assign_numbers`, in `build_docx`,
+    or in a future refactor of either) rather than only in the chapter sources. It exists because
+    the one duplication bug this project actually shipped (a second, orphaned copy of "Was CD38 a
+    pattern or a one-off?", numbered "E.7.1", found in the committed PDF by an external reviewer)
+    was invisible to every check that stopped at the source text -- the source-level guard added
+    afterward is necessary but, on its own, is exactly the kind of single point of failure that
+    let the original bug through once already.
+
+    A heading is matched the same way `heading()` renders it: `f'{num}\\t'` immediately followed
+    by the title, which appears exactly where `build_docx` writes the heading paragraph and
+    nowhere else (a List-of-Tables/Figures or Table-of-Contents entry uses dot leaders before its
+    page number and is excluded by requiring no `...` on the matched line).
+    """
+    all_lines = [ln for p in pages for ln in p.split('\n')]
+    problems = []
+    seen = {}
+    for level, num, title, _xref in toc:
+        if level not in (1, 2) or not title:
+            continue  # only numbered @sec/@sub entries; chapter/appendix title pages differ in layout
+        key = (num, title)
+        if key in seen:
+            continue  # a stale/duplicate TOC entry is check_section_refs'/assign_numbers' concern
+        seen[key] = True
+        # A heading paragraph renders flush against the left margin, as "<num><TAB><title>...".
+        # A Table-of-Contents entry for the same heading renders the identical text INDENTED (by
+        # its nesting level) and, in this document's layout, carries no dot leader before its page
+        # number -- so a leader is not a reliable way to exclude it, but the indentation is:
+        # matching on the UNSTRIPPED line and requiring the number to start at column 0 excludes
+        # every TOC/List-of-Tables/List-of-Figures entry while still matching the real heading.
+        pat = re.compile(r'^' + re.escape(num) + r'\s+' + re.escape(title[:40]))
+        n_hits = sum(1 for ln in all_lines if pat.match(ln))
+        if n_hits > 1:
+            problems.append(f'heading "{num} {title}" appears {n_hits} times in the rendered PDF '
+                            f'body (expected exactly 1) -- a duplicate section survived to the '
+                            f'final artefact')
+    return problems
+
+
+def verify_output(pdf, tabs, figs, toc=()):
     """Post-build checks for rendering faults that are invisible in the .docx but corrupt the PDF.
 
-    Both guard real bugs that shipped silently in an earlier build and were found only by reading the
-    rendered PDF, not the source:
+    All three guard real bugs that shipped silently in an earlier build and were found only by
+    reading the rendered PDF, not the source:
       1. A caption whose label touches its text ("Table E.1Test-set ..."), caused by a tab with no tab
          stop wide enough to advance into.
       2. A List-of-Tables/Figures page number pointing at a prose cross-reference instead of the real
          caption, caused by a caption-matching pattern that assumed a particular separator.
+      3. A numbered heading appearing more than once in the rendered body (see
+         `_verify_no_duplicate_headings_in_pdf`).
     Returns a list of human-readable problems; empty means clean.
     """
     pages = pdf_pages(pdf)
     all_lines = [ln for p in pages for ln in p.split('\n')]
     problems = []
+    problems += _verify_no_duplicate_headings_in_pdf(pages, toc)
     for kind, lst in (('Table', tabs), ('Figure', figs)):
         for num, cap in lst:
             # Only LINE-INITIAL occurrences are captions. An occurrence inside a sentence is a prose
@@ -986,7 +1240,7 @@ def main():
         print('remaining differences after pass 3:', sum(1 for k in pages2 if pages2[k] != pages3[k]))
     print(f'PDF pages: {n2}; references cited: {len(bld.cited)}; unused reference keys: {unused}')
     words = sum(len(re.findall(r"\w+", b[1])) for b in bld.blocks if b[0] == 'para')
-    problems = verify_output(pdf, tabs, figs)
+    problems = verify_output(pdf, tabs, figs, toc)
     if problems:
         print(f'\nBUILD VERIFICATION FAILED ({len(problems)} problem(s)):')
         for p in problems:

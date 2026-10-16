@@ -2866,3 +2866,119 @@ analisis, representation_ladder.py 219/219 nilai tetap identik setelah dedup. Ta
   dampak saat ini).
 - Tidak melakukan "overengineering" kosmetik (type hints, reformat, dll) -- di luar pola nilai
   yang sudah terbukti sesi ini (guard defensif + test, bukan gaya penulisan).
+
+## BUG NYATA DITEMUKAN REVIEWER EKSTERNAL, SAYA SEMPAT MENOLAKNYA SALAH (2026-10-16, lanjutan ke-5)
+
+User menempel balasan reviewer eksternal kedua yang mengecek ulang sanggahan saya. Enam dari
+tujuh poin disepakati reviewer bahwa saya benar. TAPI satu klaim spesifik -- duplikasi Apendiks E
+(E.4.3 vs "E.7.1") -- saya tolak sebelumnya dengan cek yang TIDAK CUKUP (cuma awk-scan struktur
+sumber, tidak pernah ekstrak PDF jadi). Reviewer itu mengecek ulang dan menegaskan klaimnya,
+lengkap dengan nomor halaman (226 vs 242).
+
+### VERIFIKASI: reviewer benar, saya salah
+`pdftotext` pada PDF yang SUDAH TER-COMMIT (`9e3e56e`) menunjukkan 4 kemunculan judul
+"Was CD38 a pattern or a one-off?": 2 yang sah (E.4.3, daftar isi + badan) DAN 2 duplikat liar
+(E.7.1, nyasar nempel di ekor Apendiks E tepat sebelum Apendiks F mulai).
+
+### Akar penyebab
+`build_thesis.py:166` -- `glob.glob('chapters/*.txt')` TANPA daftar pengecualian. Script generator
+`make_chembl_expansion.py` menulis fragmen `@sub`-only ke `chapters/11y_chembl_expansion.txt`,
+dimaksudkan untuk DISALIN SEKALI ke `11_appendices.txt` lalu DIBUANG -- tapi saya lupa
+menyingkirkannya. Glob membacanya KEDUA KALI; karena tak punya `@ch`/`@appendix` sendiri, isinya
+diam-diam menempel ke bab/lampiran manapun yang masih terbuka pada urutan file sebelumnya --
+persis di ekor Apendiks E. SEMUA guard lain (markup balance, inline directive, section-ref) LOLOS,
+karena tak satu pun memeriksa apakah sebuah file BERHAK membuka konten baru sama sekali.
+
+### Bug KEDUA ditemukan saat memperbaiki yang pertama
+Perbaikan "three best-studied targets" -> "four" yang saya kira sudah diterapkan sesi sebelumnya
+TERNYATA tidak pernah benar-benar tersimpan (replace() diam-diam gagal match 0 kali, kemungkinan
+teks sekitarnya sudah berubah sejak upaya pertama). Ditemukan lewat diff ketat, diperbaiki dengan
+assertion count==1 supaya kegagalan senyap semacam ini loud di masa depan.
+
+### Perbaikan
+1. `make_chembl_expansion.py`: path output dipindah KELUAR dari `chapters/`
+   (`guidance/thesis/fragments/chembl_expansion.txt`) -- akar penyebab kelas bug ini dihilangkan,
+   bukan cuma gejalanya. Generator JUGA diajari mengeluarkan `{fig:chemblexp}` + directive `@fig`
+   yang sebelumnya cuma ditambah manual ke `11_appendices.txt` (supaya generator dan naskah final
+   tidak bisa menyimpang diam-diam lagi).
+2. `chapters/11y_chembl_expansion.txt` dihapus dari `chapters/` DAN dari git (`git rm --cached`).
+3. Guard build-time baru: `check_no_orphan_fragments()` -- setiap file yang lolos glob
+   `chapters/*.txt` WAJIB mendeklarasikan `@ch`/`@appendix`/`@abstract` sendiri. Diuji mutasi:
+   skenario PERSIS kejadian nyata ini (file `@sub`-only tanpa heading) dikembalikan, build gagal
+   dengan benar.
+4. `test_chembl_expansion_is_not_stale` TERNYATA JUGA cacat dengan cara yang sama: masih menunjuk
+   path lama yang baru saja dihapus, sehingga diam-diam ter-skip dan dilaporkan "PASS" tanpa
+   benar-benar menguji apa pun -- instance KEDUA dari masalah akar yang sama (pemeriksaan yang
+   targetnya diam-diam lenyap). Ditulis ulang untuk memeriksa terhadap `11_appendices.txt`
+   (sumber kebenaran yang sebenarnya), diuji mutasi: judul dimutasi di naskah, test gagal benar.
+5. 7 test baru (`OrphanFragmentGuard`). Suite file tesis: 34 -> 40 test.
+
+### VERIFIKASI AKHIR
+PDF turun dari 280 -> **278 halaman** (persis hilangnya 1 duplikat subbab + figurnya).
+`pdftotext` dikonfirmasi: "E.7.1" sudah tidak ada sama sekali di PDF. Suite proyek: 18 suite,
+0 gagal, 0 skip. Number check 96/96. Reproduksibilitas 7/7.
+
+### Pelajaran jujur yang dicatat
+Sanggahan saya sebelumnya ke reviewer pertama HANYA mengecek STRUKTUR SUMBER (`awk` di file
+`.txt`), TIDAK PERNAH mengekstrak PDF JADI untuk verifikasi langsung -- padahal itulah yang
+sebenarnya dibaca pembaca/penguji. Bug ini lolos dari SELURUH guard build-time yang saya bangun
+sepanjang sesi karena tak satu pun dari guard itu memeriksa kelas masalah "file yang tak berhak
+ada di sana sama sekali" sampai sekarang. Reviewer eksternal itu benar, dan verifikasi saya
+sebelumnya tidak cukup dalam.
+
+## PENGERASAN LANJUTAN ATAS SARAN REVIEWER (2026-10-16, lanjutan ke-6)
+
+Reviewer eksternal menerima perbaikan bug duplikasi, lalu mengusulkan 3 penguatan konkret.
+Ketiganya dikerjakan, bukan sekadar nasihat umum -- semuanya langsung relevan dengan bug nyata
+yang baru ditemukan:
+
+### 1. Manifest eksplisit menggantikan glob buta
+`CHAPTER_FILES` -- daftar terurut eksplisit menggantikan `glob.glob('chapters/*.txt')` tanpa syarat.
+`check_manifest_matches_directory()` baru memverifikasi DUA ARAH: file di disk yang tak ada di
+manifest (TAK AKAN TERBACA -- persis risiko yang menyebabkan bug E.7.1), dan nama di manifest yang
+filenya sudah tak ada (manifest basi). Diuji mutasi kedua arah.
+
+### 2. `replace_exactly_once()` -- mencegah kelas bug "three->four" terulang
+Helper bersama yang melempar `ValueError` kalau jumlah match bukan persis 1 (bukan 0, bukan >1).
+Ini bukan cuma menambal gejala -- ini mencegah KELAS bug yang sama persis menyebabkan perbaikan
+"three->four" sebelumnya diam-diam gagal tanpa pernah terlihat gagal.
+
+### 3. Guard duplikasi judul -- DUA LAPIS independen
+- **Level sumber** (`check_no_duplicate_headings`): tidak boleh ada dua judul `@sec`/`@sub` yang
+  sama persis dalam satu bab/lampiran yang sama. Di-scope per LEVEL (sec vs sub terpisah) supaya
+  tidak false-positive pada pola sah "VI.1 @sec Design" vs "VI.5.1 @sub Design" (dicek dulu secara
+  empiris sebelum guard diaktifkan -- memang ada 1 pengulangan sah, tidak flagged, benar).
+  Diuji mutasi: duplikasi SAH (punya heading sendiri, BUKAN orphan) disuntik, guard menangkap --
+  ini LEBIH KUAT dari guard orphan-fragment, karena menangkap kasus yang headingnya valid.
+- **Level render** (`_verify_no_duplicate_headings_in_pdf`): membaca PDF JADI, bukan sumber --
+  persis permintaan eksplisit reviewer ("validasi PDF harus dijalankan setelah build terakhir").
+  Independen total dari parser -- akan menangkap duplikasi dari jalur rendering manapun, bukan
+  cuma dari parsing sumber.
+
+### Bug SAYA SENDIRI ditemukan saat menulis guard-guard ini (berturut-turut, ditemukan sebelum merusak apa pun)
+1. `check_no_duplicate_headings` pertama kali ditulis dengan asumsi tuple shape SALAH (`b[2]`
+   padahal `('sec', title)` cuma 2 elemen) -- akan `IndexError` kalau sempat dijalankan. Ditemukan
+   dan diperbaiki sebelum pernah dipanggil.
+2. Tag block salah diasumsikan `'ch'`/`'ap'`, padahal parser pakai `'chapter'`/`'appendix'` --
+   kalau tak diperbaiki, grouping per-bab TAK PERNAH ter-update, guard jadi salah scope total
+   (checking globally, bukan per-chapter) secara SENYAP (tidak crash, cuma salah). Ditemukan
+   lewat pembacaan ulang kode sebelum menjalankan.
+3. **Guard render-level PERTAMA KALI dijalankan langsung MEMBERI 15 FALSE POSITIVE** pada naskah
+   yang sudah bersih (sudah dikonfirmasi bersih sebelumnya lewat pdftotext manual). Diselidiki:
+   asumsi saya "entri Daftar Isi selalu pakai titik leader (....)" TERNYATA SALAH untuk dokumen
+   ini -- entri TOC-nya pakai indentasi, bukan leader titik. Ditemukan dengan membongkar baris
+   mentah PDF langsung (bukan dipercaya begitu saja), diperbaiki dengan memeriksa indentasi
+   (bukan leader titik) untuk membedakan entri TOC dari heading badan sungguhan. False positive
+   ini sekarang jadi regression test permanen
+   (`test_pdf_level_detector_does_not_flag_an_indented_table_of_contents_entry`).
+
+### VERIFIKASI AKHIR
+Suite file tesis: 40 -> **51 test**. Build 278 halaman bersih (tak berubah dari sebelumnya --
+penguatan ini TIDAK mengubah isi, murni infrastruktur). Suite proyek: 18/18. Reproduksibilitas:
+7/7. `pdftotext` dikonfirmasi ulang: "E.7.1" tetap tidak ada.
+
+### Catatan jujur
+Guard render-level yang BARU SAJA dibuat untuk "jangan percaya hijau tanpa tahu persis apa yang
+diperiksa" -- SENDIRI sempat false-positive pada percobaan pertamanya, karena asumsi yang tak
+diverifikasi (leader titik). Diperbaiki dengan cara yang sama persis yang dianjurkan: baca BUKTI
+MENTAH (baris PDF asli) alih-alih mempercayai asumsi. Ironi yang pas dengan topik tesis itu sendiri.

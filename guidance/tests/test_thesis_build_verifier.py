@@ -209,6 +209,217 @@ class SectionRefGuard(unittest.TestCase):
         bt.check_section_refs(files)
 
 
+class ManifestAndDuplicateHeadingGuard(unittest.TestCase):
+    """Three further guards added in direct response to the same real incident as
+    OrphanFragmentGuard (an external reviewer finding a duplicated appendix subsection,
+    "E.7.1", in the committed PDF): an explicit chapter-file manifest instead of a bare glob,
+    a source-level check that no two @sec/@sub titles repeat within one chapter/appendix, and a
+    render-level check of the same thing against the actual rendered PDF text, as a layer that
+    does not depend on the source-level parser having seen the problem correctly."""
+
+    def test_manifest_catches_a_file_present_but_not_listed(self):
+        import tempfile
+        d = tempfile.mkdtemp()
+        open(os.path.join(d, 'listed.txt'), 'w').close()
+        open(os.path.join(d, 'stray.txt'), 'w').close()
+        files = [os.path.join(d, 'listed.txt')]
+        old = bt.CHAPTER_FILES
+        bt.CHAPTER_FILES = ['listed.txt']
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                bt.check_manifest_matches_directory([os.path.join(d, 'stray.txt'),
+                                                     os.path.join(d, 'listed.txt')])
+            self.assertIn('stray.txt', str(cm.exception))
+        finally:
+            bt.CHAPTER_FILES = old
+
+    def test_manifest_catches_a_listed_file_that_no_longer_exists(self):
+        old = bt.CHAPTER_FILES
+        bt.CHAPTER_FILES = ['this_file_does_not_exist_anywhere.txt']
+        try:
+            with self.assertRaises(SystemExit) as cm:
+                bt.check_manifest_matches_directory([])
+            self.assertIn('this_file_does_not_exist_anywhere.txt', str(cm.exception))
+        finally:
+            bt.CHAPTER_FILES = old
+
+    def test_replace_exactly_once_applies_a_unique_match(self):
+        self.assertEqual(bt.replace_exactly_once('a b c', 'b', 'X'), 'a X c')
+
+    def test_replace_exactly_once_rejects_zero_matches(self):
+        """The exact shape of the real bug: a fix that silently did nothing because its target
+        string no longer matched, believed to have been applied, undetected for a full session."""
+        with self.assertRaises(ValueError):
+            bt.replace_exactly_once('a b c', 'ZZZ', 'X')
+
+    def test_replace_exactly_once_rejects_multiple_matches(self):
+        with self.assertRaises(ValueError):
+            bt.replace_exactly_once('a b a', 'a', 'X')
+
+    def test_duplicate_sub_title_within_one_appendix_is_rejected(self):
+        blocks = [('appendix', 'E', 'TITLE'), ('sec', 'A section'),
+                  ('sub', 'Method'), ('sub', 'Method')]
+        with self.assertRaises(SystemExit) as cm:
+            bt.check_no_duplicate_headings(blocks)
+        self.assertIn('Method', str(cm.exception))
+
+    def test_same_title_as_sec_and_sub_is_not_flagged(self):
+        """The real, legitimate pattern this guard must not break: Chapter VI has both a top-level
+        '@sec Design' (its own experiment) and, nested elsewhere, a '@sub Design' (the positive
+        control's own sub-design) -- same word, different level, not a duplication bug."""
+        blocks = [('chapter', 'VI', 'TITLE'), ('sec', 'Design'), ('sec', 'Results'),
+                  ('sub', 'Design'), ('sub', 'Result')]
+        bt.check_no_duplicate_headings(blocks)  # must not raise
+
+    def test_same_title_in_different_chapters_is_not_flagged(self):
+        blocks = [('chapter', 'IV', 'A'), ('sec', 'Method'),
+                  ('chapter', 'V', 'B'), ('sec', 'Method')]
+        bt.check_no_duplicate_headings(blocks)  # must not raise
+
+    def test_pdf_level_duplicate_heading_detector_catches_a_synthetic_duplicate(self):
+        """Unit-level test of the render-level guard, isolated from a full build: feeds it
+        fabricated page text standing in for pdftotext output, so the detection logic is checked
+        without needing a rendered PDF on disk."""
+        toc = [(1, 'IV.1', 'A Section Title That Is Long Enough To Match', ('sec', 'IV.1'))]
+        pages_clean = ['IV.1   A Section Title That Is Long Enough To Match\nsome body text\n']
+        self.assertEqual(bt._verify_no_duplicate_headings_in_pdf(pages_clean, toc), [])
+        pages_dup = ['IV.1   A Section Title That Is Long Enough To Match\n'
+                     'more text\n'
+                     'IV.1   A Section Title That Is Long Enough To Match\n']
+        problems = bt._verify_no_duplicate_headings_in_pdf(pages_dup, toc)
+        self.assertEqual(len(problems), 1)
+        self.assertIn('IV.1', problems[0])
+
+    def test_pdf_level_detector_does_not_flag_an_indented_table_of_contents_entry(self):
+        """The false-positive this check produced on its first run against the real thesis: this
+        document's Table of Contents has no dot leader before its page number (the assumption the
+        first version of this guard relied on), so an indented TOC line for the same heading must
+        not be counted as a second occurrence of the body heading."""
+        toc = [(1, 'IV.1', 'A Section Title That Is Long Enough To Match', ('sec', 'IV.1'))]
+        pages = ['    IV.1   A Section Title That Is Long Enough To Match      42\n'  # TOC, indented
+                'IV.1   A Section Title That Is Long Enough To Match\nbody text\n']  # real heading
+        self.assertEqual(bt._verify_no_duplicate_headings_in_pdf(pages, toc), [])
+
+    def test_live_chapters_have_no_cross_chapter_manifest_drift(self):
+        import glob
+        files = sorted(glob.glob(os.path.join(THESIS, 'chapters', '*.txt')))
+        if not files:
+            self.skipTest('chapter sources not present')
+        bt.check_manifest_matches_directory(files)
+
+
+class DuplicateBodyContentWarning(unittest.TestCase):
+    """A fourth guard suggested by the same external review: duplicate-heading checks key on
+    titles by construction and cannot see a duplicated BODY sitting under two different titles.
+    `warn_on_duplicate_body_content` is deliberately a warning, not a build failure -- two
+    sections can legitimately share a long passage on purpose, and a hard failure on every such
+    case would train whoever maintains this build to silence the check rather than read it."""
+
+    def _blocks(self, sections):
+        """sections: list of (label, kind, title, body) -> a flat block list like parse_sources
+        produces, with one 'chapter' block introducing each distinct label."""
+        out, seen_labels = [], set()
+        for label, kind, title, body in sections:
+            if label not in seen_labels:
+                out.append(('chapter', label, 'TITLE')); seen_labels.add(label)
+            out.append((kind, title))
+            out.append(('para', body))
+        return out
+
+    def test_identical_long_body_under_different_titles_is_warned(self):
+        body = 'x' * 250
+        blocks = self._blocks([('IV', 'sub', 'First Title', body),
+                               ('IV', 'sub', 'Second Title', body)])
+        warned = bt.warn_on_duplicate_body_content(blocks)
+        self.assertEqual(len(warned), 1)
+
+    def test_short_identical_body_is_not_warned(self):
+        body = 'Not applicable.'
+        blocks = self._blocks([('IV', 'sub', 'First Title', body),
+                               ('IV', 'sub', 'Second Title', body)])
+        self.assertEqual(bt.warn_on_duplicate_body_content(blocks), [])
+
+    def test_different_long_bodies_are_not_warned(self):
+        blocks = self._blocks([('IV', 'sub', 'First Title', 'a' * 250),
+                               ('IV', 'sub', 'Second Title', 'b' * 250)])
+        self.assertEqual(bt.warn_on_duplicate_body_content(blocks), [])
+
+    def test_identical_body_across_chapters_is_still_warned(self):
+        """Unlike the title guard (scoped per chapter on purpose), a copy-pasted body is just as
+        much a duplication risk whether it lands in the same chapter or a different one."""
+        body = 'y' * 250
+        blocks = self._blocks([('IV', 'sub', 'First Title', body),
+                               ('VI', 'sub', 'Unrelated Title', body)])
+        self.assertEqual(len(bt.warn_on_duplicate_body_content(blocks)), 1)
+
+    def test_live_chapters_produce_no_duplicate_body_warnings(self):
+        import glob
+        files = sorted(glob.glob(os.path.join(THESIS, 'chapters', '*.txt')))
+        if not files:
+            self.skipTest('chapter sources not present')
+        # parse_sources() re-runs every other guard too (balance, orphan-fragment, etc.), which is
+        # fine: it is cheap, and exercising the real pipeline end to end is more representative
+        # than re-implementing a slimmer parse just for this one check.
+        blocks, _ = bt.parse_sources()
+        warned = bt.warn_on_duplicate_body_content(blocks)
+        self.assertEqual(warned, [], f'unexpected duplicate-body warning(s) on the live document: '
+                                     f'{warned}')
+
+
+class OrphanFragmentGuard(unittest.TestCase):
+    """Fault 9: a fragment file under chapters/ with no @ch/@appendix of its own, silently
+    absorbed into whichever chapter precedes it in sort order.
+
+    This is not hypothetical. `make_chembl_expansion.py` writes a `@sub`-only fragment meant to
+    be copied once into `11_appendices.txt` and then discarded; the fragment was left behind in
+    `chapters/` after the copy. The build's glob picked it up a second time, and because it opened
+    with `@sub` and no heading of its own, its content silently reattached to the end of whatever
+    appendix the previous file in sort order had left open -- a full, legible second copy of
+    "Was CD38 a pattern or a one-off? An expanded sample", numbered "E.7.1", stitched onto the
+    tail of Appendix E. Every other guard in this file passed: the markup was balanced, no
+    directive was buried in prose, and every section reference pointed at a section that existed
+    (E.7.1 itself existed, it just should not have). An external reviewer reading the finished PDF
+    found it; nothing in this build did until this guard was written in response.
+    """
+
+    def _write(self, text):
+        import tempfile
+        d = tempfile.mkdtemp()
+        p = os.path.join(d, 'chapter.txt')
+        with open(p, 'w', encoding='utf-8') as fh:
+            fh.write(text)
+        return p
+
+    def test_orphan_fragment_is_rejected(self):
+        p = self._write('@sub A fragment with no heading of its own\n\nsome prose.\n')
+        with self.assertRaises(SystemExit) as cm:
+            bt.check_no_orphan_fragments([p])
+        self.assertIn(os.path.basename(p), str(cm.exception))
+
+    def test_chapter_with_its_own_heading_is_accepted(self):
+        p = self._write('@ch IV | PREDICTOR QUALITY\n\n@sec A section\n\nprose.\n')
+        bt.check_no_orphan_fragments([p])  # must not raise
+
+    def test_appendix_with_its_own_heading_is_accepted(self):
+        p = self._write('@appendix F | COMPLETE EFFECT-SIZE REGISTER\n\n@sec A section\n\nprose.\n')
+        bt.check_no_orphan_fragments([p])  # must not raise
+
+    def test_abstract_file_is_accepted(self):
+        p = self._write('@abstract\nprose.\n@endabstract\n')
+        bt.check_no_orphan_fragments([p])  # must not raise
+
+    def test_comment_lines_before_the_heading_do_not_confuse_the_check(self):
+        p = self._write('# GENERATED FILE\n# Source: somewhere\n@appendix F | TITLE\n\nprose.\n')
+        bt.check_no_orphan_fragments([p])  # must not raise
+
+    def test_live_chapters_have_no_orphan_fragments(self):
+        import glob
+        files = sorted(glob.glob(os.path.join(THESIS, 'chapters', '*.txt')))
+        if not files:
+            self.skipTest('chapter sources not present')
+        bt.check_no_orphan_fragments(files)
+
+
 class GeneratedAppendix(unittest.TestCase):
     """Fault 7: a generated chapter file drifting behind the data it is generated from.
 
@@ -220,12 +431,25 @@ class GeneratedAppendix(unittest.TestCase):
     """
 
     def test_chembl_expansion_is_not_stale(self):
+        """Checks staleness against the real target, not a file that no longer exists.
+
+        Until the orphan-fragment bug (see OrphanFragmentGuard) was found and fixed, the
+        generator's committed output lived at `chapters/11y_chembl_expansion.txt`, a second,
+        independent copy of content that was ALSO hand-spliced into `11_appendices.txt` -- the
+        duplication the external reviewer found. The fix deleted that second copy and made
+        `11_appendices.txt` the sole, authoritative home of this content; the generator now writes
+        to `fragments/` (outside the chapter glob) for comparison only. This test's old form
+        checked the generator's output against the path that was JUST DELETED as part of that
+        fix, so it was silently skipping (via the `not os.path.exists(committed)` branch) and
+        reporting as a pass with nothing actually checked -- a second instance of the same root
+        problem (a check whose target quietly stopped existing) one guard below Issue 9 itself.
+        """
         import subprocess
         import tempfile
         gen = os.path.join(THESIS, 'make_chembl_expansion.py')
-        committed = os.path.join(THESIS, 'chapters', '11y_chembl_expansion.txt')
+        committed = os.path.join(THESIS, 'chapters', '11_appendices.txt')
         if not (os.path.exists(gen) and os.path.exists(committed)):
-            self.skipTest('generator or generated section absent')
+            self.skipTest('generator or appendix file absent')
         root = os.path.dirname(THESIS.rstrip(os.sep))
         root = os.path.dirname(root) if os.path.basename(root) == 'guidance' else root
         with tempfile.TemporaryDirectory() as tmp:
@@ -238,10 +462,14 @@ class GeneratedAppendix(unittest.TestCase):
                 if 'ModuleNotFoundError' in out or 'FileNotFoundError' in out:
                     self.skipTest('generator cannot run in this interpreter / data layout')
                 self.fail(f'generator exited {proc.returncode}:\n{out[-800:]}')
-            a = open(committed, encoding='utf-8').read()
-            b = open(fresh, encoding='utf-8').read()
-        self.assertEqual(a, b, 'the ChEMBL expansion section is stale: regenerate it with '
-                               'PYTHONPATH=. python guidance/thesis/make_chembl_expansion.py')
+            fresh_body = '\n'.join(l for l in open(fresh, encoding='utf-8').read().split('\n')
+                                   if not l.startswith('#')).strip()
+        appendix = open(committed, encoding='utf-8').read()
+        self.assertIn(fresh_body, appendix,
+                     'the ChEMBL expansion content embedded in 11_appendices.txt no longer '
+                     'matches what the generator produces: regenerate with PYTHONPATH=. python '
+                     'guidance/thesis/make_chembl_expansion.py and re-splice by hand, or update '
+                     'the generator to match an intentional manual edit')
 
     def test_effect_size_appendix_is_not_stale(self):
         import subprocess
@@ -462,6 +690,7 @@ if __name__ == '__main__':
     # recorded as "0 test(s)", which looks indistinguishable from a suite that silently ran nothing.
     cases = [CaptionSpacingGuard, ListPageGuard, CharsetGuard, MarkupBalanceGuard,
              InlineDirectiveGuard, TableDerivedFigures, SectionRefGuard, GeneratedAppendix,
+             OrphanFragmentGuard, ManifestAndDuplicateHeadingGuard, DuplicateBodyContentWarning,
              NumberSourceCheck]
     loader = unittest.TestLoader()
     n = 0
