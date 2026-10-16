@@ -1,0 +1,55 @@
+{
+ "structure_model": "egnn_a1c_ensemble",
+ "ligand_champion": "desc_ridge",
+ "b": 2000,
+ "seed": 20260925,
+ "n_rows": 11855,
+ "n_targets": 127,
+ "n_unannotated_targets": 0,
+ "levels": {
+  "complex (no clustering)": {
+   "n_clusters": 11855,
+   "structure_r2": 0.4071791626892439,
+   "ligand_r2": 0.3530988567500075,
+   "d_r2": 0.054080305939236406,
+   "ci95": [
+    0.04159811037397453,
+    0.06635296518430897
+   ],
+   "ci_width": 0.024754854810334438,
+   "boot_p": 0.0004997501249375312,
+   "underpowered": false,
+   "degenerate": false
+  },
+  "target (as reported in this thesis)": {
+   "n_clusters": 127,
+   "structure_r2": 0.4071791626892438,
+   "ligand_r2": 0.3530988567500074,
+   "d_r2": 0.054080305939236406,
+   "ci95": [
+    -0.039957021900216515,
+    0.1398148338088098
+   ],
+   "ci_width": 0.17977185570902632,
+   "boot_p": 0.215,
+   "underpowered": false,
+   "degenerate": false
+  },
+  "Pfam family": {
+   "n_clusters": 63,
+   "structure_r2": 0.4071791626892438,
+   "ligand_r2": 0.3530988567500074,
+   "d_r2": 0.054080305939236406,
+   "ci95": [
+    -0.026894679336999003,
+    0.1312581795878378
+   ],
+   "ci_width": 0.15815285892483683,
+   "boot_p": 0.163,
+   "underpowered": false,
+   "degenerate": false
+  }
+ },
+ "width_ratio_family_over_target": 0.8797420391588915,
+ "width_ratio_target_over_complex": 7.262084834930106
+}

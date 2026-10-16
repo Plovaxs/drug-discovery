@@ -224,6 +224,42 @@ def test_paired_r2_comparison_resample_landing_on_degenerate_subset_is_skipped_n
         f'CI {r["ci95"]} looks corrupted by a degenerate resample slipping through')
 
 
+def test_compare_vs_structure_imports_this_r2_rows_not_a_copy():
+    """Regression guard for a found-and-fixed bug, not a hypothetical one.
+
+    stats_common.r2_rows's own docstring once claimed that compare_vs_structure.py had already been
+    switched to import this definition. It had not: it still carried its own byte-identical copy, so
+    nothing would have kept the two in sync if either was ever edited, and five downstream scripts
+    (label_harmonisation.py, scaffold_audit.py, representation_ladder.py, noise_ceiling.py,
+    novelty_tiers.py, which get r2_rows transitively through compare_vs_structure.py) were exposed to
+    that drift risk without it being visible anywhere. An equality check on behaviour would not catch
+    a reintroduced copy, since a copy is behaviourally identical by construction until someone edits
+    one side; only object identity proves there is a single definition.
+    """
+    from guidance.cheminformatics.compare_vs_structure import r2_rows as reexported
+    assert reexported is r2_rows, (
+        'guidance/cheminformatics/compare_vs_structure.py has its own copy of r2_rows again '
+        'instead of importing stats_common.r2_rows; this is the exact drift this test exists to catch')
+
+
+def test_no_other_module_silently_redefines_r2_rows():
+    """Sweep the project for a second re-introduced copy anywhere, not only the one historical site.
+
+    Any `def r2_rows(` outside this file is either stats_common's own definition or a regression.
+    """
+    import glob
+    import os
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # guidance/
+    offenders = []
+    for path in glob.glob(os.path.join(here, '**', '*.py'), recursive=True):
+        if 'reference_code' in path or path.endswith('stats_common.py'):
+            continue
+        with open(path, encoding='utf-8') as fh:
+            if any(ln.startswith('def r2_rows(') for ln in fh):
+                offenders.append(path)
+    assert offenders == [], f'duplicate r2_rows definition(s) found: {offenders}'
+
+
 if __name__ == '__main__':
     fns = [(k, v) for k, v in sorted(globals().items()) if k.startswith('test_') and callable(v)]
     for k, f in fns:

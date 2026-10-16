@@ -1,0 +1,127 @@
+{
+ "seed": 20261016,
+ "n_targets_in_pool": 127,
+ "n_sampled": 20,
+ "sample": {
+  "APOA_HUMAN_4123_4201_0": {
+   "mnemonic": "APOA",
+   "n": 2,
+   "pk_min": 4.69897,
+   "pk_max": 4.69897
+  },
+  "BTK_HUMAN_2_170_0": {
+   "mnemonic": "BTK",
+   "n": 2,
+   "pk_min": 7.060480747381382,
+   "pk_max": 7.060480747381382
+  },
+  "CHIA1_ASPFM_28_337_0": {
+   "mnemonic": "CHIA1",
+   "n": 9,
+   "pk_min": 3.785156,
+   "pk_max": 4.102373
+  },
+  "DAPK3_HUMAN_7_287_0": {
+   "mnemonic": "DAPK3",
+   "n": 1,
+   "pk_min": 4.283997,
+   "pk_max": 4.283997
+  },
+  "DEF_STRA3_1_204_0": {
+   "mnemonic": "DEF",
+   "n": 59,
+   "pk_min": 5.845272,
+   "pk_max": 7.886057
+  },
+  "EPMA_ECOLI_2_325_0": {
+   "mnemonic": "EPMA",
+   "n": 2,
+   "pk_min": 7.958607,
+   "pk_max": 7.958607314841775
+  },
+  "FA11_HUMAN_388_625_0": {
+   "mnemonic": "FA11",
+   "n": 301,
+   "pk_min": 4.09691,
+   "pk_max": 9.522879
+  },
+  "FYN_HUMAN_248_537_0": {
+   "mnemonic": "FYN",
+   "n": 2,
+   "pk_min": 8.318758762624412,
+   "pk_max": 8.318759
+  },
+  "KIT_HUMAN_550_935_0": {
+   "mnemonic": "KIT",
+   "n": 10,
+   "pk_min": 7.69897,
+   "pk_max": 8.221849
+  },
+  "LEG3_HUMAN_111_250_0": {
+   "mnemonic": "LEG3",
+   "n": 39,
+   "pk_min": 3.0409586076789066,
+   "pk_max": 7.468521082957745
+  },
+  "MRCKB_HUMAN_2_416_0": {
+   "mnemonic": "MRCKB",
+   "n": 5,
+   "pk_min": 5.716698771296451,
+   "pk_max": 8.39794
+  },
+  "NR1H3_HUMAN_189_447_ligBind_0": {
+   "mnemonic": "NR1H3",
+   "n": 12,
+   "pk_min": 6.060480747381382,
+   "pk_max": 7.568636235841013
+  },
+  "NRAM_INBLE_72_466_0": {
+   "mnemonic": "NRAM",
+   "n": 85,
+   "pk_min": 3.6497519816658373,
+   "pk_max": 8.920819
+  },
+  "PCXB_PSEPU_2_239_0": {
+   "mnemonic": "PCXB",
+   "n": 88,
+   "pk_min": 2.0,
+   "pk_max": 7.221849
+  },
+  "PDE4A_HUMAN_350_683_0": {
+   "mnemonic": "PDE4A",
+   "n": 4,
+   "pk_min": 4.142667503568732,
+   "pk_max": 5.481486060122113
+  },
+  "PDE4D_HUMAN_383_715_0": {
+   "mnemonic": "PDE4D",
+   "n": 342,
+   "pk_min": 4.086186,
+   "pk_max": 10.677781
+  },
+  "RNAS2_HUMAN_27_161_0": {
+   "mnemonic": "RNAS2",
+   "n": 6,
+   "pk_min": 4.238072,
+   "pk_max": 4.49485
+  },
+  "ROCK1_HUMAN_5_414_0": {
+   "mnemonic": "ROCK1",
+   "n": 80,
+   "pk_min": 5.958607,
+   "pk_max": 8.221849
+  },
+  "SMYD2_HUMAN_2_433_0": {
+   "mnemonic": "SMYD2",
+   "n": 28,
+   "pk_min": 6.267606,
+   "pk_max": 8.55284196865778
+  },
+  "TRY2_RAT_22_246_0": {
+   "mnemonic": "TRY2",
+   "n": 25,
+   "pk_min": 1.8239087409443189,
+   "pk_max": 5.35164
+  }
+ }
+}

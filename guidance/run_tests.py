@@ -25,6 +25,7 @@ Usage:
 import argparse
 import glob
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -55,19 +56,75 @@ def discover(pattern=None):
     return sorted(set(suites))
 
 
+def interpreters():
+    """Every usable Python on this machine, most preferred first.
+
+    No single interpreter here can run every suite. The thesis build needs `python-docx`, which
+    lives in the system Python; the modelling suites need `numpy` and `torch`, which live in the
+    project's conda environment; neither has the other's dependency. Before this existed, running
+    the suite under either interpreter reported the other half as SKIP, and a reader of the summary
+    line could reasonably conclude those guards were unverified when in fact they had simply never
+    been given an interpreter that could import them. A suite that skips is therefore retried on
+    the remaining interpreters before the skip is believed.
+
+    `THESIS_ALT_PYTHON` may name extra interpreters, colon-separated, for other machines.
+    """
+    cands = [sys.executable, shutil.which('python3'), shutil.which('python')]
+    cands += os.environ.get('THESIS_ALT_PYTHON', '').split(os.pathsep)
+    cands += sorted(glob.glob(os.path.expanduser('~/miniconda3/envs/*/bin/python')))
+    cands += sorted(glob.glob(os.path.expanduser('~/anaconda3/envs/*/bin/python')))
+    out, seen = [], set()
+    for c in cands:
+        if not c or not os.path.exists(c):
+            continue
+        real = os.path.realpath(c)
+        if real in seen:
+            continue
+        seen.add(real)
+        out.append(c)
+    return out
+
+
+def wrong_interpreter(proc):
+    """Did this run fail for lack of a dependency rather than because a test is broken?
+
+    Two shapes count. A suite that announces itself as skipped exits with SKIP_EXIT, which is the
+    polite form. Most suites do not: they simply raise ModuleNotFoundError while importing numpy or
+    torch and exit 1, which is indistinguishable from a real failure by exit code alone. Both mean
+    the same thing, that this interpreter cannot run this suite, and both are worth retrying
+    elsewhere before the result is believed. If every interpreter gives the same import error the
+    result is still reported as a failure, so a genuinely missing dependency is not hidden.
+    """
+    if proc.returncode == SKIP_EXIT:
+        return True
+    if proc.returncode == 0:
+        return False
+    out = proc.stdout + proc.stderr
+    return 'ModuleNotFoundError' in out or 'ImportError' in out
+
+
 def run_suite(rel, quiet):
     env = dict(os.environ, PYTHONPATH=ROOT + os.pathsep + os.environ.get('PYTHONPATH', ''))
+    pythons = interpreters()
     t0 = time.time()
-    proc = subprocess.run([sys.executable, rel], cwd=ROOT, env=env,
-                          capture_output=True, text=True)
+    proc = subprocess.run([pythons[0], rel], cwd=ROOT, env=env, capture_output=True, text=True)
+    used = pythons[0]
+    for alt in pythons[1:]:
+        if not wrong_interpreter(proc):
+            break
+        retry = subprocess.run([alt, rel], cwd=ROOT, env=env, capture_output=True, text=True)
+        if not wrong_interpreter(retry):
+            proc, used = retry, alt
     dt = time.time() - t0
+    via = '' if os.path.realpath(used) == os.path.realpath(sys.executable) \
+        else f' via {os.path.basename(os.path.dirname(os.path.dirname(used)))}'
     if proc.returncode == 0:
         n = sum(1 for l in proc.stdout.splitlines() if l.startswith('PASS'))
-        status, detail = 'PASS', f'{n} test(s)'
+        status, detail = 'PASS', f'{n} test(s){via}'
     elif proc.returncode == SKIP_EXIT:
-        status, detail = 'SKIP', 'required data artifacts absent'
+        status, detail = 'SKIP', f'skipped on all {len(pythons)} interpreter(s) found'
     else:
-        status, detail = 'FAIL', f'exit {proc.returncode}'
+        status, detail = 'FAIL', f'exit {proc.returncode}{via}'
     print(f'[{status}] {rel}  ({detail}, {dt:.1f}s)')
     if status != 'PASS' or not quiet:
         tail = (proc.stdout + proc.stderr).strip().splitlines()

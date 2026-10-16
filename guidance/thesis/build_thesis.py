@@ -39,8 +39,8 @@ FONT = 'Times New Roman'
 TEXT_W = 8.27 - 1.5 - 1.0          # A4 width minus margins (in)
 
 META = dict(
-    title_lines=['DIAGNOSING GUIDANCE FAILURE IN DIFFUSION-BASED', 'STRUCTURE-BASED DRUG DESIGN: A LEAKAGE-SAFE,', 'FALSIFICATION-DRIVEN STUDY'],
-    title_inline='Diagnosing Guidance Failure in Diffusion-Based Structure-Based Drug Design: A Leakage-Safe, Falsification-Driven Study',
+    title_lines=['DIAGNOSING GUIDANCE FAILURE IN STRUCTURE-BASED', 'MOLECULAR DIFFUSION: A LEAKAGE-SAFE EVALUATION', 'WITH A POSITIVE CONTROL'],
+    title_inline='Diagnosing Guidance Failure in Structure-Based Molecular Diffusion: A Leakage-Safe Evaluation with a Positive Control',
     name='[[STUDENT NAME]]', sid='[[STUDENT IDENTIFICATION NUMBER]]', when='[[MONTH, YEAR OF THE DEFENSE]]',
     degree='[[MAGISTER — academic degree as listed in the student handbook]]',
     advisor='[[Your Advisor Name]]',
@@ -78,10 +78,95 @@ def check_markup_balance(files):
         raise SystemExit('markup balance check failed:\n  ' + '\n  '.join(problems))
 
 
+#: Directives the parser only recognises at the start of a line.
+LINE_INITIAL_DIRECTIVES = ('@sec', '@sub', '@fig', '@tab', '@endtab', '@note',
+                           '@abstract', '@endabstract')
+
+
+def check_inline_directives(files):
+    """Fail fast when a directive is buried inside a line of prose.
+
+    The parser tests every line with ``startswith``, so a directive that ends up appended to the
+    end of a paragraph is not a directive at all: it is silently rendered as body text, the
+    heading or figure it was meant to produce never appears, and the build reports success. This
+    is the same quiet-success failure mode as unbalanced table markup, and it is checked here for
+    the same reason. It was introduced by hand while an existing paragraph was being extended,
+    and it swallowed a whole subsection heading in Chapter V without any build error.
+    """
+    pat = re.compile(r'\S[ \t]+(' + '|'.join(re.escape(d) for d in LINE_INITIAL_DIRECTIVES) + r')(\s|$)')
+    problems = []
+    for f in files:
+        name = os.path.basename(f)
+        for ln_no, ln in enumerate(open(f, encoding='utf-8'), 1):
+            if ln.startswith('@'):
+                continue            # a real directive; the rest of its line is its payload
+            m = pat.search(ln)
+            if m:
+                problems.append(f'{name}:{ln_no}: "{m.group(1)}" appears inside a line of prose '
+                                f'and will be rendered as body text, not as a directive')
+    if problems:
+        raise SystemExit('inline-directive check failed:\n  ' + '\n  '.join(problems))
+
+
+SECTION_REF = re.compile(
+    r'\b(?:Sections?|Chapters?|Appendi(?:x|ces))\s+((?:[IVX]+|[A-E])\.\d+(?:\.\d+)?)')
+
+
+def section_numbers(files):
+    """Every section number the document will actually produce, replicating the numbering above.
+
+    `@sec` yields `<label>.<n>` and `@sub` yields `<label>.<n>.<m>`, where the label comes from the
+    enclosing `@ch` or `@appendix`. Walking the sources the same way the renderer does is what lets
+    the next function check prose references without rendering anything.
+    """
+    nums, label, sec_n, sub_n = set(), None, 0, 0
+    for f in files:
+        for ln in open(f, encoding='utf-8'):
+            if ln.startswith('@ch ') or ln.startswith('@appendix '):
+                label = ln.split('|')[0].split(None, 1)[1].strip()
+                sec_n = sub_n = 0
+            elif ln.startswith('@sec ') and label:
+                sec_n += 1; sub_n = 0
+                nums.add(f'{label}.{sec_n}')
+            elif ln.startswith('@sub ') and label:
+                sub_n += 1
+                nums.add(f'{label}.{sec_n}.{sub_n}')
+    return nums
+
+
+def check_section_refs(files):
+    """Fail when prose points at a section number the document does not contain.
+
+    Section numbers are positional: inserting one `@sec` renumbers every later section in that
+    chapter, and every "Section IV.9" written elsewhere silently starts pointing somewhere else.
+    Nothing about that is visible in the source, in the build, or in the rendered PDF, and the
+    reference still looks perfectly well formed. The risk is concrete rather than theoretical here,
+    because this document is edited by appending sections to chapters that are already referenced
+    from several other chapters.
+
+    Only numeric references are checked. A reference by name is immune to renumbering and is the
+    better form where one reads naturally.
+    """
+    valid = section_numbers(files)
+    problems = []
+    for f in files:
+        name = os.path.basename(f)
+        for ln_no, ln in enumerate(open(f, encoding='utf-8'), 1):
+            if ln.startswith('#'):
+                continue
+            for ref in SECTION_REF.findall(ln):
+                if ref not in valid:
+                    problems.append(f'{name}:{ln_no}: "Section {ref}" does not exist')
+    if problems:
+        raise SystemExit('section-reference check failed:\n  ' + '\n  '.join(sorted(set(problems))))
+
+
 def parse_sources():
     blocks, abstract, abbrevs = [], None, []
     files = sorted(glob.glob(os.path.join(HERE, 'chapters', '*.txt')))
     check_markup_balance(files)
+    check_inline_directives(files)
+    check_section_refs(files)
     for f in files:
         lines = open(f, encoding='utf-8').read().split('\n')
         i = 0

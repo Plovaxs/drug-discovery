@@ -483,7 +483,23 @@ def fig_scale_by_track():
     fig.tight_layout(); fig.savefig(f'{OUT}/fig_scale_by_track.png', bbox_inches='tight'); plt.close(fig)
 
 
+def _audit_figures():
+    """Also regenerate the figures defined in the two later figure modules.
+
+    Those six were added later, in a separate module, so that the audit-driven figures could be
+    developed without touching this file. Running them from here keeps a single entry point: a
+    contributor who regenerates figures before a build gets all of them, rather than silently
+    leaving six stale while the rest are refreshed.
+    """
+    import importlib
+    for name in ('make_figures_audit', 'make_figures_chapters'):
+        mod = importlib.import_module(name)
+        for f in mod.FIGURES:
+            f(); print('ok', f.__name__)
+
+
 if __name__ == '__main__':
     for f in (fig_pipeline, fig_verdict_flow, fig_track_e_design, fig_track_e_r2, fig_track_e_learnability,
               fig_track_e_within_target, fig_plip_jitter, fig_vina_semantics, fig_split_artifact, fig_predictive_quality, fig_track_a_full, fig_track_b, fig_diag1, fig_track_c, fig_track_d, fig_overview_significance, fig_power_curve, fig_scale_by_track):
         f(); print('ok', f.__name__)
+    _audit_figures()

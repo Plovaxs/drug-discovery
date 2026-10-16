@@ -109,7 +109,15 @@ def to_torch_const(x):
 
 def center_pos(protein_pos, ligand_pos, batch_protein, batch_ligand, mode='protein'):
     if mode == 'none':
-        offset = 0.
+        # `offset` must be an indexable tensor, not a bare 0.: every caller in this project that
+        # consumes the returned offset (e.g. guidance/guided_sampling.py's
+        # `ori_ligand_pos = ligand_pos + offset[batch_ligand]`) indexes it unconditionally,
+        # regardless of which mode produced it. A plain float crashes there with
+        # `TypeError: 'float' object is not subscriptable`. No config or call site in this
+        # project currently selects mode='none' (verified by audit, 2026-10-16), so this path was
+        # dead and the crash was never triggered by any committed result; fixed so it is correct
+        # rather than merely unreachable.
+        offset = torch.zeros_like(protein_pos[:1]).expand(batch_protein.max().item() + 1, -1)
         pass
     elif mode == 'protein':
         offset = scatter_mean(protein_pos, batch_protein, dim=0)

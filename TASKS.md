@@ -2492,3 +2492,377 @@ kontrol per-arsitektur. Menjalankannya untuk EGNN adalah pekerjaan yang tersisa.
 4. tipe interaksi PLIP sebagai blok tangga ke-8.
 5. coverage kondisional conformal per tier/famili.
 6. kurasi "maximal curation" Landrum untuk label BindingNet Arm B/C.
+
+## Sesi figur: enam figur baru + dua bug yang ditemukan karenanya (2026-10-16)
+
+Enam figur baru dibuat dari file JSON hasil yang sudah di-commit (`guidance/thesis/make_figures_audit.py`),
+disisipkan ke Bab IV, V, VI dan VIII dengan caption yang berdiri sendiri, dan dirujuk silang dari prosa.
+Jumlah figur tesis 33 -> 39; PDF 245 -> 251 halaman.
+
+### Cacat yang diperbaiki pada figur itu sendiri (semuanya cacat saya)
+1. `fig_rq2_control`: Vina Dock -18,4% diwarnai MERAH oleh logika "negatif = buruk", padahal untuk
+   Vina Dock lebih negatif = lebih baik. Figur itu secara visual menyatakan kebalikan dari klaim
+   tesis. Warna sekarang mengikuti ARAH PERBAIKAN per metrik, bukan tanda angka. Batang yang tidak
+   signifikan digambar berongga.
+2. `fig_representation_ladder`: tanpa interval, urutan batang terbaca sebagai peringkat dan
+   menyiratkan ECIF (0,370) mengalahkan ligand-only (0,353). Sekarang memakai CI bootstrap
+   target-clustered; semua interval tumpang tindih. Baris yang tidak pernah diuji berpasangan
+   ditandai "not tested vs ligand-only" alih-alih dibiarkan tampak menang.
+3. `fig_gradient_direction`: panel dekat/jauh memakai warna hijau/merah padahal tak punya CI
+   maupun uji. Dinetralkan jadi satu warna dan diberi label "descriptive only".
+4. `fig_arm_budget`: jam dan epoch digambar berdampingan pada SATU sumbu "Training budget" --
+   dua satuan tak sebanding pada satu skala. Diganti jadi jam saja, dipecah aktif vs suspensi
+   termal, epoch ditulis sebagai label. Panel kiri kini menyatakan CI-nya tumpang tindih dan
+   tidak ada uji berpasangan antar-arm.
+5. `fig_m2_subgroup`: selisih pK 0,79 tanpa sebaran. SD dalam-kelompok (~1,7) ditambahkan.
+
+### Dua bug tesis yang ditemukan gara-gara membuat figur
+6. **Catatan tabel ladder salah.** Catatannya menyatakan blok tanpa CI "dibandingkan berpasangan,
+   tidak di-bootstrap secara individual". Padahal KESEPULUH blok punya `ci95` di
+   `representation_ladder_results.json` (B = 2.000, 127 klaster); tabel hanya tidak mencetaknya.
+   Semua CI kini dicetak dan catatannya dikoreksi.
+7. **Baris ligand+pocket tertulis "≈0,35"**, nilai sebenarnya 0,3832. Dikoreksi; dua blok yang
+   hilang (ecif_norm+size 0,3547; all 0,3639) ditambahkan.
+   11 klaim baru dipin di `check_numbers_against_sources.py` (47 -> 58), termasuk batas CI.
+
+### Bug build yang ditemukan dan dijaga
+8. **Direktif di tengah prosa.** `@sub The signed measurement, and what it changes` menempel di
+   akhir paragraf di `05_tracks_ab.txt:118`. Parser hanya mengenali direktif di awal baris, jadi
+   SELURUH subjudul itu dirender sebagai teks badan dan build tetap melaporkan sukses. Diperbaiki,
+   lalu `check_inline_directives()` ditambahkan ke `build_thesis.py` (jalan sebelum parsing,
+   seperti `check_markup_balance`). Uji mutasi: bug sengaja dimasukkan lagi, build gagal dengan
+   benar. 5 tes baru (`InlineDirectiveGuard`), suite 14 -> 19 tes.
+9. Uji mutasi `test_every_claim_can_actually_fail` tidak bisa menelusuri indeks list, jadi klaim
+   CI pertama (`ci95.0`) melempar TypeError dan MEMBATALKAN seluruh sapuan mutasi. Penelusurnya
+   disamakan dengan `jpath`. Ke-58 klaim kini terbukti bisa gagal.
+10. `make_figures.py` sekarang juga menjalankan keenam figur audit, jadi regenerasi figur punya
+    satu pintu masuk dan tidak ada figur yang diam-diam basi.
+
+Status akhir: build 251 halaman, number check 58/58, verifikasi caption/halaman/charset bersih,
+19/19 tes lolos.
+
+## Figur untuk bab yang masih kosong: I, II, X (2026-10-16, lanjutan)
+
+Tiga bab tadinya NOL figur (~9.200 kata, 2 tabel besar, tanpa satu pun grafik). Sekarang
+tiap bab punya minimal satu. Total figur 39 -> 42; PDF 251 -> 256 halaman.
+
+### Figur baru (`guidance/thesis/make_figures_chapters.py`)
+- **Bab I `fig_thesis_map`** -- peta tesis/visual abstract: 14 objektif, dikelompokkan jadi 4
+  tahap pertanyaan, diwarnai per JENIS hasil. Sengaja tidak meratakan semuanya jadi "gagal":
+  hipotesis terpraregistrasi yang difalsifikasi, efek yang ternyata artefak ukuran, dan uji yang
+  memang tak menemukan apa-apa adalah tiga hasil berbeda.
+- **Bab II `fig_literature_matrix`** -- 10 karya x 6 bahan, dengan baris "This thesis". Tiga
+  keadaan (ada / tidak ada / tidak dinyatakan dalam materi yang ditinjau), dan keadaan ketiga
+  sengaja DIPISAH dari kedua: menganggap "tak disebut di yang dibaca" sebagai "tak ada" berarti
+  menuduh sebuah studi berdasarkan pencarian yang memang tak mencarinya.
+- **Bab X `fig_scope_boundary`** -- batas klaim null: apa yang diuji vs apa yang tidak. Satu-
+  satunya figur konseptual murni; tidak mengklaim apa pun di luar yang sudah ditulis babnya.
+
+### Pengaman: figur di-generate DARI SUMBER TESIS
+`fig_thesis_map` mem-parse `@tab objmap` dari `01_introduction.txt`; `fig_literature_matrix`
+mem-parse `@tab lit` dari `02_literature.txt`. Tidak ada isi tabel yang diketik ulang di skrip.
+Keduanya memeriksa DUA arah: baris tabel yang tak tergambar = error; entri layout yang tak
+terpakai = error. Uji mutasi: baris palsu ditambahkan ke tabel -> tes gagal dengan benar.
+Angka ringkasan pada figur peta (14 eksperimen, 1 berhasil, 4 diagnostik) DIHITUNG dari peta
+verdict, tidak diketik.
+
+### Bug yang ditemukan gara-gara ini
+11. **BoKDiff salah terwarnai hijau.** Sel "Evaluation independent ... with controls" berbunyi
+    "Proposed as a generation technique, not framed as a positive control", dan heuristik saya
+    (apa pun yang tidak diawali penanda negatif = "ada") mewarnainya HIJAU. Itu melebih-lebihkan
+    klaim karya orang lain, dalam figur yang justru tentang klaim siapa punya apa. Diperbaiki
+    dua arah: selnya diawali "No (...)" agar konsisten dengan baris lain, DAN `classify()` dibuat
+    strict -- menolak sel tanpa penanda yang dikenali alih-alih menebak.
+12. Lingkaran matriks digambar sebagai `plt.Circle` dalam koordinat data, jadi keluar sebagai
+    ELIPS karena aspek sumbu bukan 1. Diganti ke marker scatter.
+13. Tabel `@tab lit` ternyata SUDAH punya baris "This thesis"; versi pertama saya mendeklarasikan
+    baris itu sendiri secara manual -- sumber kedua yang bisa melenceng. Sekarang diparse.
+
+### Infrastruktur
+- `guidance/thesis/thesis_tables.py` baru: parsing tabel tanpa dependensi matplotlib, supaya
+  logika yang bisa diam-diam salah itu bisa diuji oleh suite (interpreter suite punya python-docx
+  tapi tidak matplotlib; env drugdisc sebaliknya).
+- 6 tes baru (`TableDerivedFigures`), suite 19 -> 25 tes.
+- `make_figures.py` kini menjalankan ketiga modul figur: 27 figur dari satu pintu masuk.
+
+Status akhir: build 256 halaman, 42 figur, number check 58/58, 25/25 tes lolos.
+
+## SISA AUDIT DIKERJAKAN (2026-10-16, lanjutan ke-3)
+
+Judul final diputuskan: **"Diagnosing Guidance Failure in Structure-Based Molecular Diffusion:
+A Leakage-Safe Evaluation with a Positive Control"**. Yang lama memuat "Diffusion-Based
+Structure-Based" yang janggal; yang baru menyebut dua pilar metodologisnya dan tidak melebihkan
+klaim (tidak menyatakan "guidance gagal secara umum", yang bukan kesimpulan tesis).
+
+### F073/F074 -- SUDAH BERES sebelumnya
+65 rujukan, semua terverifikasi: 44 PubMed, 15 sumber, 6 Crossref. Nol `v='kn'`.
+
+### F049 (publikasikan semua effect size) -- SELESAI
+Apendiks F baru, **di-generate** oleh `guidance/thesis/make_effect_size_appendix.py`:
+- Tabel F.1: seluruh 56 perbandingan gradien (Track A eksploratori 9, A full 24, B1 9, B2 6,
+  B3 8) dengan mean/median shift, KS D, p mentah, p BH, pergeseran ligand efficiency, dan
+  laju PoseBusters. **0 dari 56 signifikan** -- konsisten dengan klaim 0/24 dan 0/23 di tesis.
+- Tabel F.2: seluruh 15 pocket Track C dengan effect size + CI 95%, confound ukuran, PoseBusters.
+  14/15 signifikan -- cocok dengan teks Bab VI.
+Alasan di-generate, bukan diketik: 71 baris hasil salin tangan hampir pasti melahirkan galat
+transkripsi; proyek ini sudah menemukan 4 galat semacam itu di tabel yang jauh lebih kecil.
+
+### F037 (bootstrap berklaster famili) -- SELESAI, HASILNYA BERLAWANAN DUGAAN AUDIT
+`guidance/cheminformatics/family_cluster_bootstrap.py`. Perbandingan utama dijalankan di TIGA
+level klaster, data/model/statistik/B/seed identik:
+| unit resampling | klaster | lebar CI | p | verdict |
+| kompleks (tanpa klaster) | 11.855 | 0,0248 | 0,000 | AKAN disebut signifikan |
+| target (dipakai tesis) | 127 | 0,1798 | 0,215 | seri |
+| famili Pfam | 63 | 0,1582 | 0,163 | seri |
+Kekhawatiran audit (target terlalu halus, famili akan melebarkan interval) TIDAK terbukti:
+famili justru 0,88x, dalam derau prosedur. Yang menentukan adalah langkah kompleks->target (7,3x).
+Ditulis ke Bab III.6 + Tabel 3.x + figur baru `fig_clustering_levels`. Dilaporkan dengan kaveat:
+0,88x tidak di-over-read; dua efek (klaster lebih sedikit vs dependensi lebih tinggi) berlawanan arah.
+
+### F065 (audit varians residual) -- SELESAI, MENEMUKAN SESUATU
+`guidance/cheminformatics/residual_variance_audit.py`. Dua hal diukur:
+1. LULUS: rasio SD residual desil terlebar/tersempit 1,50-1,59x; uji Breusch-Pagan
+   (korelasi residual^2 vs prediksi, di-bootstrap per TARGET) CI mencakup nol untuk KETIGA model.
+   Jadi R^2 bukan ringkasan yang tidak adil di sini.
+2. TEMUAN: Spearman dalam-desil median +0,115 (struktur), +0,121 (ligand), **+0,138
+   (heavy-atom count saja -- TERTINGGI)**. Urutan struktur-vs-ligand BERBALIK di 5 dari 10 desil.
+   Keunggulan model ada pada penempatan kasar di sepanjang rentang afinitas, bukan pada
+   pengurutan molekul yang sudah berdekatan -- kesimpulan yang sama dengan dekomposisi
+   class-prior IV.8, dicapai TANPA permutasi apa pun.
+   Kaveat ditulis eksplisit: atenuasi akibat range restriction memang diharapkan, jadi nilai
+   absolutnya tidak dibaca sebagai "model tidak berguna"; yang informatif adalah URUTANNYA.
+   R^2 dalam-desil dicoba lebih dulu dan dibuang: nilainya -4 s/d -119, menggambarkan
+   pengirisannya, bukan modelnya. Ini dicatat di tabel, bukan disembunyikan.
+
+### run_tests.py -- satu perintah kini menjalankan SEMUANYA
+Masalah nyata: tidak ada satu interpreter pun yang punya python-docx DAN numpy/torch, jadi
+separuh suite selalu dilaporkan SKIP/FAIL tergantung interpreter mana yang dipakai. Runner kini
+mencoba ulang suite pada interpreter lain yang ada. Pemicunya BUKAN hanya exit-code SKIP: sebagian
+besar suite tidak keluar dengan sopan, mereka crash dengan ModuleNotFoundError saat import dan
+exit 1, yang tak bisa dibedakan dari kegagalan nyata lewat exit code saja. Keduanya kini memicu
+retry. Hasil: **17 passed, 0 failed, 0 skipped** dari interpreter mana pun.
+
+### Tersisa, dengan biaya terukur (bukan tebakan)
+- **F060 (trace puluhan molekul)**: skrip lama hanya 1 molekul. `trace_guidance_trajectory_multi.py`
+  baru memuat model sekali lalu melooping seed. Diukur: 3,9 menit/molekul. 24 molekul ~1,5 jam GPU.
+  SEDANG BERJALAN di latar. Dua molekul percobaan memberi gap/nudge 0,95% dan 0,58%, konsisten
+  dengan ~1% dari E.5 (n=1).
+- **F077 (clean-room reproducibility)**: belum dijalankan. Rencana yang terjangkau: harness yang
+  menjalankan ulang analisis CPU deterministik (seed tetap) dan men-diff terhadap JSON ter-commit,
+  bukan membangun environment baru dari nol. Ditunda sampai F060 selesai supaya CPU tidak
+  berebut -- CPU adalah bottleneck termal mesin ini.
+
+### F077 (clean-room reproducibility) -- SELESAI, DAN MENEMUKAN CACAT NYATA
+Clean room sesungguhnya (mesin + environment baru dari lockfile) di luar jangkauan satu laptop,
+dan mengaku melakukannya padahal tidak akan lebih buruk daripada tidak melakukannya. Yang
+dikerjakan adalah pertanyaan di baliknya, yang justru lebih bernilai daripada kedengarannya:
+**kalau analisisnya dijalankan ulang hari ini dari kode dan data di repo ini, apakah keluar angka
+yang dikutip tesis?** Itu tidak dijamin oleh guard mana pun yang sudah ada -- number checker
+memverifikasi tesis COCOK dengan JSON, tapi tak bisa tahu apakah JSON masih cocok dengan kode
+yang mengklaim menghasilkannya.
+
+`guidance/verify_results_reproduce.py`: menjalankan ulang 7 analisis CPU deterministik ke direktori
+sementara, mengembalikan file ter-commit lewat `finally` (supaya run yang terinterupsi tak pernah
+meninggalkan hasil regenerasi menyamar jadi hasil ter-commit), lalu membandingkan field demi field.
+
+**HASIL PERTAMA: 6 reproduce (685 nilai), 1 GAGAL.**
+`protein_family_stratification_results.json` tidak reproduce: `boot_p` ter-commit 0,6 dan 0,2 --
+angka bulat khas B kecil (0,6 = 3/5), bukan B=2000. Artefak itu sisa run uji coba berdaya rendah
+yang TIDAK PERNAH ditimpa oleh run final.
+
+Penting, dan ini yang menyelamatkan: **teks tesisnya BENAR.** Tesis mengutip CI [-0,264, 0,365]
+dan q = 0,652, yaitu angka B=2000 yang betul. Yang basi hanya artefak di disk. Tapi tetap cacat
+provenance nyata: siapa pun yang menurunkan ulang dari JSON akan dapat angka berbeda dari tesis,
+dan tidak ada yang bisa menangkap penyimpangan berikutnya karena angka-angka itu belum di-pin.
+Diperbaiki: artefak diregenerasi pada B=2000, satu galat pembulatan di tesis dirapikan
+(-0,2645 membulat ke -0,265, tesis menulis -0,264), dan 7 angka itu kini DI-PIN.
+
+**HASIL AKHIR: 7 reproduce, 0 gagal, 1.038 nilai.**
+Cakupan dinyatakan eksplisit di output harness: hanya analisis CPU ber-seed. Training dan sampling
+GPU TIDAK tercakup dan TIDAK diklaim reproduce bit-per-bit.
+
+### Guard tambahan
+- `GeneratedAppendix.test_effect_size_appendix_is_not_stale`: Apendiks F diregenerasi dan
+  dibandingkan byte-per-byte. Tanpa ini, file hasil generate bisa tertinggal di belakang data
+  sumbernya tanpa ada yang protes, karena markup-nya tetap sah.
+- Klaim angka ter-pin: 47 -> 83.
+- Suite: 19 -> 26 tes (file tesis), total proyek 17 suite, 0 skip.
+
+### Guard rujukan seksi -- MENEMUKAN 3 RUJUKAN RUSAK YANG SUDAH ADA
+Ditulis setelah saya sendiri hampir menulis "Section E.6" untuk seksi yang belum ada, dan setelah
+sadar bahwa menambah satu `@sec` ke Apendiks E akan MENGGESER nomor E.6 dan E.7 sehingga semua
+rujukan ke keduanya diam-diam jadi salah. (Karena itu trace multi-molekul nanti dipasang sebagai
+`@sub` di dalam E.5, bukan `@sec` baru.)
+
+`check_section_refs()` di `build_thesis.py` mereplikasi penomoran renderer (`{label}.{sec}` dan
+`{label}.{sec}.{sub}`), lalu memverifikasi setiap rujukan "Section/Chapter/Appendix X.Y" dalam
+prosa benar-benar ada. Rujukan tanpa nomor tidak diperiksa -- rujukan bernama kebal terhadap
+penggeseran nomor dan memang bentuk yang lebih baik.
+
+**Jalan pertama langsung menemukan 3 yang rusak, lolos dari semua pass sebelumnya:**
+1. `04:196` "Section III.7.2" -- III.7 TIDAK punya subseksi sama sekali.
+2. `06:114` "Section VI.3.2" (2 kali di baris yang sama, frasa berbeda) -- VI.3 juga tidak punya sub.
+   Target sebenarnya VI.2 / VI.2.2.
+3. Salah satunya SUDAH TERSALIN ke Apendiks F yang saya generate -- saya menyalin galat yang sudah
+   ada. Diperbaiki di GENERATOR-nya, bukan hanya di keluarannya.
+
+7 tes baru (`SectionRefGuard`), termasuk satu yang menjalankan guard pada naskah hidup.
+Suite file tesis: 26 -> 33 tes.
+
+### F060 (trace puluhan molekul) -- SELESAI, DAN MENGOREKSI KLAIM E.5
+24 molekul, protokol paired-deterministic yang identik, checkpoint/pocket/lambda sama, hanya seed
+yang divariasikan. 1,6 jam GPU. `guidance/trace_guidance_trajectory_multi.py` (memuat model sekali,
+lalu melooping seed -- itu yang membuat 24 molekul terjangkau sama sekali).
+
+**Hasil:**
+- median gap 0,0158 A (0,77% dari nudge kumulatif) -- DEKAT dengan pembacaan studi kasus
+- TAPI rentangnya 0,0050-0,4361 A, faktor **87x**
+- **8 dari 24** molekul di atas 1%; tujuh di antaranya 4,7-28,5%
+- displacement satu-atom terbesar **1,68 A**, lawan 0,13 A di studi kasus
+- molekul E.5 ada di persentil ~71 -- bukan outlier, tapi di ATAS tengah, dan sama sekali bukan batas
+
+**Tiga klaim E.5 direvisi:**
+1. "two orders of magnitude below the raw nudge sum" -> dikualifikasi "in this molecule"
+2. "at most 0,13 A for any atom" -> dikualifikasi, + penunjuk ke subseksi baru
+3. Yang paling konsekuensial: paragraf penutup E.5 MENYATAKAN DI MUKA bahwa gap yang tumbuh jadi
+   fraksi besar dari nudge kumulatif, sementara molekulnya tetap valid secara kimia, akan menunjuk
+   ke ARAH gradien, bukan ke mekanisme injeksi. Di 8 dari 24 molekul, separuh-geometri kondisi itu
+   DIDEKATI. Separuh validitas-kimia TIDAK diukur di run ini, jadi kondisinya TIDAK diklaim
+   terpenuhi penuh -- itu dinyatakan eksplisit, bukan dibulatkan ke arah yang menguntungkan.
+
+**Kenapa ini MEMPERKUAT tesis, bukan menggoyahkannya:** di molekul-molekul yang nudge-nya TIDAK
+tenggelam, skor docking tetap tidak membaik. Sinyal yang menggerakkan atom secara berarti namun
+tetap tak memberi manfaat docking adalah bukti tentang SINYAL-nya, bukan tentang mekanisme yang
+membawanya -- yaitu pembacaan F1. Konvergen dengan DIAG2 (arah gradien tak bisa dibedakan dari
+acak atas 23.202 atom-state). Dua pengukuran independen -- ke mana gradien menunjuk, dan seberapa
+jauh ia benar-benar menggerakkan atom -- kini sepakat bahwa batasnya ada pada apa yang DIKETAHUI
+predictor, bukan pada apakah gradiennya sampai ke sampler.
+
+Figur `fig_trace_distribution` sengaja menandai molekul tunggal E.5 DI DALAM distribusinya,
+karena pertanyaan auditnya justru apakah molekul itu representatif.
+Baris peta tesis di Bab I diperbarui; guard sinkronisasi tabel-figur LANGSUNG menangkap probe
+layout yang tak lagi cocok setelah teks objektif diubah -- persis fungsinya.
+
+Klaim ter-pin: 83 -> 89. PDF 271 -> 274 halaman. Figur 44 -> 45.
+
+### F051 (perbesar sampel ChEMBL) -- SELESAI, MENGUATKAN TEMUAN CD38
+Item terakhir dari daftar audit asli. User diberi pilihan cakupan lewat AskUserQuestion: jawaban
+"keduanya" -- sampel acak dari 127 target test leakage-safe + target yang sudah disebut berulang
+di Apendiks E (CDK6, HDAC8, CD38, AKT1, sudah tercache).
+
+**Proses:** `guidance/chembl_f051_sample.py` baru -- bagian LOKAL yang reproducible (seed 20261016,
+menggambar 20 target, menghitung rentang pK proyek sendiri). Bagian ChEMBL TIDAK reproducible
+sebagai skrip dari dalam repo (query via tool MCP ChEMBL, bukan panggilan lokal) -- ini diakui
+eksplisit di naskah, sama seperti keterbatasan yang sudah ada di pemeriksaan 4-target asli.
+
+**Resolusi target:** 20 diambil, 17 berhasil dipetakan ke ID ChEMBL tanpa ragu, 3 DIKELUARKAN
+sengaja (bukan ditebak): DEF_STRA3 (kode organisme "STRA3" tidak cocok yakin dengan spesies yang
+ditemukan -- risiko salah spesies), EPMA_ECOLI dan PCXB_PSEPU (tak ada target ChEMBL yang masuk
+akal lewat pencarian gen/nama). Dari 17 yang resolved, 4 punya NOL entri Ki di ChEMBL (LGALS3,
+APOA1, Prss2/tripsin tikus, chiA1/kitinase jamur) -- dilaporkan sebagai temuan CAKUPAN, bukan
+kegagalan pencarian (galectin biasa diuji via fluorescence polarization, bukan Ki klasik).
+
+**HASIL: 12 dari 13 target dengan data Ki tumpang-tindih dengan rentang proyek sendiri.**
+Satu pengecualian: **RNAS2 (ribonuklease non-sekretori)** -- pola PERSIS SAMA dengan CD38:
+label proyek seragam lemah (pK 4,24-4,49, n=6) sementara dua entri Ki ChEMBL-nya (dari seri
+penghambat yang sama) keduanya sub-mikromolar (pChEMBL 6,75). **CD38 BUKAN kasus terisolasi** --
+penjelasan yang diajukan untuk CD38 (ligan ko-kristalisasi tak harus senyawa paling poten yang
+diketahui; ChEMBL condong ke seri kimia-obat yang melaporkan analog terbaiknya) kini diperkuat
+oleh kejadian kedua yang independen.
+
+### Bug figur ditemukan dan diperbaiki (lagi)
+Rentang dengan lo==hi (n=1, atau beberapa nilai identik) tergambar sebagai GARIS PANJANG-NOL DAN
+HILANG SAMA SEKALI. Ini mengenai BTK, DAPK3, FYN (batang biru proyek hilang) dan yang PALING FATAL:
+**titik merah RNAS2 sendiri -- poin utama seluruh subbab -- tidak tergambar.** Diperbaiki dengan
+menggambar marker titik untuk rentang di bawah ambang lebar.
+
+### Infrastruktur
+- `guidance/thesis/make_chembl_expansion.py` -- generate Apendiks E.3 (subbab baru) dari JSON
+  hasil, tidak diketik tangan.
+- Disisipkan sebagai `@sub` BUKAN `@sec` baru (pelajaran dari kasus trace F060 -- tidak menggeser
+  nomor E.6/E.7).
+- Guard kebaruan baru (`test_chembl_expansion_is_not_stale`).
+- Klaim ter-pin: 89 -> 96. Suite tesis: 33 -> 34 tes. PDF: 274 -> 280 halaman.
+
+### STATUS AKHIR: SELURUH 85 ITEM AUDIT FORENSIK TERTUTUP
+F001-F012 milik user (sengaja tak diisi). Semua sisanya -- termasuk F025/F057 (DIAG2, sesi lalu),
+F037, F049, F051, F060, F065, F077 (sesi ini) -- tuntas dengan pengukuran nyata, bukan kaveat teks.
+
+## AUDIT KODEBASE PENUH (2026-10-16, lanjutan ke-4) -- "audit keseluruhan, perbaiki semua bug"
+
+User minta audit seluruh KODEBASE proyek (bukan cuma naskah tesis) dan perbaikan bug menyeluruh,
+dengan "overclocking/overengineering" -- dibaca sebagai: lanjutkan metodologi perburuan bug yang
+sama ketatnya (guard defensif, uji reproduksibilitas, uji mutasi), bukan penulisan ulang kosmetik.
+
+### Rekonaisans
+195 skrip Python di luar vendor/reference_code. Sapuan compile-check (semua 195 valid sintaksnya),
+sapuan path-file-hilang (1 hit, false positive -- path output, bukan input), sapuan klaim refactor
+basi ("now imports"/"canonical home") di seluruh kodebase, dan status infrastruktur (antrean selesai
+25/25, GPU 38C, tak ada proses/lock nyasar).
+
+### BUG 1 (NYATA, DITEMUKAN DAN DIPERBAIKI): deduplikasi r2_rows yang diklaim sudah terjadi, TERNYATA BELUM
+`stats_common.r2_rows`'s docstring sendiri mengklaim "compare_vs_structure.py sekarang mengimpor
+fungsi ini, bukan menyimpan salinan sendiri" -- KLAIM INI SALAH. `compare_vs_structure.py` masih
+punya DEFINISI PENUH SENDIRI, byte-identik tapi independen. Lima skrip lain
+(label_harmonisation.py, scaffold_audit.py, representation_ladder.py, noise_ceiling.py,
+novelty_tiers.py) mewarisi r2_rows transitif lewat compare_vs_structure.py -- SALAH SATUNYA
+(representation_ladder.py) langsung memberi makan tabel utama Bab IV. Risikonya: tidak ada
+mekanisme apa pun yang menjaga kedua salinan tetap sinkron; perbaikan masa depan ke satu sisi
+tidak akan sampai ke sisi lain secara diam-diam.
+**Perbaikan:** `compare_vs_structure.py` sekarang benar-benar mengimpor dari `stats_common`.
+Kedua formula diverifikasi byte-identik SEBELUM perubahan, jadi tidak ada angka yang berubah --
+dikonfirmasi lewat harness F077: representation_ladder.py tetap mereproduksi 219/219 nilai persis.
+Docstring `stats_common.py` yang salah diperbaiki jadi akurat.
+**Guard baru:** `test_compare_vs_structure_imports_this_r2_rows_not_a_copy` (cek identitas objek,
+bukan cuma kesamaan perilaku -- salinan baru akan identik perilakunya sampai seseorang mengedit
+satu sisi, jadi cuma identity check yang membuktikan definisi tunggal) + sapuan proyek-lebar
+`test_no_other_module_silently_redefines_r2_rows`. Diuji mutasi: definisi ganda dikembalikan,
+test gagal dengan benar.
+
+### BUG 2 (NYATA, DITEMUKAN DAN DIPERBAIKI): celah test di mekanisme paling konsekuensial di proyek
+`guidance/guided_sampling.py` -- basis SELURUH temuan arah gradien (DIAG2, pembacaan F1 Bab III,
+trace F060) -- TIDAK PUNYA SATU PUN test otomatis. Satu-satunya verifikasi
+(`verify_baseline_equivalence.py`) butuh GPU+checkpoint penuh, sengaja di luar suite ringan, DAN
+cuma mengecek kasus lambda=0 (no-op) -- bukan konvensi TANDA saat lambda!=0, yaitu persis yang
+dipakai DIAG2. Kalau tanda `pos0_from_e + grad_pos` pernah terbalik jadi minus lewat edit di masa
+depan, SETIAP pembacaan arah gradien di tesis akan diam-diam terbalik tanpa ada satu angka pun
+yang "terlihat salah" -- karena pengukuran diagnostik membaca gradien AKTUAL dari run nyata.
+**Perbaikan:** `guidance/tests/test_guided_sampling_sign.py` baru -- CPU murni, mock model
+deterministik minimal (num_steps=1, t=0 sehingga noise posterior nol), menjalankan FUNGSI ASLI
+yang tidak diubah. 6 test: lambda=0 no-op eksak, tanda + (bukan -), skala linear termasuk tanda
+negatif, gradien nol = no-op, plus 2 test untuk center_pos (lihat Bug 3). Diuji mutasi: tanda
+dibalik di kode sungguhan, test gagal dengan pesan yang tepat.
+
+### BUG 3 (NYATA, DITEMUKAN DAN DIPERBAIKI): crash laten di center_pos(mode='none')
+Ditemukan SAAT menulis test Bug 2. `models/molopt_score_model.py`'s `center_pos(mode='none')`
+mengembalikan `offset = 0.` (float Python telanjang). Tapi `guided_sampling.py` SELALU melakukan
+`offset[batch_ligand]` tanpa syarat di akhir fungsi -- itu `TypeError: 'float' object is not
+subscriptable` kalau mode 'none' pernah dipakai. Diverifikasi lewat grep proyek-lebar: SEMUA 8
+config YAML dan SEMUA pemanggil Python pakai `'protein'` -- jadi ini dead code path yang TAK PERNAH
+mempengaruhi angka tesis mana pun. Tetap diperbaiki karena murah dan aman: cabang 'none' dan
+'protein' terpisah total (if/elif), jadi memperbaiki yang satu tak bisa menyentuh yang lain.
+**Guard baru:** 2 test (`test_center_pos_none_mode_returns_an_indexable_offset_not_a_bare_float`,
+`test_center_pos_protein_mode_is_unchanged_by_the_none_mode_fix`) -- yang kedua memin formula
+'protein' sendiri supaya klaim "tak tersentuh" teruji, bukan cuma diargumentasikan.
+
+### Debris sesi ini sendiri, ditemukan dan dibersihkan
+Direktori bersarang `guidance/thesis/guidance/thesis/figures/` (340KB, 1 file nyasar) -- sisa dari
+perintah yang dijalankan dengan asumsi cwd salah sesi ini sendiri. Diverifikasi tak dirujuk apa pun,
+tak pernah ter-track git, dihapus.
+
+### Konsistensi checklist tesis
+Penambahan suite baru (test_guided_sampling_sign.py) menaikkan jumlah suite 17->18 -- tabel
+checklist reproduksibilitas Apendiks A diperbarui supaya tidak jadi inkonsistensi baru.
+
+### VERIFIKASI AKHIR
+Build 280 halaman bersih. Suite proyek: 17 -> **18 suite, 0 gagal, 0 skip**. Harness F077: 7/7
+analisis, representation_ladder.py 219/219 nilai tetap identik setelah dedup. Tak ada regresi.
+
+### Yang DISENGAJA tidak dilakukan (dibatasi, bukan ditinggalkan)
+- Tidak mengaudit ~20 file .md catatan riset lama (TRACK_B1_FINDING.md dkk) -- itu catatan lab
+  historis, bukan deliverable yang diklaim tesis; sudah ditulis sebelum standar rigor saat ini.
+- Tidak mem-paired_r2_comparison-kan `paired_power_check.py` (sudah benar berpasangan secara
+  independen, tapi tidak dikutip tesis mana pun -- prioritas rendah, bukan nol risiko tapi nol
+  dampak saat ini).
+- Tidak melakukan "overengineering" kosmetik (type hints, reformat, dll) -- di luar pola nilai
+  yang sudah terbukti sesi ini (guard defensif + test, bukan gaya penulisan).

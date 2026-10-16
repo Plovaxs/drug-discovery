@@ -66,14 +66,15 @@ def r2_rows(y, p, rows):
     zero variance (denom <= 0) -- see paired_r2_comparison below for the case this alone does not catch.
 
     Canonical home as of 2026-10-13: previously defined independently in
-    guidance/cheminformatics/compare_vs_structure.py (byte-identical formula; that module now imports
-    this one instead of keeping its own copy). guidance/cheminformatics/label_harmonisation.py,
-    scaffold_audit.py, representation_ladder.py, noise_ceiling.py and novelty_tiers.py each have their
-    OWN already-reported numbers riding on this exact formula and were deliberately NOT retrofitted to
-    import from here -- this module's own policy (see the file docstring) is that an already-reported
-    result is not touched for a refactor-only benefit without a rerun verifying byte-for-byte
-    equivalence, and auditing five scripts' worth of already-cited TASKS.md numbers was out of scope for
-    this pass. New callers should import from here, not redefine it a tenth time."""
+    guidance/cheminformatics/compare_vs_structure.py (byte-identical formula). That module's docstring
+    claimed, as of 2026-10-13, that it had already been switched to import this definition; it had not
+    -- it still carried its own copy, so nothing kept the two in sync, and a future fix made to one
+    would not have reached the other. This was found and fixed on 2026-10-16: compare_vs_structure.py
+    now imports r2_rows from here, and the five scripts that use it transitively through that module
+    (label_harmonisation.py, scaffold_audit.py, representation_ladder.py, noise_ceiling.py and
+    novelty_tiers.py) follow automatically. The two bodies were verified byte-identical before the
+    change, so no previously reported number in any of those scripts' output moves. New callers should
+    import from here, not redefine it again."""
     yy, pp = y[rows], p[rows]
     denom = ((yy - yy.mean()) ** 2).sum()
     if denom <= 0:

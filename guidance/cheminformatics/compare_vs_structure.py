@@ -38,7 +38,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from guidance.cheminformatics.chem_data import target_groups
-from guidance.uncertainty_a1.stats_common import bh, cluster_bootstrap_indices
+from guidance.uncertainty_a1.stats_common import bh, cluster_bootstrap_indices, r2_rows
 
 LIGAND_PREDS = './guidance/cheminformatics/ligand_only_test_preds.npz'
 OUT = './guidance/cheminformatics/structure_vs_ligand_only.json'
@@ -53,13 +53,13 @@ STRUCTURE_SOURCES = {
     'egnn_qat_s2023':   ('./guidance/uncertainty_a1/a1g_test_preds_s2023.npz', 'y_true', 'y_pred'),
 }
 
-
-def r2_rows(y, p, rows):
-    yy, pp = y[rows], p[rows]
-    denom = ((yy - yy.mean()) ** 2).sum()
-    if denom <= 0:
-        return np.nan
-    return 1.0 - ((yy - pp) ** 2).sum() / denom
+# r2_rows used to be redefined here (byte-identical to stats_common's) rather than imported, which
+# left two formulas that nothing kept in sync -- a future fix to one would silently not reach the
+# other. stats_common.py's own docstring already claimed this import had been made; it had not.
+# Fixed 2026-10-16: this module now imports the single definition, and the five downstream scripts
+# that get r2_rows transitively through this module (label_harmonisation.py, scaffold_audit.py,
+# noise_ceiling.py, novelty_tiers.py, representation_ladder.py) follow automatically. The two
+# bodies were verified byte-identical before the change, so no previously reported number moves.
 
 
 def load_structure(name, path, ykey, pkey, pk_ref, target_ref):

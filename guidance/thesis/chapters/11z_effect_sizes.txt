@@ -1,0 +1,101 @@
+# GENERATED FILE -- do not edit by hand.
+# Regenerate with: PYTHONPATH=. python guidance/thesis/make_effect_size_appendix.py
+# Source: the gradient_informativeness_results.csv of each track directory and
+#         guidance/track_c_analysis/track_c_analysis_results.json
+@appendix F | COMPLETE EFFECT-SIZE REGISTER
+
+@sec Why This Register Exists
+
+The results chapters report how many comparisons reached significance after correction, which is the quantity the decision rule of Section III.6 acts on but is not, on its own, enough to judge a null result. A count of zero significant comparisons is equally consistent with effects that are genuinely negligible and with effects that are substantial but measured too noisily to resolve, and only the effect sizes distinguish the two. This appendix therefore publishes every comparison behind Chapters V and VI individually: all 56 gradient-guidance comparisons in {tab:esgrad} and all 15 rejection-sampling pockets in {tab:estrackc}. A reader who wishes to pool these into a meta-analysis, or to check that the null is a null of small effects rather than of wide intervals, has the per-comparison numbers to do so here.
+
+Both tables are generated directly from the stored result files by `guidance/thesis/make_effect_size_appendix.py`, not transcribed. At this size a hand-copied table would be a near-certain source of transcription error, and four such errors have already been found and corrected in much smaller tables in this thesis.
+
+@sec Gradient Guidance: Every Comparison
+
+{tab:esgrad} lists all 56 comparisons of Tracks A and B. The shift columns are in kcal/mol and are oriented so that a negative value is a better (more negative) docking score under guidance. 0 of the 56 comparisons is significant after Benjamini–Hochberg correction within its own run. The full tier of Track A is also presented, with its own commentary, in Appendix C; it is repeated here so that this register is complete on its own.
+
+@tab esgrad | Every gradient-guidance comparison, with effect sizes
+| Run | Pocket | Condition | n (un / gu) | KS D | Mean shift | Median shift | LE shift | PoseBusters | p (raw) | p (BH) |
+| Track A, exploratory tier | BSD | λ = 0.1 | 20 / 20 | 0.300 | −0.703 | −0.537 | −0.0233 | 0.25 → 0.55 | 0.3356 | 0.4315 |
+| ″ | BSD | λ = 0.3 | 20 / 20 | 0.500 | −1.410 | −1.445 | −0.0431 | 0.25 → 0.30 | 0.0123 | 0.1107 |
+| ″ | BSD | λ = 1.0 | 20 / 17 | 0.397 | −1.476 | −0.882 | −0.0670 | 0.25 → 0.06 | 0.0791 | 0.1824 |
+| ″ | HDAC8 | λ = 0.1 | 20 / 20 | 0.350 | −0.324 | −0.495 | −0.0149 | 0.60 → 0.65 | 0.1745 | 0.2618 |
+| ″ | HDAC8 | λ = 0.3 | 20 / 20 | 0.400 | −0.538 | −0.539 | −0.0250 | 0.60 → 0.55 | 0.0811 | 0.1824 |
+| ″ | HDAC8 | λ = 1.0 | 20 / 19 | 0.434 | −0.539 | −0.472 | −0.0491 | 0.60 → 0.21 | 0.0373 | 0.1677 |
+| ″ | CD38 | λ = 0.1 | 20 / 20 | 0.250 | −0.463 | −0.274 | −0.0153 | 0.40 → 0.40 | 0.5713 | 0.6296 |
+| ″ | CD38 | λ = 0.3 | 20 / 20 | 0.350 | −0.876 | −0.888 | −0.0286 | 0.40 → 0.35 | 0.1745 | 0.2618 |
+| ″ | CD38 | λ = 1.0 | 20 / 18 | 0.228 | +0.150 | +0.264 | −0.0038 | 0.40 → 0.00 | 0.6296 | 0.6296 |
+| Track A, full tier | BSD | λ = 0.1 | 30 / 30 | 0.200 | +0.172 | +0.151 | +0.0100 | 0.33 → 0.50 | 0.5941 | 0.9988 |
+| ″ | BSD | λ = 0.3 | 30 / 30 | 0.300 | −0.960 | −0.330 | −0.0324 | 0.33 → 0.40 | 0.1350 | 0.5514 |
+| ″ | BSD | λ = 1.0 | 30 / 28 | 0.290 | −0.635 | −0.021 | −0.0297 | 0.33 → 0.04 | 0.1378 | 0.5514 |
+| ″ | HDAC8 | λ = 0.1 | 30 / 30 | 0.367 | −0.472 | −0.632 | −0.0257 | 0.63 → 0.63 | 0.0346 | 0.4150 |
+| ″ | HDAC8 | λ = 0.3 | 30 / 30 | 0.333 | −0.350 | −0.444 | −0.0190 | 0.63 → 0.47 | 0.0709 | 0.5514 |
+| ″ | HDAC8 | λ = 1.0 | 30 / 29 | 0.424 | −0.665 | −0.898 | −0.0402 | 0.63 → 0.10 | 0.0065 | 0.1572 |
+| ″ | CD38 | λ = 0.1 | 29 / 30 | 0.176 | −0.398 | −0.172 | −0.0091 | 0.38 → 0.47 | 0.6810 | 0.9988 |
+| ″ | CD38 | λ = 0.3 | 29 / 29 | 0.276 | −0.926 | −0.648 | −0.0290 | 0.38 → 0.38 | 0.2221 | 0.7616 |
+| ″ | CD38 | λ = 1.0 | 29 / 29 | 0.310 | −0.621 | −1.049 | −0.0203 | 0.38 → 0.03 | 0.1229 | 0.5514 |
+| ″ | MENE | λ = 0.1 | 30 / 30 | 0.167 | −0.145 | +0.380 | +0.0000 | 0.50 → 0.43 | 0.8080 | 0.9988 |
+| ″ | MENE | λ = 0.3 | 30 / 29 | 0.087 | −0.246 | +0.067 | −0.0041 | 0.50 → 0.45 | 0.9983 | 0.9988 |
+| ″ | MENE | λ = 1.0 | 30 / 30 | 0.167 | −0.297 | −0.077 | −0.0093 | 0.50 → 0.10 | 0.8080 | 0.9988 |
+| ″ | NQO1 | λ = 0.1 | 30 / 30 | 0.167 | +0.087 | +0.012 | +0.0046 | 0.57 → 0.53 | 0.8080 | 0.9988 |
+| ″ | NQO1 | λ = 0.3 | 30 / 30 | 0.133 | −0.027 | −0.090 | −0.0002 | 0.57 → 0.60 | 0.9578 | 0.9988 |
+| ″ | NQO1 | λ = 1.0 | 30 / 29 | 0.180 | +0.190 | −0.074 | +0.0056 | 0.57 → 0.31 | 0.6469 | 0.9988 |
+| ″ | PAK4 | λ = 0.1 | 30 / 30 | 0.100 | +0.093 | +0.146 | +0.0056 | 0.80 → 0.83 | 0.9988 | 0.9988 |
+| ″ | PAK4 | λ = 0.3 | 30 / 30 | 0.167 | +0.268 | +0.269 | +0.0153 | 0.80 → 0.67 | 0.8080 | 0.9988 |
+| ″ | PAK4 | λ = 1.0 | 30 / 30 | 0.233 | +0.736 | +0.399 | +0.0345 | 0.80 → 0.40 | 0.3929 | 0.9988 |
+| ″ | PNTM | λ = 0.1 | 29 / 30 | 0.094 | +0.068 | −0.083 | −0.0012 | 0.69 → 0.67 | 0.9956 | 0.9988 |
+| ″ | PNTM | λ = 0.3 | 29 / 30 | 0.094 | −0.018 | −0.143 | −0.0054 | 0.69 → 0.67 | 0.9956 | 0.9988 |
+| ″ | PNTM | λ = 1.0 | 29 / 30 | 0.161 | +0.609 | −0.127 | +0.0180 | 0.69 → 0.27 | 0.7498 | 0.9988 |
+| ″ | RIBB | λ = 0.1 | 29 / 30 | 0.198 | −0.638 | −0.176 | −0.0214 | 0.59 → 0.60 | 0.5021 | 0.9988 |
+| ″ | RIBB | λ = 0.3 | 29 / 30 | 0.230 | −0.860 | −0.468 | −0.0289 | 0.59 → 0.60 | 0.3237 | 0.9711 |
+| ″ | RIBB | λ = 1.0 | 29 / 30 | 0.211 | −0.717 | −0.458 | −0.0249 | 0.59 → 0.07 | 0.4615 | 0.9988 |
+| Track B1, gradient-norm normalisation | BSD | raw vs unguided | 20 / 20 | 0.200 | +14.326 | +0.062 | +0.4064 | 0.25 → 0.25 | 0.8320 | 0.9360 |
+| ″ | BSD | normalised vs unguided | 20 / 18 | 0.428 | +0.677 | +0.518 | +0.0188 | 0.25 → 0.28 | 0.0428 | 0.1925 |
+| ″ | BSD | normalised vs raw | 20 / 18 | 0.428 | −13.649 | +0.455 | −0.3876 | 0.25 → 0.28 | 0.0428 | 0.1925 |
+| ″ | HDAC8 | raw vs unguided | 20 / 20 | 0.300 | −0.107 | −0.402 | −0.0057 | 0.60 → 0.60 | 0.3356 | 0.5034 |
+| ″ | HDAC8 | normalised vs unguided | 20 / 20 | 0.200 | +0.198 | +0.280 | +0.0125 | 0.60 → 0.30 | 0.8320 | 0.9360 |
+| ″ | HDAC8 | normalised vs raw | 20 / 20 | 0.300 | +0.304 | +0.683 | +0.0182 | 0.60 → 0.30 | 0.3356 | 0.5034 |
+| ″ | CD38 | raw vs unguided | 20 / 20 | 0.150 | −0.214 | −0.128 | −0.0065 | 0.40 → 0.45 | 0.9831 | 0.9831 |
+| ″ | CD38 | normalised vs unguided | 20 / 20 | 0.300 | −0.760 | −0.739 | −0.0250 | 0.40 → 0.25 | 0.3356 | 0.5034 |
+| ″ | CD38 | normalised vs raw | 20 / 20 | 0.300 | −0.546 | −0.611 | −0.0186 | 0.45 → 0.25 | 0.3356 | 0.5034 |
+| Track B2, classifier-guidance reformulation | BSD | classifier vs unguided | 20 / 19 | 0.334 | +0.241 | +0.790 | +0.0101 | 0.25 → 0.37 | 0.1745 | 0.5236 |
+| ″ | BSD | classifier vs raw | 20 / 19 | 0.429 | −14.085 | +0.728 | −0.3964 | 0.25 → 0.37 | 0.0439 | 0.2631 |
+| ″ | HDAC8 | classifier vs unguided | 20 / 20 | 0.250 | +0.619 | +0.361 | +0.0443 | 0.60 → 0.05 | 0.5713 | 0.8570 |
+| ″ | HDAC8 | classifier vs raw | 20 / 20 | 0.300 | +0.725 | +0.763 | +0.0500 | 0.60 → 0.05 | 0.3356 | 0.6712 |
+| ″ | CD38 | classifier vs unguided | 20 / 18 | 0.172 | −0.056 | +0.131 | −0.0014 | 0.40 → 0.22 | 0.8927 | 0.8927 |
+| ″ | CD38 | classifier vs raw | 20 / 18 | 0.178 | +0.158 | +0.260 | +0.0050 | 0.45 → 0.22 | 0.8692 | 0.8927 |
+| Track B3, timestep-windowed guidance | BSD | uniform window | 20 / 20 | 0.100 | −0.156 | +0.136 | −0.0061 | 0.20 → 0.25 | 1.0000 | 1.0000 |
+| ″ | BSD | late third | 20 / 20 | 0.200 | +0.115 | +0.463 | +0.0037 | 0.20 → 0.25 | 0.8320 | 1.0000 |
+| ″ | BSD | middle third | 20 / 20 | 0.150 | −0.011 | +0.052 | +0.0002 | 0.20 → 0.20 | 0.9831 | 1.0000 |
+| ″ | BSD | early third | 20 / 20 | 0.150 | −0.002 | +0.068 | −0.0008 | 0.20 → 0.30 | 0.9831 | 1.0000 |
+| ″ | HDAC8 | uniform window | 20 / 20 | 0.250 | −0.088 | −0.448 | −0.0050 | 0.60 → 0.60 | 0.5713 | 1.0000 |
+| ″ | HDAC8 | late third | 20 / 20 | 0.150 | +0.096 | +0.083 | +0.0016 | 0.60 → 0.60 | 0.9831 | 1.0000 |
+| ″ | HDAC8 | middle third | 20 / 20 | 0.200 | −0.036 | −0.132 | −0.0032 | 0.60 → 0.55 | 0.8320 | 1.0000 |
+| ″ | HDAC8 | early third | 20 / 20 | 0.200 | −0.051 | −0.129 | −0.0031 | 0.60 → 0.60 | 0.8320 | 1.0000 |
+@note Shifts are guided minus unguided, so a negative mean shift is an improvement. "LE shift" is the change in ligand efficiency (kcal/mol per heavy atom). "PoseBusters" gives the pass rate unguided → guided. p (BH) is corrected within each run, which is the unit the decision rule of Section III.6 applies to; an asterisk marks a comparison significant at that level. A repeated run name is shown as ″.
+@endtab
+
+@sec Rejection Sampling: Every Pocket
+
+{tab:estrackc} lists all 15 pockets of Track C (Chapter VI) with the effect size and its 95% bootstrap interval, alongside the two quantities that determine how the effect should be read: the change in mean heavy-atom count, which is the size confound, and the change in PoseBusters pass rate. The effect size is positive when the selected top 10% has a *worse* (less negative) mean docking score than the full pool.
+
+@tab estrackc | Every Track C pocket, with effect size, interval and confounds
+| Pocket | n pool | k selected | Vina (pool) | Vina (top 10%) | Effect size [95% CI] | Heavy atoms | PoseBusters | KS p |
+| BSD | 594 | 59 | −7.83 | −7.62 | +0.209  [−0.138, +0.576] | 27.3 → 38.2 | 0.35 → 0.03 | 0.0580 |
+| HDAC8 | 597 | 60 | −5.19 | −6.19 | −0.997  [−2.044, −0.276] | 16.5 → 31.3 | 0.55 → 0.12 | 0.0006* |
+| CD38 | 591 | 59 | −8.20 | −9.60 | −1.405  [−1.784, −0.970] | 27.3 → 35.5 | 0.48 → 0.42 | 4.7 × 10⁻¹⁰* |
+| MENE | 598 | 60 | −7.48 | −8.78 | −1.308  [−1.607, −0.992] | 27.2 → 34.7 | 0.48 → 0.40 | 2.1 × 10⁻¹¹* |
+| NQO1 | 597 | 60 | −7.08 | −7.98 | −0.899  [−1.261, −0.624] | 23.5 → 33.5 | 0.61 → 0.28 | 7.6 × 10⁻⁷* |
+| PAK4 | 598 | 60 | −6.52 | −9.35 | −2.830  [−3.109, −2.549] | 16.5 → 31.3 | 0.77 → 0.48 | 3.5 × 10⁻³³* |
+| PNTM | 596 | 60 | −4.89 | −8.33 | −3.445  [−6.016, −1.958] | 20.1 → 29.6 | 0.62 → 0.45 | 6.4 × 10⁻²¹* |
+| RIBB | 592 | 59 | −6.45 | −4.50 | +1.951  [+1.285, +2.647] | 16.3 → 30.7 | 0.54 → 0.02 | 3.2 × 10⁻¹⁰* |
+| DPP2 | 596 | 60 | −6.45 | −8.58 | −2.130  [−2.446, −1.704] | 16.5 → 31.5 | 0.64 → 0.28 | 2.2 × 10⁻²⁶* |
+| XANLY | 599 | 60 | −7.29 | −9.82 | −2.538  [−2.922, −2.162] | 20.1 → 30.6 | 0.68 → 0.52 | 4.3 × 10⁻²¹* |
+| IMA1 | 600 | 60 | −4.38 | −5.70 | −1.328  [−1.561, −1.154] | 12.7 → 25.4 | 0.80 → 0.38 | 5.7 × 10⁻²¹* |
+| NOS2 | 599 | 60 | −4.94 | −8.67 | −3.731  [−4.066, −3.297] | 12.7 → 27.0 | 0.79 → 0.43 | 2.3 × 10⁻³⁶* |
+| P2Y12 | 578 | 58 | −8.53 | −6.95 | +1.574  [+0.773, +2.464] | 34.3 → 45.1 | 0.29 → 0.09 | 2.3 × 10⁻⁵* |
+| PYRD | 597 | 60 | −6.01 | −8.71 | −2.697  [−2.989, −2.355] | 16.5 → 30.1 | 0.71 → 0.23 | 2.2 × 10⁻²⁸* |
+| SQHC | 576 | 58 | −10.18 | −10.30 | −0.126  [−1.223, +4.657] | 34.6 → 48.0 | 0.27 → 0.10 | 0.0304* |
+@note Vina Dock in kcal/mol, lower is better. The effect size is the difference in mean Vina Dock between the selected subset and the full pool, in kcal/mol, with a bootstrap 95% interval. Heavy atoms and PoseBusters are given as full pool → selected subset; the systematic rise in the first and fall in the second are the confounds analysed in Section VI.2.2. An asterisk marks a pocket significant after correction (14 of 15).
+@endtab
+
